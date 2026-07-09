@@ -1,0 +1,191 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+The submission, "From Tokens to Words: On the Inner Lexicon of LLMs," is positioned at the intersection of three major research clusters: (1) probing and analysis of internal representations in LLMs, (2) tokenization and vocabulary engineering, and (3) mechanistic interpretability of model components (notably FFN and attention layers). Its central focus is on understanding and leveraging how LLMs internally compose subword tokens into word-level representations, and on using this understanding to expand the model's effective vocabulary without finetuning.
+
+**Most Closely Related Prior Works:**
+- **Token Erasure as a Footprint of Implicit Vocabulary Items in LLMs (Feucht et al., 2024):** Probes for implicit vocabulary by analyzing token erasure effects, showing LLMs can "forget" or "remember" tokens in multi-token words.
+- **Probing Pretrained Language Models for Lexical Semantics (Vulić et al., 2020):** Systematic probing for lexical knowledge across layers.
+- **What do tokens know about their characters and how do they know it? (Batsuren et al., 2024):** Probes for character-level and morphological information in token embeddings.
+- **Transformer Feed-Forward Layers Build Predictions by Promoting Concepts in the Vocabulary Space (Geva et al., 2022):** Mechanistic analysis of FFN layers as concept promoters.
+- **Tokenization improvement works (BPE-knockout, SaGe, etc.):** Focus on improving tokenization and its impact on model performance.
+
+**Relation to Methodological Clusters:**
+- **Probing/Representation Analysis:** The submission extends probing to the specific question of detokenization and word-level composition, using k-NN classifiers and decoding from hidden states.
+- **Mechanistic Interpretability:** It leverages and extends prior work on FFN and attention mechanisms, mapping where and how word-level information emerges.
+- **Vocabulary Engineering:** The practical method for vocabulary expansion is a direct application of insights from probing and mechanistic analysis.
+
+**Place in Problem Space:**
+- The submission addresses the open question of whether LLMs possess an "inner lexicon" that goes beyond the explicit tokenizer vocabulary, and how robust this is to tokenization artifacts (splits, typos, OOV).
+- It also proposes a practical intervention (vocabulary expansion via representation fusion) that is not present in prior work.
+
+**Evaluation Approaches:**
+- Uses standard probing metrics (classification accuracy, decoding success), as well as practical evaluation of language model performance post-intervention.
+
+**Independent Assessment:**
+- The submission is most closely aligned with recent probing and mechanistic interpretability work, but its practical vocabulary expansion method is a novel application not directly addressed in prior literature.
+- Its focus on robustness to non-morphemic splits and OOV words is a meaningful extension of prior probing studies, which often focus on in-vocabulary or morphologically regular cases.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Positioning:**
+- The authors generally cite prior work as either (a) foundational for probing/model analysis, (b) evidence of tokenization limitations, or (c) mechanistic studies of model components.
+- They position their work as the first to provide direct evidence of intrinsic detokenization and to propose a practical, finetuning-free vocabulary expansion method.
+
+**Accuracy and Balance of Characterizations:**
+- **Token Erasure as a Footprint... (Feucht et al., 2024):**  
+  - Authors: "Concurrently... present evidence for an implicit vocabulary in LLMs, showing that models 'forget' preceding tokens in multi-token words or multi-word entities, but remember previous tokens when processing single-token words."
+  - *Assessment:* This is a fair summary, but the submission does not fully acknowledge that Feucht et al. also probe for internal word-level representations, albeit via different metrics (erasure/forgetting vs. decoding/classification).
+- **Tokenization Improvement Works (BPE-knockout, SaGe, etc.):**  
+  - Authors: Cited as efforts to improve tokenization or analyze its effects.
+  - *Assessment:* Accurate, but the submission does not directly compare its vocabulary expansion method to these, which are more about tokenizer design than post-hoc vocabulary expansion.
+- **Probing for Lexical Semantics (Vulić et al., 2020):**  
+  - Authors: Cited as showing early layers provide local syntactic information.
+  - *Assessment:* Accurate, but the submission's focus is more on word-level composition than on syntactic information per se.
+- **FFN Mechanistic Work (Geva et al., 2022, 2021):**  
+  - Authors: Cited as showing FFN layers promote concepts in vocabulary space.
+  - *Assessment:* Accurate and well-integrated into the submission's mechanistic analysis.
+- **Character/Morphology Probing (Batsuren et al., 2024):**  
+  - Authors: Cited as showing tokenization can disrupt morphological structure.
+  - *Assessment:* Accurate, but the submission's focus is on word-level, not subword/character-level, composition.
+
+**Discrepancies and Rhetoric:**
+- The submission sometimes frames prior work as not addressing the specific question of intrinsic detokenization or practical vocabulary expansion, which is largely accurate, but may understate the conceptual proximity of Feucht et al. (2024) and related probing studies.
+- The claim of being "first" to provide evidence for intrinsic detokenization is somewhat overstated, as Feucht et al. (2024) and others have probed for internal word-level representations, though not via the same methods or with the same practical focus.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Claimed Contribution 1: **First evidence that LLMs perform intrinsic detokenization, combining sub-word sequences into coherent word representations internally**
+
+- **Most Similar Prior Work:**  
+  - Feucht et al. (2024): Probes for implicit vocabulary via token erasure effects.
+  - Vulić et al. (2020), Batsuren et al. (2024): Probe for lexical/character-level information.
+- **Claimed Difference:**  
+  - Submission claims to provide the first *direct* evidence of detokenization, using decoding and classification from hidden states, and mapping where/how this occurs in the model.
+- **Independent Assessment:**  
+  - Feucht et al. (2024) provide evidence for internal word-level representations, but via erasure/forgetting metrics rather than direct decoding or classification.
+  - Submission's use of decoding and k-NN classification is a methodological extension, but the conceptual finding (that LLMs internally compose word-level representations) is present in both.
+  - The main delta is in the *method of evidence* and the *granularity* of analysis (layer-wise, FFN/attention mapping).
+- **Substantive vs. Superficial:**  
+  - The difference is substantive in terms of methodology and practical mapping, but the conceptual novelty is incremental rather than foundational.
+
+## Claimed Contribution 2: **Demonstration that detokenization is robust to non-morphemic splits, typos, and OOV words**
+
+- **Most Similar Prior Work:**  
+  - Batsuren et al. (2024), Kaushal & Mahowald (2022): Analyze robustness to tokenization artifacts.
+- **Claimed Difference:**  
+  - Submission claims to show robustness of internal word representations to a broader range of perturbations.
+- **Independent Assessment:**  
+  - Prior work has examined robustness to some tokenization artifacts, but the submission's systematic probing of non-morphemic splits, typos, and OOV words is a more comprehensive and practical evaluation.
+- **Substantive vs. Superficial:**  
+  - This is a substantive extension in terms of empirical scope.
+
+## Claimed Contribution 3: **Identification of a latent vocabulary or inner lexicon in LLMs, beyond the explicit tokenizer vocabulary**
+
+- **Most Similar Prior Work:**  
+  - Feucht et al. (2024): Implicit vocabulary via erasure.
+  - Vulić et al. (2020): Lexical knowledge probing.
+- **Claimed Difference:**  
+  - Submission claims to map and decode this inner lexicon directly.
+- **Independent Assessment:**  
+  - Prior work has identified implicit/latent vocabulary, but the submission's decoding and mapping approach provides a more direct operationalization.
+- **Substantive vs. Superficial:**  
+  - The difference is in operationalization and practical mapping, not in the conceptual claim.
+
+## Claimed Contribution 4: **Introduction of a practical, finetuning-free method to expand LLM vocabulary by fusing multi-token word representations**
+
+- **Most Similar Prior Work:**  
+  - Tokenization improvement works (BPE-knockout, SaGe, etc.) focus on tokenizer design, not post-hoc vocabulary expansion.
+- **Claimed Difference:**  
+  - Submission claims to expand vocabulary without retraining or finetuning, by fusing representations at inference.
+- **Independent Assessment:**  
+  - This is a novel practical intervention not present in prior work, which focuses on tokenizer design or retraining.
+- **Substantive vs. Superficial:**  
+  - This is a substantive and practical contribution.
+
+## Claimed Contribution 5: **Detailed analysis of where (in model layers) and how (via FFN and attention) detokenization occurs**
+
+- **Most Similar Prior Work:**  
+  - Geva et al. (2022, 2021), Merullo et al. (2024): Analyze FFN/attention mechanisms.
+- **Claimed Difference:**  
+  - Submission applies these mechanistic analyses specifically to detokenization and word-level composition.
+- **Independent Assessment:**  
+  - Prior work has mapped FFN/attention functions, but not specifically for detokenization.
+- **Substantive vs. Superficial:**  
+  - This is a targeted application of existing methods, representing an incremental but meaningful extension.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  - The field of LLM interpretability, probing, and tokenization is highly active and rapidly evolving. Many recent papers (2022–2024) address related questions.
+- **Recent Surveys/Literature Reviews:**  
+  - Surveys on LLM interpretability and tokenization (e.g., "A Survey of Tokenization Algorithms for Neural Language Models," 2023) provide overviews of the state of the art.
+- **Trends:**  
+  - Movement from surface-level probing to mechanistic, layer-wise analysis.
+  - Increasing focus on practical interventions (e.g., efficiency, robustness, vocabulary expansion).
+  - Growing recognition of the limitations of static tokenizers and the potential for dynamic or post-hoc vocabulary manipulation.
+- **Incremental Advances:**  
+  - Many advances are incremental, building on probing or mechanistic analysis with new metrics, broader empirical scope, or practical applications.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The claim of being the "first" to provide evidence for intrinsic detokenization is somewhat overstated; prior work (Feucht et al., 2024) has addressed similar questions with different methods.
+  - The practical vocabulary expansion method is more clearly novel.
+- **Alignment of Claimed Novelty with Evidence:**  
+  - The submission's empirical and mechanistic analyses are well-supported, but the conceptual novelty is incremental.
+- **Empirical Improvements:**  
+  - Improvements in model performance after vocabulary expansion may be due to reduced input length or computational artifacts, not necessarily deeper conceptual advances.
+- **Terminology Differences:**  
+  - The use of "inner lexicon" and "detokenization" may obscure similarities with prior work on implicit vocabulary and word-level representation.
+- **Routine Extensions:**  
+  - The application of FFN/attention analysis to detokenization is a logical extension of prior mechanistic work.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Potentially Relevant Work Not Addressed:**  
+  - Some recent works on dynamic tokenization, vocabulary adaptation, or compositionality in LLMs may be relevant but are not cited.
+  - Literature on subword composition in multilingual or morphologically rich languages could provide additional context.
+- **Areas for Additional Comparison:**  
+  - Direct empirical comparison with Feucht et al. (2024) on implicit vocabulary enumeration.
+  - Comparison with dynamic or adaptive tokenization methods.
+- **Incomplete/Misleading Characterizations:**  
+  - The submission may understate the conceptual overlap with prior probing studies.
+  - The limitations of prior work are sometimes framed as categorical (e.g., "did not address detokenization") when in fact related questions were addressed with different methods.
+- **Citation Practices:**  
+  - The submission cites relevant work but could provide more nuanced discussion of methodological and conceptual overlaps.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - The practical, finetuning-free vocabulary expansion method is a novel contribution not present in prior work.
+  - The systematic, layer-wise mapping of detokenization via decoding and FFN/attention analysis is a meaningful methodological extension.
+- **Main Relationships to Existing Research:**
+  - The submission builds directly on probing and mechanistic interpretability work, especially Feucht et al. (2024) and Geva et al. (2022).
+  - Its conceptual claims about an "inner lexicon" and intrinsic detokenization are incremental extensions of prior findings.
+- **Strongest Differentiation:**
+  - Practical vocabulary expansion without finetuning.
+  - Comprehensive robustness analysis to tokenization artifacts.
+- **Weakest Differentiation:**
+  - Conceptual claim of intrinsic detokenization; prior work has addressed similar questions with different methods.
+- **Discrepancies Between Author Characterizations and Independent Assessment:**
+  - The claim of being "first" to provide evidence for intrinsic detokenization is somewhat overstated.
+  - The submission's practical intervention is more clearly novel than its conceptual findings.
+
+---
+
+**These observations are intended to inform reviewers' independent judgment regarding the submission's novelty and relationship to prior work.**

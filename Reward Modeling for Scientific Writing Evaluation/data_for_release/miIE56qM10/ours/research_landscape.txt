@@ -1,0 +1,188 @@
+Below is a comprehensive research landscape analysis based on the provided submission and related papers.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the following methodological themes emerge:
+
+- **Uncertainty Estimation via Model Internals**: Probing LLM hidden states (e.g., Semantic Entropy Probes, probing estimators) to extract uncertainty or hallucination risk.
+- **Learnable/Trainable Scoring Functions**: Supervised or semi-supervised models (e.g., LARS, MARS, Corrector in the submission) that learn to aggregate or correct uncertainty scores.
+- **Semantic and Relevance-based Reweighting**: Methods that assign greater weight to semantically important tokens or sentences (e.g., SAR, MARS, WSE).
+- **Black-box and Query-based Approaches**: Techniques that estimate uncertainty without access to model internals, often via prompt perturbations, rephrasing, or output diversity (e.g., rephrased queries, semantic dispersion, stable explanations).
+- **Hybrid and Ensemble Methods**: Combining multiple uncertainty sources or scores (e.g., LM-Polygraph, HUQ, submission’s Corrector).
+- **Benchmarking and Engineering Frameworks**: Systematic evaluation and integration of multiple UE methods (e.g., LM-Polygraph, conformal prediction-based benchmarking).
+
+### Method Clusters
+
+- **Cluster 1: Probing and Internal State Analysis**
+  - *Papers*: Semantic Entropy Probes, LLM Internal States Reveal Hallucination Risk, LM-Polygraph
+  - *Description*: Use of linear or non-linear probes on LLM hidden states to estimate uncertainty or hallucination risk, often with minimal computational overhead.
+  - *Trends*: Move toward cost-efficient, generalizable probes; focus on extracting semantic uncertainty from internal activations.
+
+- **Cluster 2: Learnable/Trainable Scoring Functions**
+  - *Papers*: LARS, MARS, Submission Paper (Corrector), WSE
+  - *Description*: Supervised or semi-supervised models that learn to aggregate token-level probabilities or assign semantic importance, often outperforming heuristic or entropy-based methods.
+  - *Trends*: Increasing sophistication in modeling token dependencies and semantic relevance; shift from hand-crafted to data-driven scoring.
+
+- **Cluster 3: Semantic and Relevance-based Reweighting**
+  - *Papers*: SAR (two versions), MARS, WSE
+  - *Description*: Methods that explicitly reweight uncertainty contributions based on semantic relevance at token or sentence level.
+  - *Trends*: Recognition of generative inequality and the need to focus on meaningful content for reliable uncertainty estimation.
+
+- **Cluster 4: Black-box and Output-based Approaches**
+  - *Papers*: Just rephrase it!, Generating with Confidence, Large Language Model Confidence Estimation via Black-Box Access, Cycles of Thought, Can LLMs Express Their Uncertainty?
+  - *Description*: Estimating uncertainty via output diversity, prompt perturbations, or explanation stability, without requiring model internals.
+  - *Trends*: Emphasis on practical applicability to closed-source models; leveraging output variability and consistency as uncertainty signals.
+
+- **Cluster 5: Hybrid/Ensemble and Benchmarking Frameworks**
+  - *Papers*: LM-Polygraph, HUQ, Benchmarking LLMs via Uncertainty Quantification, Submission Paper
+  - *Description*: Combining multiple uncertainty sources (e.g., epistemic and aleatoric), integrating various methods, and providing unified evaluation platforms.
+  - *Trends*: Move toward comprehensive, extensible frameworks for both research and engineering use.
+
+### Methodological Trends and Relationships
+
+- **Orthogonality and Complementarity**: The submission paper’s Corrector is explicitly designed to be orthogonal and complementary to existing methods, indicating a trend toward ensemble and hybrid approaches.
+- **From Heuristics to Learning**: There is a clear evolution from heuristic (e.g., entropy-based) to learnable, data-driven uncertainty estimation.
+- **Semantic Awareness**: Increasing focus on semantic similarity, relevance, and meaning-aware scoring (MARS, KLE, SAR, WSE).
+- **Black-box Applicability**: Growing interest in methods that work with closed-source or API-only LLMs, using output-based signals.
+- **Generalizability and Robustness**: Many methods emphasize robustness to out-of-distribution data and generalization across tasks and models.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Uncertainty Estimation in LLMs**: Central to nearly all papers, with subproblems including calibration, ranking, and robustness.
+- **Hallucination Detection**: Identifying when LLMs generate factually incorrect or unfaithful outputs.
+- **Overconfidence and Underconfidence**: Addressing LLMs’ tendency to be over- or under-confident, especially in open-ended or high-stakes tasks.
+- **Generative Inequality**: Recognizing that not all tokens or sentences contribute equally to uncertainty (SAR, WSE).
+- **Black-box/Closed-source Model Limitations**: Estimating uncertainty without access to model internals.
+- **Selective Generation and Failure Prediction**: Deciding when to trust or reject LLM outputs based on uncertainty.
+- **Benchmarking and Comparability**: Need for unified evaluation and comparison of UE methods.
+
+### Approaches to Similar Problems
+
+- **Uncertainty Estimation**: Tackled via internal probes (SEPs, LLM Internal States), learnable scoring (LARS, MARS), semantic reweighting (SAR, WSE), and black-box methods (rephrased queries, semantic dispersion).
+- **Hallucination Detection**: Addressed by semantic entropy probes, kernel-based entropy (KLE), and probing internal states.
+- **Calibration and Confidence Elicitation**: Explored via verbalized vs. probabilistic confidence, prompting strategies, and output consistency.
+- **Generative Inequality**: SAR and WSE directly address the unequal contribution of tokens/sentences to uncertainty.
+- **Black-box Constraints**: Methods like rephrased queries, semantic dispersion, and stable explanations are designed for settings where model internals are inaccessible.
+
+### Patterns in Problem Formulation
+
+- **From Token-level to Sequence-level**: Shift from token-level uncertainty to sequence- and meaning-aware approaches.
+- **From Model-centric to Output-centric**: Increasing focus on output-based uncertainty estimation, especially for closed-source models.
+- **From Single-task to Multi-domain**: Many methods are evaluated across diverse tasks and datasets, emphasizing generalizability.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Question Answering (QA)**: TriviaQA, CoQA, SciQ, MedQA, MedMCQA, PubMedQA, Natural Questions, and others.
+- **Medical QA**: COVID-QA, Medical Meadow MedQA, MedQuAD.
+- **Commonsense and Reasoning**: CommonsenseQA, MMLU, TruthfulQA.
+- **Translation and Summarization**: WMT 2023, MQM-annotated datasets.
+- **General NLG Tasks**: Over 700 datasets in some studies, spanning 15+ NLG tasks.
+
+### Evaluation Metrics
+
+- **Uncertainty Estimation Metrics**: AUROC, AUPR, AURC, Brier score, Expected Calibration Error (ECE), semantic/relative uncertainty ranking.
+- **Task Performance**: Accuracy, BLEU, TER, COMET, human evaluation.
+- **Calibration and Correlation**: Calibration error, Spearman/Kendall correlation between confidence types.
+- **Computational Cost**: Inference cost, especially for methods aiming for efficiency.
+
+### Patterns in Performance Measurement
+
+- **Relative vs. Absolute Uncertainty**: Both ranking-based and absolute performance metrics are used.
+- **Calibration and Selective Prediction**: Emphasis on calibration (ECE, Brier score) and selective prediction (AURC, AUARC).
+- **Generalization and Robustness**: Many papers report performance on out-of-distribution data or across multiple LLMs and domains.
+- **Cost-efficiency**: Some methods (e.g., SEPs) highlight computational efficiency as a key metric.
+
+### Comparison of Evaluation Approaches
+
+- **Diversity of Datasets**: While QA and medical QA are common, some works extend to translation, summarization, and ambiguous tasks (toxicity detection).
+- **Unified Benchmarks**: LM-Polygraph and conformal prediction-based benchmarking aim to standardize evaluation.
+- **Human-in-the-loop**: Some works include human evaluation, especially in translation and post-editing.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Semantic and Relevance-based Uncertainty Estimation
+- *Papers*: SAR (both versions), MARS, WSE, KLE
+- *Characteristics*: Focus on semantic importance, token/sentence relevance, and fine-grained uncertainty allocation.
+- *Relationships*: These methods often build on or extend each other (e.g., SAR and WSE both address generative inequality).
+
+### Cluster 2: Probing and Internal State Analysis
+- *Papers*: Semantic Entropy Probes, LLM Internal States Reveal Hallucination Risk, LM-Polygraph
+- *Characteristics*: Use of model internals for efficient, generalizable uncertainty or hallucination risk estimation.
+- *Relationships*: LM-Polygraph integrates multiple probing-based and other UE methods.
+
+### Cluster 3: Learnable/Trainable Scoring Functions
+- *Papers*: LARS, MARS, Submission Paper (Corrector)
+- *Characteristics*: Supervised learning of uncertainty scoring, often outperforming heuristic methods.
+- *Relationships*: The submission’s Corrector is designed to be orthogonal and complementary, suggesting synergy with these methods.
+
+### Cluster 4: Black-box and Output-based Approaches
+- *Papers*: Just rephrase it!, Generating with Confidence, Large Language Model Confidence Estimation via Black-Box Access, Cycles of Thought, Can LLMs Express Their Uncertainty?
+- *Characteristics*: Output-based uncertainty estimation, often using prompt perturbations, output diversity, or explanation stability.
+- *Relationships*: These methods are particularly relevant for closed-source or API-only LLMs.
+
+### Cluster 5: Benchmarking, Engineering, and Hybrid Frameworks
+- *Papers*: LM-Polygraph, Benchmarking LLMs via Uncertainty Quantification, HUQ, Submission Paper
+- *Characteristics*: Integration and comparison of multiple UE methods, hybridization of uncertainty sources, and engineering for practical deployment.
+- *Relationships*: The submission paper’s approach fits here, as it combines external correction with existing methods.
+
+### Cluster 6: Application-specific and Review Papers
+- *Papers*: A Review of Uncertainty Estimation in Medical Imaging, Hybrid Uncertainty Quantification for Selective Text Classification, Translation Quality Error Detection, MT Post-editing
+- *Characteristics*: Application of UE methods to specific domains (medical, translation, toxicity detection), or comprehensive reviews.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **From Heuristic to Learnable**: Early methods relied on entropy or probability heuristics; recent work (LARS, MARS, Corrector) uses supervised learning to capture complex dependencies.
+- **From Token-level to Semantic-level**: Shift from treating all tokens equally to meaning-aware and relevance-based scoring (SAR, MARS, WSE, KLE).
+- **From White-box to Black-box**: As LLMs become more closed, black-box methods (rephrased queries, semantic dispersion, stable explanations) gain prominence.
+- **From Single-source to Hybrid/Ensemble**: Combining multiple uncertainty sources (LM-Polygraph, HUQ, submission’s Corrector) for improved robustness and generalizability.
+- **From Research to Engineering**: Move toward practical frameworks and benchmarks (LM-Polygraph, conformal prediction benchmarking) for real-world deployment.
+
+### Building Blocks and Extensions
+
+- **Semantic Entropy → KLE**: KLE generalizes semantic entropy by incorporating fine-grained semantic similarity.
+- **SAR → WSE**: WSE extends SAR’s relevance-based reweighting to both word and sequence levels, with application to medical QA.
+- **Entropy-based → Learnable Scoring (LARS, MARS)**: LARS and MARS replace hand-crafted scoring with supervised learning, capturing richer dependencies.
+- **Probing → External Correction (Submission Paper)**: The submission’s Corrector augments existing methods (e.g., SAR, semantic entropy) with an external, globally-informed correction.
+
+### Competing and Complementary Approaches
+
+- **Competing**: Heuristic vs. learnable scoring; white-box vs. black-box methods; semantic vs. lexical uncertainty estimation.
+- **Complementary**: The submission paper’s Corrector is explicitly designed to be complementary to existing methods, suggesting ensemble approaches are favored for robustness.
+- **Hybridization**: Methods like HUQ and LM-Polygraph combine multiple uncertainty sources, reflecting a trend toward hybrid solutions.
+
+---
+
+# **Summary Table: Key Clusters and Relationships**
+
+| Cluster | Methods/Papers | Key Features | Evolution/Relationship |
+|---------|---------------|--------------|-----------------------|
+| Semantic/Relevance-based | SAR, MARS, WSE, KLE | Token/sentence/meaning-aware reweighting | SAR → WSE; MARS extends to semantic importance |
+| Probing/Internal State | SEPs, LLM Internal States, LM-Polygraph | Probing hidden states for uncertainty/hallucination | LM-Polygraph integrates multiple probes |
+| Learnable Scoring | LARS, MARS, Submission (Corrector) | Supervised learning of uncertainty scores | LARS/MARS → Corrector as external correction |
+| Black-box/Output-based | Rephrased queries, Semantic dispersion, Stable explanations, Black-box confidence | Output diversity, prompt perturbations, explanation stability | Output-based methods for closed-source LLMs |
+| Hybrid/Benchmarking | LM-Polygraph, HUQ, Benchmarking LLMs, Submission | Ensemble/hybrid methods, unified evaluation | Submission’s Corrector is orthogonal/complementary |
+| Application/Review | Medical imaging review, HUQ (toxicity), Translation/MT post-editing | Domain-specific applications, reviews | Application of general UE methods to new domains |
+
+---
+
+# **Conclusion**
+
+The research landscape in LLM uncertainty estimation is rapidly evolving from heuristic, token-level, and model-internal approaches to more sophisticated, learnable, semantic-aware, and hybrid methods. There is a clear trend toward combining multiple uncertainty sources, improving robustness and generalizability, and developing practical frameworks for both research and deployment. The submission paper fits at the intersection of these trends, proposing an external, globally-informed correction method that is complementary to existing approaches, and demonstrating robust improvements across diverse settings. This reflects a broader movement in the field toward ensemble, hybrid, and meaning-aware uncertainty estimation for trustworthy and reliable LLM deployment.

@@ -1,0 +1,185 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+- The submission, "Persistent Similarity in Internal Representations of Large Language Models," is positioned at the intersection of *topological data analysis (TDA) of neural representations* and *pruning/redundancy analysis in LLMs*.
+- It introduces a *zigzag persistence* framework and a new *persistence similarity* metric to analyze the evolution of topological features across LLM layers, and applies this metric as a criterion for layer pruning.
+
+**Most Closely Related Prior Works:**
+- **Topological Analysis:**  
+  - *On Characterizing the Evolution of Embedding Space of Neural Networks using Algebraic Topology* (Suresh et al., 2023): Uses Betti numbers to analyze representation evolution.
+  - *Topological Uncertainty: Monitoring trained neural networks through persistence of activation graphs* (Rieck et al., 2023): Applies TDA for uncertainty monitoring.
+  - *Stable Signatures for Dynamic Graphs and Dynamic Metric Spaces via Zigzag Persistence* (Kim & Mémoli, 2017): Provides the mathematical foundation for zigzag persistence.
+- **Pruning/Redundancy in LLMs:**
+  - *ShortGPT: Layers in Large Language Models are More Redundant Than You Expect* (Bai et al., 2024): Studies redundancy and pruning in LLMs.
+  - *LLM-Pruner: On the Structural Pruning of Large Language Models* (Ma et al., 2023): Proposes structural pruning methods.
+  - *What Matters in Transformers? Not All Attention is Needed* (Fan et al., 2020): Explores importance of transformer components for pruning.
+
+**Relation to Methodological Clusters:**
+- The submission extends the *topological analysis* cluster by moving from static (Betti numbers, persistent homology) to *dynamic, trajectory-based* (zigzag persistence) analysis.
+- It complements the *pruning/redundancy* cluster by introducing a *topologically-motivated* pruning criterion, as opposed to functional or similarity-based metrics (e.g., Block Influence, Shapley value, cosine similarity).
+
+**Place in Problem Space and Evaluation:**
+- Addresses *interpretability* and *transparency* of LLMs via topological analysis.
+- Tackles *model compression* by proposing a new criterion for pruning.
+- Evaluates both *topological metrics* (persistence similarity) and *pruning effectiveness* (performance retention), in line with field standards.
+
+**Independent Assessment:**
+- The submission is a direct extension of TDA methods to LLMs, with a novel focus on *dynamic* (across-layer) topological evolution and its use for *pruning*.
+- The closest prior works are those that use TDA for representation analysis (Suresh et al., Rieck et al.) and those that use similarity/importance metrics for pruning (Bai et al., Ma et al.).
+- The use of zigzag persistence is a technical advance over prior static TDA approaches, but the conceptual leap is incremental within the TDA cluster.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+- The authors cite prior pruning works (ShortGPT, LLM-Pruner, What Matters in Transformers, The Unreasonable Ineffectiveness of the Deeper Layers) primarily to motivate the need for efficient LLMs and to contextualize the importance of pruning.
+- Topological analysis works (Suresh et al., Rieck et al., Kim & Mémoli) are cited to establish the foundation for TDA and zigzag persistence.
+
+**Accuracy and Balance:**
+- *ShortGPT, LLM-Pruner, What Matters in Transformers*: Cited as evidence of redundancy and the need for pruning, with no direct technical comparison to the submission’s method.
+- *Suresh et al. (2023)*: Cited for Betti number stability and depth trends, but the submission claims to go beyond by tracking *trajectories* of topological features.
+- *Kim & Mémoli (2017)*: Cited as the mathematical basis for zigzag persistence, which the submission adapts to LLM representations.
+
+**Discrepancies and Rhetoric:**
+- The submission does not directly compare its *persistence similarity* metric to other similarity or importance metrics (e.g., CKA, NNTS, Shapley value), despite their relevance.
+- The claim that prior TDA methods cannot track *dynamic changes* across layers is somewhat overstated; Suresh et al. and others do analyze evolution, though perhaps not with zigzag persistence.
+- The use of "universal topological behaviors" is asserted but not clearly contrasted with prior findings (e.g., Betti number universality).
+
+**Substantiation of Claimed Improvements:**
+- The claim that persistence similarity enables effective pruning is supported by empirical results, but the comparison is only to "state-of-the-art" methods in aggregate, not to specific topological or similarity-based pruning criteria.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Contribution 1: Zigzag Persistence Framework for LLMs
+- **Most Similar Prior Work:**  
+  - *Stable Signatures for Dynamic Graphs and Dynamic Metric Spaces via Zigzag Persistence* (Kim & Mémoli, 2017): Mathematical foundation.
+  - *On Characterizing the Evolution of Embedding Space of Neural Networks using Algebraic Topology* (Suresh et al., 2023): Empirical TDA of neural representations.
+- **Claimed Difference:**  
+  - First application of zigzag persistence to LLM internal representations.
+- **Independent Assessment:**  
+  - Prior work (Kim & Mémoli) is mathematical; Suresh et al. use Betti numbers (static TDA) but do not use zigzag persistence.
+  - The submission’s use of zigzag persistence for *layerwise* analysis is a technical extension, but the conceptual advance is incremental (applying an existing TDA tool to a new domain).
+- **Substantive vs. Superficial:**  
+  - The technical adaptation is non-trivial, but the novelty is primarily in application rather than in the underlying mathematics.
+
+## Contribution 2: Persistence Similarity Metric
+- **Most Similar Prior Work:**  
+  - *Similarity of Neural Network Models: A Survey of Functional and Representational Measures* (Klabunde et al., 2023): Surveys similarity metrics.
+  - *Inter-layer Information Similarity Assessment of Deep Neural Networks Via Topological Similarity and Persistence Analysis of Data Neighbour Dynamics* (not cited): Uses topological similarity for inter-layer analysis.
+- **Claimed Difference:**  
+  - Persistence similarity tracks the *full trajectory* of topological features across layers, unlike prior static or pairwise metrics.
+- **Independent Assessment:**  
+  - Prior metrics (NNTS, CKA, cosine) do not track *trajectories*; the submission’s metric is a genuine extension in this regard.
+  - However, the omission of direct comparison to *Inter-layer Information Similarity Assessment...* is a gap, as that work also uses TDA for inter-layer similarity.
+- **Substantive vs. Superficial:**  
+  - The trajectory-based aspect is a substantive technical difference, but the conceptual novelty is moderate (extension of TDA similarity to dynamic setting).
+
+## Contribution 3: Pruning via Persistence Similarity
+- **Most Similar Prior Work:**  
+  - *ShortGPT*, *LLM-Pruner*, *What Matters in Transformers*: Use functional or similarity-based metrics for pruning.
+  - *Inter-layer Information Similarity Assessment...* (not cited): Uses topological similarity for pruning.
+- **Claimed Difference:**  
+  - Persistence similarity as a *topological* pruning criterion, achieving performance comparable to state-of-the-art.
+- **Independent Assessment:**  
+  - The use of a *trajectory-based* topological metric for pruning is new within the cited literature, but not entirely unprecedented in the broader TDA literature (see omitted work).
+  - The empirical results show comparable performance, but it is unclear if the improvement is due to the metric itself or to implementation details (e.g., choice of filtration, dataset, retraining).
+- **Substantive vs. Superficial:**  
+  - The approach is a meaningful addition to the set of pruning criteria, but the novelty is incremental rather than transformative.
+
+## Contribution 4: Universal Topological Behaviors
+- **Most Similar Prior Work:**  
+  - *On Characterizing the Evolution of Embedding Space...* (Suresh et al., 2023): Observes Betti number stability across datasets and architectures.
+- **Claimed Difference:**  
+  - Universality is demonstrated using persistence similarity, not just Betti numbers.
+- **Independent Assessment:**  
+  - The claim is an extension of prior observations, using a new metric; the underlying phenomenon (universality) is not new, but the method of demonstration is.
+- **Substantive vs. Superficial:**  
+  - The difference is primarily in the metric used, not in the phenomenon observed.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  - The field of TDA for neural representations is *emerging but rapidly maturing*, with increasing sophistication in both theory and application.
+  - Pruning and redundancy analysis in LLMs is a *highly active* area, with frequent incremental advances and a focus on practical impact.
+
+- **Recent Surveys:**  
+  - *Beyond Efficiency: A Systematic Survey of Resource-Efficient Large Language Models* (Men et al., 2024): Comprehensive overview of pruning, quantization, and efficiency methods.
+  - *Similarity of Neural Network Models: A Survey of Functional and Representational Measures* (Klabunde et al., 2023): Surveys similarity metrics, including topological ones.
+
+- **Trends:**  
+  - Movement from static to dynamic/topological analysis.
+  - Increasing integration of interpretability and efficiency.
+  - Standardization of evaluation and benchmarking.
+
+- **Incremental Advances:**  
+  - Many advances are *incremental* (new metrics, new applications of existing tools), with occasional conceptual leaps (e.g., new TDA frameworks).
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The claim of being the *first* to track dynamic topological changes across layers is somewhat overstated; prior work has analyzed evolution, though not with zigzag persistence.
+  - The omission of *Inter-layer Information Similarity Assessment...* (which uses TDA for inter-layer similarity and pruning) is a notable gap.
+
+- **Alignment of Claims and Evidence:**  
+  - The technical adaptation of zigzag persistence is well-motivated, but the conceptual novelty is moderate.
+  - Empirical improvements in pruning may be due to implementation details (e.g., choice of filtration, retraining) rather than the metric itself.
+
+- **Terminology Differences:**  
+  - The use of "persistence similarity" may obscure similarities to other topological similarity metrics (e.g., NNTS, Betti trajectory analysis).
+
+- **Routine Extensions:**  
+  - Applying zigzag persistence to LLMs is a logical extension of prior TDA work, rather than a fundamentally new direction.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted Relevant Work:**  
+  - *Inter-layer Information Similarity Assessment of Deep Neural Networks Via Topological Similarity and Persistence Analysis of Data Neighbour Dynamics*: Uses TDA for inter-layer similarity and pruning; should be directly compared.
+  - *How Gender Debiasing Affects Internal Model Representations, and Why It Matters*: Relevant for interpretability and topological analysis of internal representations.
+
+- **Additional Comparisons Needed:**  
+  - Direct comparison to other similarity metrics (CKA, NNTS, cosine) for pruning effectiveness.
+  - More detailed analysis of how persistence similarity correlates with functional importance.
+
+- **Potentially Misleading Characterizations:**  
+  - The claim that prior TDA methods cannot track dynamic changes is somewhat misleading; the difference is in the *method* (zigzag persistence) rather than the *capability*.
+
+- **Exaggerated Limitations of Prior Work:**  
+  - The limitations of Betti number-based analysis are somewhat overstated; prior work has tracked evolution, though perhaps not as comprehensively.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - The use of *zigzag persistence* and *persistence similarity* for dynamic, trajectory-based analysis of LLM representations is a technical extension of prior TDA methods.
+  - Application of this metric as a *pruning criterion* is a novel, though incremental, addition to the set of available methods.
+
+- **Main Relationships to Existing Research:**
+  - The submission builds directly on the TDA cluster, extending from static to dynamic analysis.
+  - It complements, rather than replaces, existing pruning and similarity metrics.
+
+- **Strongest Differentiation:**
+  - The *trajectory-based* aspect of persistence similarity is the most distinctive technical contribution.
+
+- **Weakest Differentiation:**
+  - The claim of universality of topological behaviors is an extension of prior findings, not a fundamentally new observation.
+  - The conceptual novelty of applying zigzag persistence is moderate, as it is a logical extension of prior TDA work.
+
+- **Discrepancies Between Author Characterizations and Independent Assessment:**
+  - The novelty of tracking dynamic changes is somewhat overstated; prior work has addressed similar questions with different tools.
+  - The omission of directly relevant TDA-based similarity/pruning work (e.g., *Inter-layer Information Similarity Assessment...*) is a gap in the related work discussion.
+
+---
+
+**Overall, the submission offers a technically meaningful, but conceptually incremental, extension of TDA methods to LLMs, with a new trajectory-based metric and its application to pruning. The main novelty lies in the adaptation and application of zigzag persistence, but the field context suggests that such extensions are a natural progression. The omission of some directly relevant prior work and the somewhat overstated claims of novelty should be considered by reviewers.**

@@ -1,0 +1,205 @@
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the provided papers, several methodological themes emerge, particularly around **continual pre-training**, **domain adaptation**, **efficient data selection**, and **instruction tuning**. The landscape can be grouped into the following clusters:
+
+#### **Cluster 1: Continual Pre-training and Domain Adaptation**
+- **Core Idea:** Adapt general-purpose LLMs to new domains (medical, legal, financial, e-commerce, travel, etc.) by further pre-training on domain-specific corpora, often with strategies to mitigate catastrophic forgetting and instability.
+- **Key Methods:**
+  - Multi-epoch training on high-quality data subsets (Submission, Related 1, 7, 19)
+  - Data mixture strategies to match pre-training distributions (Submission, Related 1, 16)
+  - Learning rate scheduling and replay (8)
+  - Model merging to balance domain and general capabilities (10, 14)
+  - Task-specific pre-training objectives (18)
+  - Catastrophic forgetting mitigation (4, 10)
+- **Papers:** Submission, 1, 4, 5, 7, 8, 10, 16, 17, 18, 19, 20
+
+#### **Cluster 2: Data Selection and Engineering**
+- **Core Idea:** Improve efficiency and effectiveness of pre-training or instruction tuning by selecting or engineering high-quality, diverse, and relevant data.
+- **Key Methods:**
+  - Automatic data selection based on complexity, quality, and diversity (12)
+  - High-quality token selection for pre-training (Submission, 1, 7)
+  - Data-centric knowledge injection (2, 9)
+  - Data mixture and balance for long-context scaling (20)
+- **Papers:** Submission, 1, 2, 7, 9, 12, 19, 20
+
+#### **Cluster 3: Instruction Tuning and Alignment**
+- **Core Idea:** Align LLMs to follow domain-specific or general instructions using curated or automatically generated instruction datasets.
+- **Key Methods:**
+  - Large-scale instruction tuning datasets (2, 3, 4, 9, 11, 13)
+  - Semi-automated or machine-generated instruction data (3, 12)
+  - Mixing general and domain-specific instructions (11)
+  - Direct Preference Optimization (12)
+- **Papers:** 2, 3, 4, 9, 11, 12, 13
+
+#### **Cluster 4: Efficient and Resource-Constrained Adaptation**
+- **Core Idea:** Enable domain adaptation or alignment with minimal compute, data, or privacy risk.
+- **Key Methods:**
+  - Adapter-based test-time adaptation (6)
+  - Quantization and lightweight models (14)
+  - Efficient data selection and training (7, 12)
+  - Post-hoc adaptation without full model access (6)
+- **Papers:** 6, 7, 12, 14
+
+#### **Cluster 5: Scaling and Specialized Architectures**
+- **Core Idea:** Scale LLMs to larger parameter sizes or longer contexts, and adapt architectures for new capabilities.
+- **Key Methods:**
+  - Scaling to 70B+ parameters (5, 14)
+  - Long-context adaptation (20)
+  - Mixture-of-Experts for efficient tuning (19)
+  - Specialized pre-training objectives (18)
+- **Papers:** 5, 14, 19, 20
+
+### Methodological Trends and Relationships
+
+- **Continual pre-training** is the dominant paradigm for domain adaptation, with increasing focus on efficiency (compute, data, and time).
+- **Data selection/engineering** is recognized as a critical lever for both pre-training and instruction tuning, with automatic and principled approaches gaining traction.
+- **Instruction tuning** is evolving from manual curation to semi-automated and large-scale generation, often leveraging LLMs themselves for data creation.
+- **Mitigating catastrophic forgetting** and **stability gaps** are recurring challenges, addressed via data mixture, model merging, and learning rate strategies.
+- **Resource efficiency** (adapters, quantization, selective fine-tuning) is a growing concern, especially for real-world and privacy-sensitive applications.
+- **Scaling** (both in model size and context length) is pursued in tandem with efficient adaptation, with open-source releases closing the gap to proprietary models.
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Domain Adaptation of LLMs**
+   - Adapting general LLMs to specialized domains (medical, legal, financial, e-commerce, travel, structured knowledge).
+   - Addressed by: Submission, 1, 2, 4, 5, 7, 9, 10, 14, 16, 17, 18, 20
+
+2. **Efficiency and Stability in Continual Pre-training**
+   - Reducing compute/data cost, mitigating instability (stability gap), and avoiding catastrophic forgetting.
+   - Addressed by: Submission, 1, 4, 7, 8, 10, 16, 19, 20
+
+3. **Instruction Following and Alignment**
+   - Improving LLMs’ ability to follow instructions, especially in domain-specific contexts.
+   - Addressed by: 2, 3, 4, 9, 11, 12, 13
+
+4. **Data Scarcity and Quality**
+   - Selecting or generating high-quality, diverse, and relevant data for pre-training or tuning.
+   - Addressed by: Submission, 1, 2, 3, 7, 9, 12, 13, 19, 20
+
+5. **Resource Constraints and Privacy**
+   - Adapting LLMs efficiently (compute, memory, cost) and with privacy guarantees.
+   - Addressed by: 6, 7, 12, 14
+
+6. **Scaling Model Capabilities**
+   - Extending LLMs to larger parameter sizes, longer contexts, and new modalities (structured data).
+   - Addressed by: 5, 11, 14, 19, 20
+
+### Approaches to Similar Problems
+
+- **Domain adaptation** is tackled via continual pre-training, data-centric approaches, and instruction tuning, with increasing sophistication in data selection and mixture strategies.
+- **Stability and forgetting** are addressed by learning rate schedules, replay, data mixture, and model merging.
+- **Instruction alignment** leverages both human and machine-generated data, with a trend toward automation and efficiency.
+- **Data scarcity** is mitigated by automatic data selection, synthetic data generation, and leveraging existing corpora.
+- **Resource constraints** are addressed by adapters, quantization, and selective fine-tuning, often enabling adaptation without full model retraining or access.
+
+### Patterns in Problem Formulation
+
+- Problems are increasingly formulated in terms of **efficiency** (compute, data, time), **robustness** (stability, forgetting), and **scalability** (model size, context length).
+- There is a shift from “can we adapt LLMs to new domains?” to “how can we do so efficiently, robustly, and at scale, while preserving general capabilities?”
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Medical Domain:** MedQA, MedMCQA, PubMedQA, MMLU-Medical, MIBE, USMLE, PubMed Central, medical textbooks, MedInstruct-test, EcomInstruct, etc.
+- **Financial Domain:** SEC data, financial benchmarks, Japanese financial datasets.
+- **General Benchmarks:** MMLU, TruthfulQA, The Pile, MT-Bench, AlpacaEval, Open LLM Leaderboard.
+- **Structured Knowledge:** SKG datasets (18 tasks), TableLlama, Flan-UL2.
+- **Other Domains:** E-commerce, travel (Fliggy APP), C4, P3 datasets.
+
+### Evaluation Metrics
+
+- **Task Performance:** Accuracy, average score, perplexity, zero/few-shot accuracy, human evaluation (correctness, helpfulness), truthfulness, calibration.
+- **Resource Metrics:** Compute/budget usage, GPU memory, training budget.
+- **Relative Metrics:** Performance gain over baselines, ratio to best model, improvement over previous methods.
+- **Specialized Metrics:** Needle-in-a-Haystack accuracy (long-context), UCTR/PCTR (click-through rates), overfitting/multi-epoch degradation.
+
+### Patterns in Performance Measurement
+
+- **Domain-specific benchmarks** are the gold standard for evaluating adaptation (e.g., medical QA for medical LLMs).
+- **General task benchmarks** are used to assess retention of broad capabilities post-adaptation.
+- **Resource and efficiency metrics** are increasingly reported, reflecting the field’s focus on practical deployment.
+- **Human evaluation** is used for instruction-following and conversational models.
+- **Relative improvement** over baselines and state-of-the-art is a common reporting standard.
+
+### Comparison of Evaluation Approaches
+
+- **Medical LLMs**: Rely on a suite of medical QA and reasoning benchmarks, often comparing to ChatGPT, GPT-4, and open-source baselines.
+- **Financial/E-commerce/Travel**: Use domain-specific benchmarks and, where possible, real-world business metrics (e.g., click-through rates).
+- **Instruction tuning/alignment**: Use both automatic (MT-Bench, AlpacaEval) and human evaluation.
+- **Long-context and scaling**: Use synthetic tasks (Needle-in-a-Haystack) and perplexity.
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster A: **Efficient Continual Pre-training and Domain Adaptation**
+- **Papers:** Submission, 1, 4, 5, 7, 8, 10, 16, 17, 18, 19, 20
+- **Characteristics:** Focus on continual pre-training, domain adaptation, stability/forgetting mitigation, and efficiency. Includes both medical and non-medical domains.
+- **Relationships:** The submission and Related 1 are nearly identical, forming the core of this cluster. Papers 4, 5, 7, 10, 16, 17, 18, 19, and 20 extend these ideas to other domains, model sizes, or specific technical challenges (e.g., long context, token crisis).
+
+### Cluster B: **Medical LLMs and Instruction Tuning**
+- **Papers:** 2, 3, 4, 5, 9, 13, 14
+- **Characteristics:** Building and evaluating open-source medical LLMs, often with large-scale domain-specific pre-training and instruction tuning. Emphasis on dataset creation, instruction alignment, and multilingual capabilities.
+- **Relationships:** Papers 2, 3, 4, 5, 9, 13, and 14 are tightly linked by their focus on medical LLMs, with some overlap with Cluster A (e.g., 4, 5).
+
+### Cluster C: **Data Selection, Engineering, and Alignment**
+- **Papers:** Submission, 1, 2, 3, 7, 9, 12, 19, 20
+- **Characteristics:** Emphasis on data quality, selection, and mixture for both pre-training and instruction tuning. Includes automatic data selection (12), high-quality token selection (Submission, 1, 7), and data-centric knowledge injection (2, 9).
+- **Relationships:** This cluster overlaps with both A and B, as data selection is a cross-cutting concern.
+
+### Cluster D: **Efficient Adaptation and Resource-Constrained Methods**
+- **Papers:** 6, 7, 12, 14
+- **Characteristics:** Focus on adaptation with minimal compute, memory, or privacy risk. Includes adapter-based methods (6), quantization (14), and efficient data selection (7, 12).
+
+### Cluster E: **Scaling, Long-Context, and Specialized Architectures**
+- **Papers:** 5, 11, 14, 19, 20
+- **Characteristics:** Scaling models to larger sizes, longer contexts, or new modalities (structured data). Includes architectural innovations and empirical studies on scaling laws.
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **Early works** focused on demonstrating the feasibility of domain adaptation via continual pre-training (7, 17, 18).
+- **Subsequent research** identified challenges such as catastrophic forgetting, stability gaps, and inefficiency, leading to the development of strategies like data mixture, high-quality token selection, and learning rate scheduling (Submission, 1, 8, 19).
+- **Instruction tuning** evolved from manual curation to large-scale, semi-automated, and machine-generated datasets (2, 3, 12, 13), with increasing emphasis on alignment and generalization.
+- **Resource efficiency** became a priority, with the introduction of adapter-based methods (6), quantization (14), and efficient data selection (7, 12).
+- **Scaling** efforts led to the release of larger open-source models (5, 14), long-context adaptation (20), and specialized architectures for structured knowledge (11).
+- **Evaluation** practices matured, with comprehensive benchmarks, human evaluation, and real-world metrics (e.g., click-through rates, business KPIs).
+
+### Building Blocks and Extensions
+
+- **Continual pre-training** is the foundational building block, extended by:
+  - Data selection/mixture strategies (Submission, 1, 7, 20)
+  - Instruction tuning and alignment (2, 3, 4, 9, 11, 12, 13)
+  - Adapter-based and resource-efficient adaptation (6, 14)
+  - Scaling to larger models and longer contexts (5, 14, 20)
+- **Data-centric approaches** (automatic selection, knowledge injection) are increasingly central, often combined with continual pre-training and instruction tuning.
+- **Mitigation of forgetting and instability** is addressed via model merging (10, 14), replay (8), and learning rate strategies (8, 19).
+
+### Competing and Complementary Approaches
+
+- **Competing:** Full model fine-tuning vs. adapter-based or selective adaptation (6, 14); manual vs. automatic data selection (12).
+- **Complementary:** Data selection/engineering complements both continual pre-training and instruction tuning; adapter-based methods can be combined with train-time adaptation (6); model merging can balance domain and general capabilities (10, 14).
+
+---
+
+# **Summary Table of Key Clusters and Relationships**
+
+| Cluster | Focus | Key Methods | Representative Papers | Relationship to Submission |
+|---------|-------|-------------|----------------------|---------------------------|
+| A: Efficient Continual Pre-training | Domain adaptation, stability, efficiency | Multi-epoch subset training, data mixture, model merging, learning rate scheduling | Submission, 1, 4, 5, 7, 8, 10, 16, 17, 18, 19, 20 | Submission is central, introducing stability gap and mitigation strategies |
+| B: Medical LLMs & Instruction Tuning | Medical domain adaptation, instruction alignment | Large-scale medical corpora, instruction tuning, dataset creation | 2, 3, 4, 5, 9, 13, 14 | Submission’s strategies are applicable and compared in medical LLMs |
+| C: Data Selection & Engineering | Data quality, selection, mixture | Automatic selection, high-quality token selection, knowledge injection | Submission, 1, 2, 3, 7, 9, 12, 19, 20 | Submission’s data sampling and mixture strategies are key contributions |
+| D: Efficient Adaptation | Resource efficiency, privacy | Adapters, quantization, efficient data selection | 6, 7, 12, 14 | Submission focuses on compute efficiency, related to this cluster |
+| E: Scaling & Specialized Architectures | Model/context scaling, new modalities | Large models, long-context, structured data, MoE | 5, 11, 14, 19, 20 | Submission’s methods are scalable and relevant for large models |
+
+---
+
+# **Conclusion**
+
+The research landscape is rapidly evolving toward **efficient, robust, and scalable domain adaptation of LLMs**, with a strong emphasis on **data-centric methods**, **instruction alignment**, and **resource efficiency**. The submission paper is at the forefront of this evolution, introducing the **stability gap** concept and practical strategies for mitigating it, which are echoed and extended in related works. The field is converging on a set of best practices—**continual pre-training with smart data selection, instruction tuning, and efficient adaptation techniques**—that are being applied across domains and model scales, with open-source releases accelerating progress and democratizing access.

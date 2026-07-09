@@ -1,0 +1,161 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+The submission proposes an *external insight-driven correction* for LLM uncertainty estimation, using a lightweight auxiliary model ("Corrector") trained on global information to refine uncertainty scores from existing methods (e.g., Semantic Entropy, Shifting Attention to Relevance). This approach is positioned as *orthogonal and complementary* to current methods, aiming to address persistent issues such as over/under-confidence and inversion of uncertainty rankings.
+
+**Most Closely Related Prior Works:**
+- **Shifting Attention to Relevance (SAR; Duan et al., 2023):** Relevance-based reweighting of token contributions to uncertainty.
+- **Semantic Entropy (SE; Kuhn et al., 2023):** Clustering semantically equivalent sentences for entropy-based uncertainty.
+- **Learnable/Trainable Scoring (LARS, MARS):** Supervised models for uncertainty scoring.
+- **Hybrid/Ensemble Methods (LM-Polygraph, HUQ):** Combining multiple uncertainty sources.
+- **Probing/Internal State Methods (SEPs, LLM Internal States):** Using model internals for efficient uncertainty estimation.
+
+**Methodological Cluster Placement:**
+The submission sits at the intersection of *learnable scoring* and *hybrid/ensemble* clusters. Its Corrector is a trainable model that operates externally to the LLM, refining outputs from existing methods, and is designed to be easily integrated with a variety of base uncertainty estimators.
+
+**Problem Space and Evaluation:**
+The submission targets the *robustness and generalizability* of uncertainty estimation, focusing on correcting ranking inversions and biases in LLMs. It evaluates on standard QA datasets (TriviaQA, curated domain-specific sets) and uses both *relative* and *absolute* uncertainty metrics, consistent with field norms.
+
+**Independent Assessment:**
+- The approach is not a new base uncertainty estimator, but a *meta-correction* layer.
+- The use of a lightweight, globally-trained Corrector is similar in spirit to prior learnable scoring functions (e.g., LARS, MARS), but is positioned as a post-hoc, model-agnostic correction.
+- The claim of orthogonality is plausible, as the Corrector can be applied atop various base methods.
+- The focus on correcting *inversion* of uncertainty rankings is a specific, well-motivated problem, but not unique to this work (see SAR, WSE, and MARS, which also address generative inequality and misranking).
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Positioning:**
+- The authors consistently group prior work into categories (logit-based, verbalized, internal state-based, consistency-based) and position their method as *complementary*.
+- They cite SAR and SE as "advanced methods" that can be "easily integrated" with their approach.
+- They reference learnable scoring (e.g., MARS, LARS) only indirectly, focusing more on semantic/relevance-based and probing methods.
+
+**Accuracy and Balance:**
+- The characterizations of SAR and SE are generally accurate: SAR assigns token-level weights based on relevance, SE clusters semantically equivalent sentences.
+- The authors claim that prior methods are "confined to inherent biases of LLMs," which is somewhat overstated—recent learnable and hybrid methods (e.g., MARS, LM-Polygraph) explicitly address such biases.
+- The claim that their method is "orthogonal" is accurate in the sense that it can be layered atop existing methods, but the degree of independence from base method limitations is not fully substantiated.
+
+**Discrepancies and Rhetoric:**
+- The authors understate the sophistication of recent learnable scoring methods (e.g., MARS, LARS), which also use external models to refine uncertainty.
+- The claim that "no robust and generalizable uncertainty estimation methods exist" is not fully accurate; several recent works (e.g., LM-Polygraph, MARS, WSE) explicitly target robustness and generalizability.
+- The focus on "external insight" is rhetorically emphasized, but similar ideas (e.g., proxy models, ensemble correction) have appeared in prior work.
+
+**Substantiation of Improvements:**
+- The claim of "consistent and significant improvements" is supported by reported metrics, but the degree of improvement over the *most recent* learnable/hybrid methods is not fully detailed in the provided summary.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Claimed Contribution 1: *External insight-driven approach for uncertainty estimation, orthogonal and complementary to existing methods*
+
+- **Most Similar Prior Work:** LM-Polygraph (ensemble/hybrid), MARS/LARS (learnable scoring), SAR (relevance-based reweighting).
+- **Claimed Difference:** The Corrector is an external, globally-trained model that can be applied atop any base method.
+- **Independent Assessment:**  
+  - *Substantive Difference:* The explicit design as a post-hoc, model-agnostic correction layer is a meaningful extension, especially if it can generalize across base methods.
+  - *Superficial Variation:* The use of an external model is not entirely novel—MARS, LARS, and LM-Polygraph also use learnable or ensemble correction. The main difference is the *explicit modularity* and focus on correcting ranking inversions.
+  - *Author Characterization vs. Reality:* The claim of orthogonality is accurate in implementation, but the conceptual novelty is incremental rather than fundamental.
+
+## Claimed Contribution 2: *Lightweight auxiliary model (Corrector) trained on global information to refine uncertainty scores*
+
+- **Most Similar Prior Work:** MARS, LARS, Becker & Soatto (2024; proxy model for confidence), LM-Polygraph.
+- **Claimed Difference:** The Corrector is lightweight and uses global (dataset-level) information.
+- **Independent Assessment:**  
+  - *Substantive Difference:* If the Corrector is significantly more efficient or generalizable than prior learnable scoring models, this is a practical advance.
+  - *Superficial Variation:* The idea of training an auxiliary model on global information is present in MARS, LARS, and Becker & Soatto (2024). The novelty may lie in implementation details (e.g., model size, training regime) rather than conceptual advance.
+  - *Author Characterization vs. Reality:* The authors do not fully acknowledge the similarity to prior learnable scoring models.
+
+## Claimed Contribution 3: *Correction of inversion in uncertainty score rankings caused by LLM biases*
+
+- **Most Similar Prior Work:** SAR, WSE, MARS, KLE (all address generative inequality and misranking).
+- **Claimed Difference:** The Corrector specifically targets and corrects ranking inversions.
+- **Independent Assessment:**  
+  - *Substantive Difference:* The explicit focus on inversion correction is a useful framing, but prior works (SAR, WSE, MARS) also address misranking and generative inequality, sometimes with more granular semantic modeling.
+  - *Superficial Variation:* The mechanism (external correction) is different, but the problem addressed is not unique.
+  - *Author Characterization vs. Reality:* The authors overstate the uniqueness of their inversion correction; prior works have addressed similar issues, though perhaps not with the same external correction mechanism.
+
+## Claimed Contribution 4: *Consistent and significant improvements over state-of-the-art baselines in both relative and absolute uncertainty estimation metrics*
+
+- **Most Similar Prior Work:** LM-Polygraph, MARS, WSE, SAR, KLE.
+- **Claimed Difference:** Outperforms all baselines across metrics and domains.
+- **Independent Assessment:**  
+  - *Substantive Difference:* If improvements are robust across diverse settings and not due to overfitting or implementation details, this is a meaningful advance.
+  - *Superficial Variation:* Without detailed ablation and comparison to the *most recent* learnable/hybrid methods, it is difficult to assess whether improvements are due to the core innovation or to engineering/implementation.
+  - *Author Characterization vs. Reality:* The claim is plausible but would require more granular evidence, especially against the latest hybrid/ensemble methods.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The field of LLM uncertainty estimation is *rapidly evolving* but not yet mature. There is a proliferation of methods, with increasing sophistication and hybridization.
+- **Recent Surveys:** "A Review of Uncertainty Estimation and its Application in Medical Imaging" (2023), "Benchmarking LLMs via Uncertainty Quantification" (2024), and LM-Polygraph (2024) provide comprehensive overviews.
+- **Trends:**  
+  - Shift from heuristic to learnable and hybrid methods.
+  - Emphasis on semantic/relevance-based scoring and black-box applicability.
+  - Move toward ensemble and meta-correction approaches.
+- **Incremental Advances:** Many recent papers offer *incremental* improvements (e.g., new scoring functions, better calibration, more robust benchmarks) rather than paradigm shifts.
+- **Reviewer Calibration:** Novelty claims should be evaluated in the context of a field where *modular, ensemble, and learnable correction* approaches are increasingly common.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The use of an external, learnable correction model is not entirely new; prior works (MARS, LARS, LM-Polygraph) have similar components.
+  - The claim of "orthogonality" is accurate in implementation but less so conceptually.
+  - The focus on inversion correction is not unique; prior works address similar ranking issues.
+- **Empirical Improvements:**  
+  - Gains may be due to implementation details (e.g., model tuning, data curation) rather than conceptual innovation.
+  - The robustness and generalizability claims are strong, but require careful ablation against the latest hybrid/ensemble methods.
+- **Terminology Differences:**  
+  - "External insight" and "Corrector" may mask similarities to "proxy models," "learnable scoring," or "ensemble correction" in prior work.
+- **Routine Extensions:**  
+  - The modular, post-hoc correction approach is a logical extension of ensemble and learnable scoring trends in the field.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Potentially Relevant Uncited Work:**  
+  - *LM-Polygraph* (2024): Hybrid/ensemble uncertainty estimation, integrating multiple methods.
+  - *MARS* (2024): Learnable, semantic-aware scoring for uncertainty.
+  - *WSE* (2024): Word-sequence entropy, semantic reweighting.
+  - *HUQ* (2023): Hybrid uncertainty quantification for selective text classification.
+  - *A Review of Uncertainty Estimation and its Application in Medical Imaging* (2023): Comprehensive survey.
+- **Areas for Additional Comparison:**  
+  - Direct ablation against LM-Polygraph, MARS, and WSE would clarify the incremental value of the Corrector.
+  - More explicit discussion of learnable scoring and ensemble correction methods.
+- **Incomplete/Misleading Characterizations:**  
+  - The claim that prior methods are "confined to inherent biases" is not fully accurate; recent works explicitly address these issues.
+  - The uniqueness of inversion correction is overstated.
+- **Citation Practices:**  
+  - The authors cite SAR and SE as "advanced" but do not fully engage with the most recent learnable/hybrid methods.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - The submission’s Corrector is a modular, external, globally-trained correction model that can be layered atop existing uncertainty estimators.
+  - The explicit focus on correcting ranking inversions is a useful framing, though not unique.
+- **Main Relationships to Existing Research:**
+  - The approach is most closely related to learnable scoring (MARS, LARS), semantic/relevance-based reweighting (SAR, WSE), and hybrid/ensemble methods (LM-Polygraph, HUQ).
+  - The Corrector is an incremental extension, offering practical modularity and potential efficiency.
+- **Strongest Differentiation:**
+  - The modular, post-hoc, model-agnostic design of the Corrector.
+  - Demonstrated integration with multiple base methods.
+- **Weakest Differentiation:**
+  - The conceptual novelty of using an external, learnable correction model.
+  - The claim of unique inversion correction.
+- **Discrepancies Between Author Characterizations and Independent Assessment:**
+  - Overstatement of the uniqueness of the approach and the limitations of prior work.
+  - Under-recognition of recent learnable/hybrid methods that address similar issues.
+  - Rhetorical emphasis on "external insight" and "orthogonality" that may mask conceptual similarities to prior ensemble/correction approaches.
+
+---
+
+**In summary:**  
+The submission offers a practical, modular extension to existing LLM uncertainty estimation methods via an external, learnable Corrector. While the implementation is flexible and potentially impactful, the conceptual advances are incremental, building on trends already present in the field (learnable scoring, ensemble correction, semantic/relevance-based reweighting). The authors’ novelty claims are somewhat overstated, particularly regarding the uniqueness of inversion correction and the limitations of prior work. Direct comparison with the latest hybrid and learnable methods would further clarify the true delta. Reviewers should weigh the practical utility and robustness of the approach against the incremental nature of its conceptual contribution.

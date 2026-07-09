@@ -1,0 +1,199 @@
+Below is a comprehensive research landscape analysis based on the provided submission and related papers.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the dominant methodological theme is **prompt learning and adaptation for Vision-Language Models (VLMs)**, especially in the context of test-time adaptation, zero-shot/few-shot generalization, and domain shift. The methods can be grouped as follows:
+
+#### **Cluster 1: Test-Time Prompt Learning and Adaptation**
+- **Test-Time Prompt Tuning (TPT, C-TPT, DiffTPT, InCPL, VPA, ADAPROMPT, VPTTA, TPGaze, DPCore, ATPL [Submission])**
+  - These methods adapt prompts at test time, often without labeled data, to improve generalization under distribution shift.
+  - Innovations include: entropy minimization, confidence selection, diffusion-based augmentation, in-context learning, buffer-based sample selection, and dynamic coreset management.
+
+#### **Cluster 2: Active Learning and Annotation Efficiency**
+- **Active Test-Time Prompt Learning (ATPL [Submission]), PCB, SALAD**
+  - These methods integrate active learning principles, such as uncertainty-based querying and class balancing, to minimize annotation cost during adaptation.
+  - The submission paper is unique in applying active learning at test time for VLMs.
+
+#### **Cluster 3: Distribution Alignment and Calibration**
+- **PromptAlign, C-TPT, ATPL [Submission]**
+  - Focus on aligning feature distributions (mean/variance) or improving calibration (reducing overconfidence) during adaptation.
+  - Use of distribution alignment losses and calibration metrics (e.g., ECE, ATFD).
+
+#### **Cluster 4: Visual Prompting and Parameter-Efficient Adaptation**
+- **VPA, DPCore, VPTTA, TPGaze**
+  - Emphasize adaptation via learnable visual prompt tokens, often with minimal parameter updates and memory/computation overhead.
+
+#### **Cluster 5: Multi-modal and Conditional Prompt Learning**
+- **MaPLe, CoCoOp, CoOp, InstructBLIP**
+  - Simultaneous adaptation of both vision and language branches, or conditioning prompts on input instances or instructions.
+
+#### **Cluster 6: Training-Free and Plug-and-Play Adaptation**
+- **MTA, MEMO**
+  - Methods that do not require prompt learning or model parameter updates, instead leveraging test-time augmentations and marginal entropy minimization.
+
+#### **Cluster 7: Domain Adaptation and Transfer Learning**
+- **SALAD, ASTTL, EDJAN**
+  - Broader domain adaptation methods, sometimes outside the VLM context, focusing on source-free, label-agnostic, or cross-dataset transfer.
+
+### Methodological Trends and Relationships
+
+- **Prompt learning** has evolved from static, class-specific prompts (CoOp) to dynamic, instance-conditional (CoCoOp), multi-modal (MaPLe), and test-time adaptive prompts (TPT, ATPL).
+- **Test-time adaptation** is increasingly parameter-efficient, leveraging prompts or small buffers rather than full model updates (VPA, DPCore, TPGaze).
+- **Active learning** is being integrated into adaptation, not just for training but also for test-time scenarios (ATPL, PCB, SALAD).
+- **Distribution alignment and calibration** are recognized as critical for robust adaptation, with explicit losses and metrics being introduced (PromptAlign, C-TPT).
+- **Training-free approaches** (MTA, MEMO) offer practical alternatives for black-box or resource-constrained settings.
+- **Visual prompting** and **memory/coreset mechanisms** (VPA, DPCore, VPTTA) address continual and efficient adaptation under dynamic domain shifts.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Test-Time Adaptation under Distribution Shift**
+   - How to adapt VLMs (especially CLIP) to new domains or tasks at test time, often without labeled data or with minimal annotation (ATPL, TPT, InCPL, VPA, DPCore, MEMO, VPTTA, TPGaze).
+
+2. **Zero-Shot and Few-Shot Generalization**
+   - Improving VLM performance on unseen classes or domains without additional training data (TPT, DiffTPT, MTA, MaPLe, CoCoOp, CoOp, InstructBLIP).
+
+3. **Efficient Annotation and Active Learning**
+   - Reducing annotation cost and maximizing adaptation efficiency via active querying and class balancing (ATPL, PCB, SALAD).
+
+4. **Distribution Alignment and Calibration**
+   - Addressing overconfidence, poor calibration, and feature distribution mismatch between source and target/test domains (PromptAlign, C-TPT, ATPL).
+
+5. **Parameter-Efficient and Continual Adaptation**
+   - Adapting models with minimal parameter updates, memory, and computation, especially in continual or streaming settings (VPA, DPCore, VPTTA, TPGaze).
+
+6. **Domain Adaptation and Transfer Learning**
+   - Adapting to new domains without source data, handling label space shifts, and cross-dataset transfer (SALAD, ASTTL, EDJAN).
+
+### Approaches to Similar Problems
+
+- **Test-Time Adaptation**: Some methods update prompts (TPT, ATPL, InCPL), others use visual tokens (VPA, DPCore), and some avoid parameter updates altogether (MTA, MEMO).
+- **Active Learning**: ATPL and PCB focus on class balancing and uncertainty, while SALAD combines active selection with domain adaptation.
+- **Distribution Alignment**: PromptAlign and ATPL use explicit alignment losses; C-TPT uses feature dispersion for calibration.
+- **Continual Adaptation**: DPCore and VPTTA use memory/coreset mechanisms to avoid forgetting and enable efficient adaptation.
+
+### Patterns in Problem Formulation
+
+- Increasing focus on **test-time, streaming, and continual settings** (single-sample, online, or batch adaptation).
+- Emphasis on **label efficiency** and **source-free adaptation** (no access to source data or labels at test time).
+- Recognition of **distribution shift** as a central challenge, with explicit methods to measure and mitigate it.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **ImageNet and its variants** (ImageNet-A, ImageNet-C, ImageNet-R): Standard for OOD and domain shift evaluation.
+- **Caltech101, Flowers102, DTD, EuroSAT, Oxford-IIIT Pets**: Popular for prompt learning and VLM adaptation.
+- **Domain generalization and cross-dataset transfer benchmarks**: Used in ATPL, PromptAlign, and others.
+- **Specialized datasets**: Bongard-HOI (visual reasoning), medical images (VPTTA), gaze estimation (TPGaze), EEG (EDJAN), activity recognition (ASTTL), and more.
+
+### Evaluation Metrics
+
+- **Accuracy**: Most common, for classification and recognition tasks.
+- **Zero-shot/Few-shot accuracy**: For generalization to unseen classes/domains.
+- **Expected Calibration Error (ECE), Average Text Feature Dispersion (ATFD)**: For calibration and uncertainty.
+- **Annotation budget, buffer capacity**: For active learning and adaptation efficiency.
+- **mIoU, mAP**: For segmentation and detection tasks.
+- **Computation time, parameter count**: For efficiency and scalability.
+
+### Patterns in Performance Measurement
+
+- **Relative improvement over state-of-the-art**: Most papers report gains over prior methods, often in percentage points.
+- **Annotation efficiency**: Measured by number of queried labels or buffer size (ATPL, PCB, SALAD).
+- **Robustness to distribution shift**: Evaluated via OOD datasets, domain generalization, and continual adaptation settings.
+- **Calibration and uncertainty**: Increasingly important, with dedicated metrics (C-TPT).
+
+### Comparison of Evaluation Approaches
+
+- **Submission paper (ATPL)**: Evaluates on 10 cross-dataset and 4 domain-generalization datasets, reporting accuracy, annotation budget, and buffer capacity.
+- **Related works**: Vary in focus—some emphasize accuracy, others annotation efficiency, calibration, or computational cost.
+- **Emerging trend**: Multi-faceted evaluation, considering not just accuracy but also efficiency, robustness, and calibration.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: **Test-Time Prompt Learning and Adaptation**
+- **Papers**: Submission (ATPL), TPT, C-TPT, DiffTPT, InCPL, VPA, ADAPROMPT, VPTTA, TPGaze, DPCore
+- **Characteristics**: Adapt prompts or visual tokens at test time, often in a streaming or single-sample setting, to improve generalization under distribution shift.
+- **Relationships**: Share the goal of parameter-efficient, label-efficient adaptation; differ in prompt type (textual vs. visual), adaptation granularity (batch vs. single-sample), and use of memory/buffers.
+
+### Cluster 2: **Active Learning and Annotation Efficiency**
+- **Papers**: Submission (ATPL), PCB, SALAD
+- **Characteristics**: Integrate active learning (uncertainty, class balancing) into adaptation, aiming to minimize annotation cost.
+- **Relationships**: ATPL is unique in applying active learning at test time for VLMs; PCB focuses on class balancing during active learning; SALAD combines active selection with source-free domain adaptation.
+
+### Cluster 3: **Distribution Alignment and Calibration**
+- **Papers**: PromptAlign, C-TPT, Submission (ATPL)
+- **Characteristics**: Address distribution shift and calibration via explicit alignment losses or feature dispersion metrics.
+- **Relationships**: Complementary to prompt learning, often integrated into prompt adaptation frameworks.
+
+### Cluster 4: **Multi-modal and Conditional Prompt Learning**
+- **Papers**: MaPLe, CoCoOp, CoOp, InstructBLIP
+- **Characteristics**: Adapt both vision and language branches, or condition prompts on input instances or instructions, for improved generalization.
+- **Relationships**: Provide foundational techniques for prompt learning, often extended by test-time adaptation methods.
+
+### Cluster 5: **Training-Free and Plug-and-Play Adaptation**
+- **Papers**: MTA, MEMO
+- **Characteristics**: Avoid prompt/model updates, using test-time augmentations and entropy minimization for adaptation.
+- **Relationships**: Offer practical alternatives for black-box or resource-constrained scenarios.
+
+### Cluster 6: **Domain Adaptation and Transfer Learning**
+- **Papers**: SALAD, ASTTL, EDJAN
+- **Characteristics**: Broader focus on domain adaptation, often outside the VLM context, with methods for source-free, label-agnostic, or cross-dataset transfer.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **Prompt Learning**: Began with static, class-specific prompts (CoOp), evolved to instance-conditional (CoCoOp), multi-modal (MaPLe), and instruction-based (InstructBLIP) prompts.
+- **Test-Time Adaptation**: Shifted from full model updates to prompt-based and visual token-based adaptation (VPA, DPCore, VPTTA), with increasing focus on efficiency and continual adaptation.
+- **Active Learning**: Moved from training-time sample selection to test-time active querying (ATPL), with innovations in class balancing and uncertainty-based selection.
+- **Distribution Alignment and Calibration**: Emerged as critical for robust adaptation, with explicit losses and metrics (PromptAlign, C-TPT, ATPL).
+- **Training-Free Methods**: Developed for scenarios where prompt/model updates are impractical (MTA, MEMO).
+- **Memory and Coreset Mechanisms**: Introduced for continual adaptation and to avoid catastrophic forgetting (DPCore, VPTTA).
+
+### Building Blocks and Extensions
+
+- **CoOp/CoCoOp**: Foundational for prompt learning, extended by MaPLe (multi-modal), TPT (test-time), and ATPL (active test-time).
+- **MaPLe**: Multi-modal prompting, further extended by PromptAlign (distribution alignment).
+- **VPA/DPCore**: Visual prompting and coreset mechanisms, enabling efficient continual adaptation.
+- **Active Learning**: PCB and SALAD inform ATPL’s active test-time adaptation.
+- **Test-Time Augmentation**: MEMO and MTA provide training-free adaptation strategies, sometimes combined with prompt learning.
+
+### Competing and Complementary Approaches
+
+- **Prompt Learning vs. Training-Free**: Prompt-based adaptation (TPT, ATPL) competes with training-free methods (MTA, MEMO) in terms of practicality and performance.
+- **Textual vs. Visual Prompting**: Some methods focus on textual prompts (TPT, ATPL), others on visual tokens (VPA, DPCore), and some combine both (MaPLe, InCPL).
+- **Active Learning vs. Passive Adaptation**: Active querying (ATPL, PCB, SALAD) complements passive adaptation (TPT, VPA).
+- **Distribution Alignment/Calibration**: Increasingly integrated into prompt learning and adaptation frameworks for improved robustness.
+
+---
+
+# **Summary Table: Key Clusters and Representative Papers**
+
+| Cluster                                   | Representative Papers                | Key Innovations/Focus                                  |
+|--------------------------------------------|--------------------------------------|--------------------------------------------------------|
+| Test-Time Prompt Learning & Adaptation     | ATPL, TPT, InCPL, VPA, DPCore, etc.  | Prompt/visual token adaptation at test time            |
+| Active Learning & Annotation Efficiency    | ATPL, PCB, SALAD                     | Active querying, class balancing, annotation minimization|
+| Distribution Alignment & Calibration       | PromptAlign, C-TPT, ATPL             | Feature alignment, calibration metrics                 |
+| Multi-modal/Conditional Prompt Learning    | MaPLe, CoCoOp, CoOp, InstructBLIP    | Multi-branch, instance/instruction-conditional prompts |
+| Training-Free/Plug-and-Play Adaptation     | MTA, MEMO                            | No prompt/model updates, test-time augmentation        |
+| Domain Adaptation & Transfer Learning      | SALAD, ASTTL, EDJAN                  | Source-free, label-agnostic, cross-dataset transfer    |
+
+---
+
+# **Conclusion**
+
+The research landscape is rapidly evolving toward **efficient, robust, and label-efficient adaptation of vision-language models under distribution shift**, with a strong emphasis on **test-time prompt learning**, **active learning**, and **distribution alignment**. The submission paper (ATPL) is at the intersection of these trends, being the first to apply active learning at test time for VLMs, integrating class balancing, uncertainty-based querying, and distribution alignment in a streaming, single-sample setting. This positions it as a significant step forward in the field, building on and extending multiple foundational ideas from the related works.

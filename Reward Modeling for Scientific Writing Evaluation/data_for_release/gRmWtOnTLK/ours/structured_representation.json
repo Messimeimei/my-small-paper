@@ -1,0 +1,998 @@
+{
+    "structured_representation": {
+        "main_paper": {
+            "raw": "{\"methods\":[\"RFWave: Multi-band Rectified Flow for audio waveform reconstruction\",\"Rectified Flow for efficient sampling (straight transport trajectory)\",\"Frame-level (STFT frame) modeling instead of sample point-level\",\"Multi-band strategy for concurrent subband generation\",\"Use of ConvNeXtV2 backbone for efficient processing\",\"Three enhanced loss functions: energy-balanced loss, overlap loss, STFT loss\",\"Optimized sampling strategy based on trajectory straightness\"],\"problems\":[\"High latency and slow generation speed in diffusion-based audio waveform reconstruction due to sample point-level operation and many sampling steps\",\"High GPU memory usage and computational demands in existing models\",\"Instability and mode collapse in GAN-based waveform reconstruction\",\"Need for high-fidelity and efficient audio waveform reconstruction from Mel-spectrograms or discrete acoustic tokens\"],\"datasets\":[],\"metrics\":[\"Inference speed (generation speed)\",\"Number of sampling steps\",\"Audio quality (subjective and/or objective, but specific metric not named)\"],\"results\":[{\"metric\":\"Inference speed\",\"value\":\"Up to 160x real-time on NVIDIA GeForce RTX 4090 GPU\"},{\"metric\":\"Number of sampling steps\",\"value\":\"10 sampling steps for high-quality audio\"}],\"novelty_claims\":[\"First diffusion-based audio waveform reconstruction model to achieve GAN-like speed while maintaining diffusion model quality and stability\",\"Operates at STFT frame level, not sample point level, significantly reducing memory and computation\",\"Integrates Rectified Flow with three novel loss functions (energy-balanced, overlap, STFT loss) for high-quality reconstruction with few sampling steps\",\"Employs a multi-band strategy and ConvNeXtV2 backbone for concurrent subband generation and speed\",\"Introduces a new sampling time point selection technique based on Rectified Flow trajectory straightness to enhance sample quality\"]}",
+            "parsed": {
+                "methods": [
+                    "RFWave: Multi-band Rectified Flow for audio waveform reconstruction",
+                    "Rectified Flow for efficient sampling (straight transport trajectory)",
+                    "Frame-level (STFT frame) modeling instead of sample point-level",
+                    "Multi-band strategy for concurrent subband generation",
+                    "Use of ConvNeXtV2 backbone for efficient processing",
+                    "Three enhanced loss functions: energy-balanced loss, overlap loss, STFT loss",
+                    "Optimized sampling strategy based on trajectory straightness"
+                ],
+                "problems": [
+                    "High latency and slow generation speed in diffusion-based audio waveform reconstruction due to sample point-level operation and many sampling steps",
+                    "High GPU memory usage and computational demands in existing models",
+                    "Instability and mode collapse in GAN-based waveform reconstruction",
+                    "Need for high-fidelity and efficient audio waveform reconstruction from Mel-spectrograms or discrete acoustic tokens"
+                ],
+                "datasets": [],
+                "metrics": [
+                    "Inference speed (generation speed)",
+                    "Number of sampling steps",
+                    "Audio quality (subjective and/or objective, but specific metric not named)"
+                ],
+                "results": [
+                    {
+                        "metric": "Inference speed",
+                        "value": "Up to 160x real-time on NVIDIA GeForce RTX 4090 GPU"
+                    },
+                    {
+                        "metric": "Number of sampling steps",
+                        "value": "10 sampling steps for high-quality audio"
+                    }
+                ],
+                "novelty_claims": [
+                    "First diffusion-based audio waveform reconstruction model to achieve GAN-like speed while maintaining diffusion model quality and stability",
+                    "Operates at STFT frame level, not sample point level, significantly reducing memory and computation",
+                    "Integrates Rectified Flow with three novel loss functions (energy-balanced, overlap, STFT loss) for high-quality reconstruction with few sampling steps",
+                    "Employs a multi-band strategy and ConvNeXtV2 backbone for concurrent subband generation and speed",
+                    "Introduces a new sampling time point selection technique based on Rectified Flow trajectory straightness to enhance sample quality"
+                ]
+            }
+        },
+        "selected_papers": [
+            {
+                "paper_id": "9dfd2248d66f7227eb8a2b5d29064acf66174c9a",
+                "raw": "{\"methods\":[\"Vocos: a neural vocoder that directly generates Fourier spectral coefficients instead of operating in the time-domain\",\"Direct generation of complex-valued spectrograms for audio synthesis\"],\"problems\":[\"Inefficiency and redundancy in time-domain neural vocoders due to lack of time-frequency inductive bias\",\"Difficulty in direct reconstruction of complex-valued spectrograms due to phase recovery issues\",\"Computational inefficiency of current time-domain neural vocoders\"],\"datasets\":[],\"metrics\":[\"Audio quality (subjective and/or objective, e.g., MOS)\",\"Computational efficiency (generation speed)\"],\"results\":[{\"metric\":\"Computational efficiency (generation speed)\",\"value\":\"An order of magnitude faster than prevailing time-domain neural vocoding approaches\"},{\"metric\":\"Audio quality\",\"value\":\"Matches state-of-the-art\"}],\"novelty_claims\":[\"First neural vocoder to directly generate Fourier spectral coefficients for high-quality audio synthesis\",\"Closes the gap between time-domain and Fourier-based neural vocoders by solving phase recovery issues\",\"Achieves state-of-the-art audio quality with significantly improved computational efficiency\"]}",
+                "parsed": {
+                    "methods": [
+                        "Vocos: a neural vocoder that directly generates Fourier spectral coefficients instead of operating in the time-domain",
+                        "Direct generation of complex-valued spectrograms for audio synthesis"
+                    ],
+                    "problems": [
+                        "Inefficiency and redundancy in time-domain neural vocoders due to lack of time-frequency inductive bias",
+                        "Difficulty in direct reconstruction of complex-valued spectrograms due to phase recovery issues",
+                        "Computational inefficiency of current time-domain neural vocoders"
+                    ],
+                    "datasets": [],
+                    "metrics": [
+                        "Audio quality (subjective and/or objective, e.g., MOS)",
+                        "Computational efficiency (generation speed)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Computational efficiency (generation speed)",
+                            "value": "An order of magnitude faster than prevailing time-domain neural vocoding approaches"
+                        },
+                        {
+                            "metric": "Audio quality",
+                            "value": "Matches state-of-the-art"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First neural vocoder to directly generate Fourier spectral coefficients for high-quality audio synthesis",
+                        "Closes the gap between time-domain and Fourier-based neural vocoders by solving phase recovery issues",
+                        "Achieves state-of-the-art audio quality with significantly improved computational efficiency"
+                    ]
+                }
+            },
+            {
+                "paper_id": "6a8079893dd5c5c743ca53340dc9de3a0ee7ba9a",
+                "raw": "{\"methods\":[\"VoiceFlow: an acoustic model using rectified flow matching for text-to-speech\",\"Formulation of mel-spectrogram generation as an ODE conditional on text inputs\",\"Estimation of the ODE's vector field via a neural network\",\"Application of rectified flow technique: retraining the flow matching model with its own generated samples to straighten the sampling trajectory\"],\"problems\":[\"Inefficiency and high latency of diffusion-based text-to-speech (TTS) models due to the need for many sampling steps\",\"Speed-quality tradeoff in diffusion-based TTS models, where reducing steps harms synthesis quality\"],\"datasets\":[\"LJSpeech (single-speaker)\",\"LibriTTS (multi-speaker)\"],\"metrics\":[\"Subjective evaluation (e.g., Mean Opinion Score, MOS)\",\"Objective evaluation (e.g., Mel Cepstral Distortion, MCD)\"],\"results\":[{\"metric\":\"Synthesis quality (subjective and objective)\",\"value\":\"VoiceFlow outperforms diffusion baseline with sufficient sampling steps; with only two steps, VoiceFlow maintains similar performance while diffusion model fails to generate reasonable speech\"}],\"novelty_claims\":[\"First application of rectified flow matching in a TTS acoustic model\",\"VoiceFlow achieves high-quality mel-spectrogram generation with a very limited number of sampling steps\",\"Rectified flow technique straightens the sampling trajectory, improving efficiency and speed-quality tradeoff in TTS\"]}",
+                "parsed": {
+                    "methods": [
+                        "VoiceFlow: an acoustic model using rectified flow matching for text-to-speech",
+                        "Formulation of mel-spectrogram generation as an ODE conditional on text inputs",
+                        "Estimation of the ODE's vector field via a neural network",
+                        "Application of rectified flow technique: retraining the flow matching model with its own generated samples to straighten the sampling trajectory"
+                    ],
+                    "problems": [
+                        "Inefficiency and high latency of diffusion-based text-to-speech (TTS) models due to the need for many sampling steps",
+                        "Speed-quality tradeoff in diffusion-based TTS models, where reducing steps harms synthesis quality"
+                    ],
+                    "datasets": [
+                        "LJSpeech (single-speaker)",
+                        "LibriTTS (multi-speaker)"
+                    ],
+                    "metrics": [
+                        "Subjective evaluation (e.g., Mean Opinion Score, MOS)",
+                        "Objective evaluation (e.g., Mel Cepstral Distortion, MCD)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Synthesis quality (subjective and objective)",
+                            "value": "VoiceFlow outperforms diffusion baseline with sufficient sampling steps; with only two steps, VoiceFlow maintains similar performance while diffusion model fails to generate reasonable speech"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First application of rectified flow matching in a TTS acoustic model",
+                        "VoiceFlow achieves high-quality mel-spectrogram generation with a very limited number of sampling steps",
+                        "Rectified flow technique straightens the sampling trajectory, improving efficiency and speed-quality tradeoff in TTS"
+                    ]
+                }
+            },
+            {
+                "paper_id": "97cc958a940a1b33241da612745c8347d7acf6d7",
+                "raw": "{\"methods\":[\"Multi-band MelGAN (MB-MelGAN): a GAN-based neural vocoder with multi-band processing\",\"Increasing the receptive field of the generator compared to original MelGAN\",\"Replacing feature matching loss with multi-resolution STFT loss\",\"Combining sub-band loss with full-band loss\",\"Pre-training for improved quality and stability\"],\"problems\":[\"Slow and computationally expensive waveform generation in high-quality text-to-speech (TTS) systems\",\"Inefficiency of autoregressive (AR) models for real-time TTS applications\",\"Quality and speed trade-off in non-AR neural vocoders (e.g., MelGAN, Parallel WaveGAN)\",\"Reducing computational complexity and memory usage for practical deployment\"],\"datasets\":[\"Not explicitly stated in the provided content\"],\"metrics\":[\"Mean Opinion Score (MOS)\",\"Computational complexity (GFLOPS)\",\"Real-Time Factor (RTF)\",\"Model parameter count\"],\"results\":[{\"metric\":\"MOS (waveform generation)\",\"value\":\"4.34\"},{\"metric\":\"MOS (TTS)\",\"value\":\"4.22\"},{\"metric\":\"Model parameters\",\"value\":\"1.91M\"},{\"metric\":\"Computational complexity\",\"value\":\"0.95 GFLOPS (reduced from 5.85 GFLOPS in original MelGAN)\"},{\"metric\":\"Real-Time Factor (RTF) on CPU\",\"value\":\"0.03\"}],\"novelty_claims\":[\"First to extend MelGAN with multi-band processing for faster and more efficient waveform generation\",\"Combining sub-band and full-band losses for improved generation quality\",\"Replacing feature matching loss with multi-resolution STFT loss in MelGAN architecture\",\"Achieves significant reduction in computational complexity and parameter count while maintaining high speech quality\",\"Demonstrates real-time CPU inference without hardware-specific optimization\"]}",
+                "parsed": {
+                    "methods": [
+                        "Multi-band MelGAN (MB-MelGAN): a GAN-based neural vocoder with multi-band processing",
+                        "Increasing the receptive field of the generator compared to original MelGAN",
+                        "Replacing feature matching loss with multi-resolution STFT loss",
+                        "Combining sub-band loss with full-band loss",
+                        "Pre-training for improved quality and stability"
+                    ],
+                    "problems": [
+                        "Slow and computationally expensive waveform generation in high-quality text-to-speech (TTS) systems",
+                        "Inefficiency of autoregressive (AR) models for real-time TTS applications",
+                        "Quality and speed trade-off in non-AR neural vocoders (e.g., MelGAN, Parallel WaveGAN)",
+                        "Reducing computational complexity and memory usage for practical deployment"
+                    ],
+                    "datasets": [
+                        "Not explicitly stated in the provided content"
+                    ],
+                    "metrics": [
+                        "Mean Opinion Score (MOS)",
+                        "Computational complexity (GFLOPS)",
+                        "Real-Time Factor (RTF)",
+                        "Model parameter count"
+                    ],
+                    "results": [
+                        {
+                            "metric": "MOS (waveform generation)",
+                            "value": "4.34"
+                        },
+                        {
+                            "metric": "MOS (TTS)",
+                            "value": "4.22"
+                        },
+                        {
+                            "metric": "Model parameters",
+                            "value": "1.91M"
+                        },
+                        {
+                            "metric": "Computational complexity",
+                            "value": "0.95 GFLOPS (reduced from 5.85 GFLOPS in original MelGAN)"
+                        },
+                        {
+                            "metric": "Real-Time Factor (RTF) on CPU",
+                            "value": "0.03"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First to extend MelGAN with multi-band processing for faster and more efficient waveform generation",
+                        "Combining sub-band and full-band losses for improved generation quality",
+                        "Replacing feature matching loss with multi-resolution STFT loss in MelGAN architecture",
+                        "Achieves significant reduction in computational complexity and parameter count while maintaining high speech quality",
+                        "Demonstrates real-time CPU inference without hardware-specific optimization"
+                    ]
+                }
+            },
+            {
+                "paper_id": "34bf13e58c7226d615afead0c0f679432502940e",
+                "raw": "{\"methods\":[\"DiffWave: a diffusion probabilistic model for audio synthesis using a feed-forward and bidirectional dilated convolution architecture\",\"Non-autoregressive waveform generation via a Markov chain with a constant number of steps at synthesis\",\"Training by optimizing a variant of the variational lower bound (ELBO) on data likelihood\",\"Conditional and unconditional waveform generation (including neural vocoding conditioned on mel spectrogram, class-conditional, and unconditional generation)\"],\"problems\":[\"High-fidelity raw audio synthesis (speech and music)\",\"Efficient and fast waveform generation (overcoming slow autoregressive models)\",\"Unconditional waveform generation (without informative local conditioners)\",\"Avoiding issues like posterior collapse and mode collapse in generative models\"],\"datasets\":[\"Not explicitly mentioned in the provided content\"],\"metrics\":[\"Mean Opinion Score (MOS)\",\"Audio quality (human and automatic evaluations)\",\"Sample diversity\",\"Synthesis speed (real-time factor, steps required)\",\"Model footprint (number of parameters)\"],\"results\":[{\"metric\":\"MOS (DiffWave vocoder)\",\"value\":\"4.44\"},{\"metric\":\"MOS (WaveNet vocoder)\",\"value\":\"4.43\"},{\"metric\":\"MOS (small DiffWave, 2.64M params)\",\"value\":\"4.37\"},{\"metric\":\"Synthesis speed (small DiffWave)\",\"value\":\"more than 5x faster than real-time on V100 GPU\"},{\"metric\":\"Number of synthesis steps\",\"value\":\"as few as 6 steps for long waveforms\"}],\"novelty_claims\":[\"First application of diffusion probabilistic models to raw audio synthesis (both conditional and unconditional)\",\"Non-autoregressive, parallel waveform generation with high fidelity and small model footprint\",\"No need for auxiliary losses or additional networks (e.g., encoder, discriminator) during training\",\"Significantly outperforms autoregressive and GAN-based models in unconditional and class-conditional waveform generation in terms of audio quality and sample diversity\",\"Orders of magnitude faster synthesis compared to strong autoregressive baselines like WaveNet\"]}",
+                "parsed": {
+                    "methods": [
+                        "DiffWave: a diffusion probabilistic model for audio synthesis using a feed-forward and bidirectional dilated convolution architecture",
+                        "Non-autoregressive waveform generation via a Markov chain with a constant number of steps at synthesis",
+                        "Training by optimizing a variant of the variational lower bound (ELBO) on data likelihood",
+                        "Conditional and unconditional waveform generation (including neural vocoding conditioned on mel spectrogram, class-conditional, and unconditional generation)"
+                    ],
+                    "problems": [
+                        "High-fidelity raw audio synthesis (speech and music)",
+                        "Efficient and fast waveform generation (overcoming slow autoregressive models)",
+                        "Unconditional waveform generation (without informative local conditioners)",
+                        "Avoiding issues like posterior collapse and mode collapse in generative models"
+                    ],
+                    "datasets": [
+                        "Not explicitly mentioned in the provided content"
+                    ],
+                    "metrics": [
+                        "Mean Opinion Score (MOS)",
+                        "Audio quality (human and automatic evaluations)",
+                        "Sample diversity",
+                        "Synthesis speed (real-time factor, steps required)",
+                        "Model footprint (number of parameters)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "MOS (DiffWave vocoder)",
+                            "value": "4.44"
+                        },
+                        {
+                            "metric": "MOS (WaveNet vocoder)",
+                            "value": "4.43"
+                        },
+                        {
+                            "metric": "MOS (small DiffWave, 2.64M params)",
+                            "value": "4.37"
+                        },
+                        {
+                            "metric": "Synthesis speed (small DiffWave)",
+                            "value": "more than 5x faster than real-time on V100 GPU"
+                        },
+                        {
+                            "metric": "Number of synthesis steps",
+                            "value": "as few as 6 steps for long waveforms"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First application of diffusion probabilistic models to raw audio synthesis (both conditional and unconditional)",
+                        "Non-autoregressive, parallel waveform generation with high fidelity and small model footprint",
+                        "No need for auxiliary losses or additional networks (e.g., encoder, discriminator) during training",
+                        "Significantly outperforms autoregressive and GAN-based models in unconditional and class-conditional waveform generation in terms of audio quality and sample diversity",
+                        "Orders of magnitude faster synthesis compared to strong autoregressive baselines like WaveNet"
+                    ]
+                }
+            },
+            {
+                "paper_id": "59a1daf15ec80eb98f2a1fd29497021e6629f969",
+                "raw": "{\"methods\":[\"FastDiff: a fast conditional diffusion model for speech synthesis\",\"Stack of time-aware location-variable convolutions with diverse receptive field patterns\",\"Noise schedule predictor to reduce sampling steps\",\"FastDiff-TTS: end-to-end text-to-speech synthesizer based on FastDiff, generating waveforms directly from text/phonemes\"],\"problems\":[\"Slow sampling speed of diffusion models for speech synthesis\",\"Difficulty in modeling long-term time dependencies in speech\",\"Degradation of speech quality when reducing diffusion sampling steps\",\"Need for high-quality and fast speech synthesis suitable for real-time applications\",\"Complexity of text-to-speech pipelines requiring intermediate features\"],\"datasets\":[\"Not explicitly mentioned in the provided content\"],\"metrics\":[\"MOS (Mean Opinion Score)\",\"Sampling speed (relative to real-time)\"],\"results\":[{\"metric\":\"MOS\",\"value\":\"4.28 (FastDiff) vs. 4.20 (WaveNet vocoder)\"},{\"metric\":\"Sampling speed\",\"value\":\"58x faster than real-time on a V100 GPU\"}],\"novelty_claims\":[\"First diffusion model for speech synthesis with sampling speed comparable to previous fast models, enabling real-time applications\",\"Use of time-aware location-variable convolutions with diverse receptive fields for efficient modeling of long-term dependencies\",\"Introduction of a noise schedule predictor to drastically reduce the number of denoising steps without sacrificing quality\",\"FastDiff-TTS: an end-to-end TTS system that generates waveforms directly from text/phonemes without intermediate features or specialized loss functions\",\"Demonstrated state-of-the-art speech quality and speed, outperforming strong baselines\"]}",
+                "parsed": {
+                    "methods": [
+                        "FastDiff: a fast conditional diffusion model for speech synthesis",
+                        "Stack of time-aware location-variable convolutions with diverse receptive field patterns",
+                        "Noise schedule predictor to reduce sampling steps",
+                        "FastDiff-TTS: end-to-end text-to-speech synthesizer based on FastDiff, generating waveforms directly from text/phonemes"
+                    ],
+                    "problems": [
+                        "Slow sampling speed of diffusion models for speech synthesis",
+                        "Difficulty in modeling long-term time dependencies in speech",
+                        "Degradation of speech quality when reducing diffusion sampling steps",
+                        "Need for high-quality and fast speech synthesis suitable for real-time applications",
+                        "Complexity of text-to-speech pipelines requiring intermediate features"
+                    ],
+                    "datasets": [
+                        "Not explicitly mentioned in the provided content"
+                    ],
+                    "metrics": [
+                        "MOS (Mean Opinion Score)",
+                        "Sampling speed (relative to real-time)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "MOS",
+                            "value": "4.28 (FastDiff) vs. 4.20 (WaveNet vocoder)"
+                        },
+                        {
+                            "metric": "Sampling speed",
+                            "value": "58x faster than real-time on a V100 GPU"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First diffusion model for speech synthesis with sampling speed comparable to previous fast models, enabling real-time applications",
+                        "Use of time-aware location-variable convolutions with diverse receptive fields for efficient modeling of long-term dependencies",
+                        "Introduction of a noise schedule predictor to drastically reduce the number of denoising steps without sacrificing quality",
+                        "FastDiff-TTS: an end-to-end TTS system that generates waveforms directly from text/phonemes without intermediate features or specialized loss functions",
+                        "Demonstrated state-of-the-art speech quality and speed, outperforming strong baselines"
+                    ]
+                }
+            },
+            {
+                "paper_id": "4e468d3da1797d791db8d514d695b183acb027ee",
+                "raw": "{\"methods\":[\"HiFi-GAN: a GAN-based speech synthesis model with a novel discriminator architecture composed of sub-discriminators focusing on specific periodic parts of raw waveforms\",\"A generator with multiple parallel residual blocks, each observing patterns of various lengths\",\"A small footprint (tiny) version of HiFi-GAN for efficient CPU inference\"],\"problems\":[\"Efficient and high-fidelity speech synthesis from mel-spectrograms\",\"Bridging the quality gap between GAN-based vocoders and autoregressive/flow-based models\",\"Fast waveform generation suitable for real-time and resource-constrained environments\"],\"datasets\":[\"Single speaker dataset (not explicitly named in the provided content)\"],\"metrics\":[\"Mean Opinion Score (MOS)\",\"Generation speed (times faster than real-time)\",\"Model parameter count\"],\"results\":[{\"metric\":\"MOS (Mean Opinion Score)\",\"value\":\"Higher than WaveNet and WaveGlow (exact value not specified)\"},{\"metric\":\"Generation speed (V100 GPU)\",\"value\":\"167.9 times faster than real-time\"},{\"metric\":\"Generation speed (CPU, tiny model)\",\"value\":\"13.4 times faster than real-time\"},{\"metric\":\"Model size (tiny version)\",\"value\":\"0.92M parameters\"}],\"novelty_claims\":[\"Proposes a new discriminator architecture with sub-discriminators focusing on periodic patterns in raw waveforms, crucial for high-fidelity speech synthesis\",\"Achieves both higher computational efficiency and sample quality than previous AR or flow-based models\",\"Demonstrates generality to mel-spectrogram inversion of unseen speakers and end-to-end speech synthesis\",\"Tiny version achieves real-time CPU inference with comparable quality to autoregressive models and a very small parameter count\"]}",
+                "parsed": {
+                    "methods": [
+                        "HiFi-GAN: a GAN-based speech synthesis model with a novel discriminator architecture composed of sub-discriminators focusing on specific periodic parts of raw waveforms",
+                        "A generator with multiple parallel residual blocks, each observing patterns of various lengths",
+                        "A small footprint (tiny) version of HiFi-GAN for efficient CPU inference"
+                    ],
+                    "problems": [
+                        "Efficient and high-fidelity speech synthesis from mel-spectrograms",
+                        "Bridging the quality gap between GAN-based vocoders and autoregressive/flow-based models",
+                        "Fast waveform generation suitable for real-time and resource-constrained environments"
+                    ],
+                    "datasets": [
+                        "Single speaker dataset (not explicitly named in the provided content)"
+                    ],
+                    "metrics": [
+                        "Mean Opinion Score (MOS)",
+                        "Generation speed (times faster than real-time)",
+                        "Model parameter count"
+                    ],
+                    "results": [
+                        {
+                            "metric": "MOS (Mean Opinion Score)",
+                            "value": "Higher than WaveNet and WaveGlow (exact value not specified)"
+                        },
+                        {
+                            "metric": "Generation speed (V100 GPU)",
+                            "value": "167.9 times faster than real-time"
+                        },
+                        {
+                            "metric": "Generation speed (CPU, tiny model)",
+                            "value": "13.4 times faster than real-time"
+                        },
+                        {
+                            "metric": "Model size (tiny version)",
+                            "value": "0.92M parameters"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Proposes a new discriminator architecture with sub-discriminators focusing on periodic patterns in raw waveforms, crucial for high-fidelity speech synthesis",
+                        "Achieves both higher computational efficiency and sample quality than previous AR or flow-based models",
+                        "Demonstrates generality to mel-spectrogram inversion of unseen speakers and end-to-end speech synthesis",
+                        "Tiny version achieves real-time CPU inference with comparable quality to autoregressive models and a very small parameter count"
+                    ]
+                }
+            },
+            {
+                "paper_id": "3553823f863d57e9459c4584b44471933f6583cd",
+                "raw": "{\"methods\":[\"Discrete wavelet transform for sub-band decomposition of waveforms\",\"Frequency-aware dilated convolution\",\"Bag of tricks to improve generation quality\"],\"problems\":[\"Generating realistic audio with a lightweight and fast diffusion-based vocoder\",\"Reducing model size and computational cost of diffusion vocoders without sacrificing audio quality\"],\"datasets\":[],\"metrics\":[\"Training time\",\"Inference speed\",\"Model size (number of parameters)\",\"Output quality\"],\"results\":[{\"metric\":\"Training time speedup\",\"value\":\"3.7x faster than baseline\"},{\"metric\":\"Inference speedup\",\"value\":\"2.2x faster than baseline\"},{\"metric\":\"Model size reduction\",\"value\":\"0.6x (1.78M parameters)\"},{\"metric\":\"Output quality\",\"value\":\"No sacrifice compared to baseline\"}],\"novelty_claims\":[\"First diffusion vocoder to use discrete wavelet transform for sub-band decomposition to simplify feature space\",\"Introduction of frequency-aware dilated convolution to improve frequency accuracy in generated speech\",\"Combination of lightweight architecture and speed optimizations without loss of output quality\"]}",
+                "parsed": {
+                    "methods": [
+                        "Discrete wavelet transform for sub-band decomposition of waveforms",
+                        "Frequency-aware dilated convolution",
+                        "Bag of tricks to improve generation quality"
+                    ],
+                    "problems": [
+                        "Generating realistic audio with a lightweight and fast diffusion-based vocoder",
+                        "Reducing model size and computational cost of diffusion vocoders without sacrificing audio quality"
+                    ],
+                    "datasets": [],
+                    "metrics": [
+                        "Training time",
+                        "Inference speed",
+                        "Model size (number of parameters)",
+                        "Output quality"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Training time speedup",
+                            "value": "3.7x faster than baseline"
+                        },
+                        {
+                            "metric": "Inference speedup",
+                            "value": "2.2x faster than baseline"
+                        },
+                        {
+                            "metric": "Model size reduction",
+                            "value": "0.6x (1.78M parameters)"
+                        },
+                        {
+                            "metric": "Output quality",
+                            "value": "No sacrifice compared to baseline"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First diffusion vocoder to use discrete wavelet transform for sub-band decomposition to simplify feature space",
+                        "Introduction of frequency-aware dilated convolution to improve frequency accuracy in generated speech",
+                        "Combination of lightweight architecture and speed optimizations without loss of output quality"
+                    ]
+                }
+            },
+            {
+                "paper_id": "f2c882fd290d616ff96c1c5d6af4578682e26556",
+                "raw": "{\"methods\":[\"WaveRNN: a single-layer recurrent neural network with a dual softmax layer for efficient audio synthesis\",\"Weight pruning/sparsification of WaveRNN to create Sparse WaveRNN for efficient, high-quality synthesis with fewer parameters\",\"Custom GPU kernel implementation for efficient sampling\",\"Subscale WaveRNN: a generation scheme based on subscaling to enable batched, parallel sample generation\"],\"problems\":[\"Slow sampling speed of sequential generative models for high-fidelity audio synthesis\",\"Inefficiency of existing models (e.g., WaveNet) for real-time or mobile deployment\",\"Maintaining high audio quality while increasing sampling efficiency\"],\"datasets\":[\"Single-speaker North-American English text-to-speech dataset (24kHz, 16-bit waveform, input: predicted linguistic feature vectors)\"],\"metrics\":[\"Negative Log-Likelihood (NLL) on held-out data\",\"A/B comparison tests (human ratings)\",\"Mean Opinion Score (MOS)\",\"Sampling speed (samples per second, real-time factor)\"],\"results\":[{\"metric\":\"A/B comparison (WaveNet512 vs WaveRNN-896)\",\"value\":\"0.02 \u00b10.08 (no significant difference)\"},{\"metric\":\"A/B comparison (SparseWR384 vs WaveRNN-896)\",\"value\":\"-0.14 \u00b10.08 (significant, SparseWR384 slightly worse)\"},{\"metric\":\"A/B comparison (SparseWRMobile vs WaveRNN-896)\",\"value\":\"-0.40 \u00b10.09 (significant, SparseWRMobile worse)\"},{\"metric\":\"A/B comparison (SubscaleWR1024 vs WaveRNN-896)\",\"value\":\"-0.03 \u00b10.05 (no significant difference)\"},{\"metric\":\"Sampling speed (WaveRNN-896 on Nvidia P100 GPU)\",\"value\":\"96,000 samples/sec (4x real time, 24kHz 16-bit audio)\"},{\"metric\":\"Sampling speed (WaveNet512 on Nvidia P100 GPU)\",\"value\":\"0.3x real time\"},{\"metric\":\"Sampling speed (Subscale WaveRNN, Fused, Nvidia P100 GPU)\",\"value\":\"10x real time\"},{\"metric\":\"Sampling speed (Sparse WaveRNN on mobile CPU)\",\"value\":\"real-time audio synthesis possible\"}],\"novelty_claims\":[\"WaveRNN achieves state-of-the-art audio quality with a single-layer RNN, matching WaveNet but with much greater sampling efficiency.\",\"Sparse WaveRNN enables real-time, high-fidelity audio synthesis on mobile CPUs, the first sequential neural model to do so across a broad set of platforms.\",\"Subscale WaveRNN introduces a new batched generation scheme that allows parallel sample generation without loss of quality, providing an orthogonal method to increase sampling efficiency.\"]}",
+                "parsed": {
+                    "methods": [
+                        "WaveRNN: a single-layer recurrent neural network with a dual softmax layer for efficient audio synthesis",
+                        "Weight pruning/sparsification of WaveRNN to create Sparse WaveRNN for efficient, high-quality synthesis with fewer parameters",
+                        "Custom GPU kernel implementation for efficient sampling",
+                        "Subscale WaveRNN: a generation scheme based on subscaling to enable batched, parallel sample generation"
+                    ],
+                    "problems": [
+                        "Slow sampling speed of sequential generative models for high-fidelity audio synthesis",
+                        "Inefficiency of existing models (e.g., WaveNet) for real-time or mobile deployment",
+                        "Maintaining high audio quality while increasing sampling efficiency"
+                    ],
+                    "datasets": [
+                        "Single-speaker North-American English text-to-speech dataset (24kHz, 16-bit waveform, input: predicted linguistic feature vectors)"
+                    ],
+                    "metrics": [
+                        "Negative Log-Likelihood (NLL) on held-out data",
+                        "A/B comparison tests (human ratings)",
+                        "Mean Opinion Score (MOS)",
+                        "Sampling speed (samples per second, real-time factor)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "A/B comparison (WaveNet512 vs WaveRNN-896)",
+                            "value": "0.02 \u00b10.08 (no significant difference)"
+                        },
+                        {
+                            "metric": "A/B comparison (SparseWR384 vs WaveRNN-896)",
+                            "value": "-0.14 \u00b10.08 (significant, SparseWR384 slightly worse)"
+                        },
+                        {
+                            "metric": "A/B comparison (SparseWRMobile vs WaveRNN-896)",
+                            "value": "-0.40 \u00b10.09 (significant, SparseWRMobile worse)"
+                        },
+                        {
+                            "metric": "A/B comparison (SubscaleWR1024 vs WaveRNN-896)",
+                            "value": "-0.03 \u00b10.05 (no significant difference)"
+                        },
+                        {
+                            "metric": "Sampling speed (WaveRNN-896 on Nvidia P100 GPU)",
+                            "value": "96,000 samples/sec (4x real time, 24kHz 16-bit audio)"
+                        },
+                        {
+                            "metric": "Sampling speed (WaveNet512 on Nvidia P100 GPU)",
+                            "value": "0.3x real time"
+                        },
+                        {
+                            "metric": "Sampling speed (Subscale WaveRNN, Fused, Nvidia P100 GPU)",
+                            "value": "10x real time"
+                        },
+                        {
+                            "metric": "Sampling speed (Sparse WaveRNN on mobile CPU)",
+                            "value": "real-time audio synthesis possible"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "WaveRNN achieves state-of-the-art audio quality with a single-layer RNN, matching WaveNet but with much greater sampling efficiency.",
+                        "Sparse WaveRNN enables real-time, high-fidelity audio synthesis on mobile CPUs, the first sequential neural model to do so across a broad set of platforms.",
+                        "Subscale WaveRNN introduces a new batched generation scheme that allows parallel sample generation without loss of quality, providing an orthogonal method to increase sampling efficiency."
+                    ]
+                }
+            },
+            {
+                "paper_id": "01fbbc3a5c317478aed073bd90ef7bd3693e7bbb",
+                "raw": "{\"methods\":[\"Chunked Autoregressive GAN (CARGAN): a hybrid GAN-based model for conditional waveform synthesis that autoregressively generates large chunks of waveform samples per forward pass\"],\"problems\":[\"Artifacts in GAN-based conditional waveform synthesis, especially during mel-spectrogram inversion\",\"Inability of GAN-based models to accurately preserve pitch and periodicity in generated audio\",\"Tradeoff between high-quality audio (autoregressive models) and fast generation (non-autoregressive models)\"],\"datasets\":[],\"metrics\":[\"Pitch error\",\"Training time\",\"Generation speed\",\"Subjective quality\"],\"results\":[{\"metric\":\"Pitch error reduction\",\"value\":\"40-60% reduction compared to prior state-of-the-art GAN-based models\"},{\"metric\":\"Training time reduction\",\"value\":\"58% reduction compared to prior state-of-the-art GAN-based models\"},{\"metric\":\"Generation speed\",\"value\":\"Maintains fast generation suitable for real-time or interactive applications\"},{\"metric\":\"Subjective quality\",\"value\":\"Maintains or improves subjective quality compared to prior GAN-based models\"}],\"novelty_claims\":[\"Proposes CARGAN, a hybrid GAN-based model that autoregressively generates large chunks of waveform samples, combining the inductive bias of autoregression with the speed of GANs\",\"Demonstrates that pitch and periodicity artifacts in GAN-based models are due to lack of autoregressive inductive bias, and that chunked autoregression can mitigate these artifacts\",\"Shows that the optimal chunk size for chunked autoregression is related to the causal receptive field of the generator\",\"Provides a detailed analysis and documentation of common artifacts in GAN-based waveform synthesis and their causes\"]}",
+                "parsed": {
+                    "methods": [
+                        "Chunked Autoregressive GAN (CARGAN): a hybrid GAN-based model for conditional waveform synthesis that autoregressively generates large chunks of waveform samples per forward pass"
+                    ],
+                    "problems": [
+                        "Artifacts in GAN-based conditional waveform synthesis, especially during mel-spectrogram inversion",
+                        "Inability of GAN-based models to accurately preserve pitch and periodicity in generated audio",
+                        "Tradeoff between high-quality audio (autoregressive models) and fast generation (non-autoregressive models)"
+                    ],
+                    "datasets": [],
+                    "metrics": [
+                        "Pitch error",
+                        "Training time",
+                        "Generation speed",
+                        "Subjective quality"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Pitch error reduction",
+                            "value": "40-60% reduction compared to prior state-of-the-art GAN-based models"
+                        },
+                        {
+                            "metric": "Training time reduction",
+                            "value": "58% reduction compared to prior state-of-the-art GAN-based models"
+                        },
+                        {
+                            "metric": "Generation speed",
+                            "value": "Maintains fast generation suitable for real-time or interactive applications"
+                        },
+                        {
+                            "metric": "Subjective quality",
+                            "value": "Maintains or improves subjective quality compared to prior GAN-based models"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Proposes CARGAN, a hybrid GAN-based model that autoregressively generates large chunks of waveform samples, combining the inductive bias of autoregression with the speed of GANs",
+                        "Demonstrates that pitch and periodicity artifacts in GAN-based models are due to lack of autoregressive inductive bias, and that chunked autoregression can mitigate these artifacts",
+                        "Shows that the optimal chunk size for chunked autoregression is related to the causal receptive field of the generator",
+                        "Provides a detailed analysis and documentation of common artifacts in GAN-based waveform synthesis and their causes"
+                    ]
+                }
+            },
+            {
+                "paper_id": "bca9507a2f6bd3379db34ab2ef4295dbdf503a67",
+                "raw": "{\"methods\":[\"Multi-Band Diffusion (MBD): a diffusion-based model for general audio synthesis\",\"Band-specific diffusion models that independently process different frequency bands\",\"Frequency equalizer (EQ) processor to normalize energy within frequency bands\",\"Novel power noise scheduler tailored for audio data with rich harmonic content\"],\"problems\":[\"Generating high-fidelity audio from low-bitrate discrete representations\",\"Reducing audible artifacts in audio synthesis from compressed or imperfect conditioning\",\"Improving over GAN-based and traditional vocoder approaches for general audio synthesis (speech, music, environmental sounds)\",\"Addressing instability and training difficulties in GAN-based decoders\"],\"datasets\":[],\"metrics\":[\"Objective metrics (not specified in the excerpt)\",\"Human perceptual studies\"],\"results\":[{\"metric\":\"Perceptual quality (human study)\",\"value\":\"Proposed approach outperforms state-of-the-art generative techniques at equal bit rate\"},{\"metric\":\"Objective metrics\",\"value\":\"Proposed approach outperforms evaluated baselines by a significant margin\"}],\"novelty_claims\":[\"Introduction of a multi-band diffusion-based framework for general audio synthesis from discrete compressed representations\",\"Band-specific diffusion models to reduce entangled errors across frequency bands\",\"Use of a frequency equalizer (EQ) processor to better match the prior Gaussian distribution to the data distribution in each band\",\"A novel power noise scheduler designed for audio data with rich harmonic content\",\"Demonstration that the approach outperforms both GAN and diffusion-based state-of-the-art methods in perceptual quality and objective metrics\"]}",
+                "parsed": {
+                    "methods": [
+                        "Multi-Band Diffusion (MBD): a diffusion-based model for general audio synthesis",
+                        "Band-specific diffusion models that independently process different frequency bands",
+                        "Frequency equalizer (EQ) processor to normalize energy within frequency bands",
+                        "Novel power noise scheduler tailored for audio data with rich harmonic content"
+                    ],
+                    "problems": [
+                        "Generating high-fidelity audio from low-bitrate discrete representations",
+                        "Reducing audible artifacts in audio synthesis from compressed or imperfect conditioning",
+                        "Improving over GAN-based and traditional vocoder approaches for general audio synthesis (speech, music, environmental sounds)",
+                        "Addressing instability and training difficulties in GAN-based decoders"
+                    ],
+                    "datasets": [],
+                    "metrics": [
+                        "Objective metrics (not specified in the excerpt)",
+                        "Human perceptual studies"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Perceptual quality (human study)",
+                            "value": "Proposed approach outperforms state-of-the-art generative techniques at equal bit rate"
+                        },
+                        {
+                            "metric": "Objective metrics",
+                            "value": "Proposed approach outperforms evaluated baselines by a significant margin"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Introduction of a multi-band diffusion-based framework for general audio synthesis from discrete compressed representations",
+                        "Band-specific diffusion models to reduce entangled errors across frequency bands",
+                        "Use of a frequency equalizer (EQ) processor to better match the prior Gaussian distribution to the data distribution in each band",
+                        "A novel power noise scheduler designed for audio data with rich harmonic content",
+                        "Demonstration that the approach outperforms both GAN and diffusion-based state-of-the-art methods in perceptual quality and objective metrics"
+                    ]
+                }
+            },
+            {
+                "paper_id": "41256b84db46893e3999c7e4325c54e29b489ba4",
+                "raw": "{\"methods\":[\"RFDS (Rectified Flow Distillation Sampling)\",\"iRFDS (inverse RFDS)\",\"RFDS-Rev (RFDS Reversal)\",\"Generalized Stochastic Interpolants framework with rectified flow interpolation factors\"],\"problems\":[\"Using pretrained rectified flow models as plug-and-play priors for generative tasks\",\"Improving text-to-3D generation quality and efficiency\",\"Image inversion and editing using generative priors\",\"Overcoming limitations of diffusion-based priors (e.g., SDS and VSD losses) in downstream tasks\"],\"datasets\":[\"Text-to-3D generation benchmarks (specific datasets not named)\",\"2D image inversion and editing datasets (specific datasets not named)\"],\"metrics\":[\"Generation quality (e.g., FID, CLIP score, but not explicitly named in the text)\",\"Efficiency (number of inference steps)\",\"Diversity of generated outputs\"],\"results\":[{\"metric\":\"Text-to-3D generation benchmark (state-of-the-art)\",\"value\":\"RFDS-Rev outperforms all 2D lifting methods and diffusion priors\"},{\"metric\":\"Image inversion and editing quality\",\"value\":\"iRFDS achieves highly competitive results compared to diffusion-based methods\"}],\"novelty_claims\":[\"First to utilize pretrained rectified flow models as plug-and-play priors for a wide range of generative tasks.\",\"Propose RFDS, iRFDS, and RFDS-Rev methods for leveraging rectified flow priors in text-to-3D generation, image inversion, and editing.\",\"RFDS-Rev establishes new state-of-the-art in text-to-3D generation among 2D lifting methods.\",\"Demonstrate that rectified flow priors can outperform diffusion-based priors (SDS, VSD) in key tasks.\",\"Extend the applicability of score-matching and knowledge distillation approaches to rectified flow models.\"]}",
+                "parsed": {
+                    "methods": [
+                        "RFDS (Rectified Flow Distillation Sampling)",
+                        "iRFDS (inverse RFDS)",
+                        "RFDS-Rev (RFDS Reversal)",
+                        "Generalized Stochastic Interpolants framework with rectified flow interpolation factors"
+                    ],
+                    "problems": [
+                        "Using pretrained rectified flow models as plug-and-play priors for generative tasks",
+                        "Improving text-to-3D generation quality and efficiency",
+                        "Image inversion and editing using generative priors",
+                        "Overcoming limitations of diffusion-based priors (e.g., SDS and VSD losses) in downstream tasks"
+                    ],
+                    "datasets": [
+                        "Text-to-3D generation benchmarks (specific datasets not named)",
+                        "2D image inversion and editing datasets (specific datasets not named)"
+                    ],
+                    "metrics": [
+                        "Generation quality (e.g., FID, CLIP score, but not explicitly named in the text)",
+                        "Efficiency (number of inference steps)",
+                        "Diversity of generated outputs"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Text-to-3D generation benchmark (state-of-the-art)",
+                            "value": "RFDS-Rev outperforms all 2D lifting methods and diffusion priors"
+                        },
+                        {
+                            "metric": "Image inversion and editing quality",
+                            "value": "iRFDS achieves highly competitive results compared to diffusion-based methods"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First to utilize pretrained rectified flow models as plug-and-play priors for a wide range of generative tasks.",
+                        "Propose RFDS, iRFDS, and RFDS-Rev methods for leveraging rectified flow priors in text-to-3D generation, image inversion, and editing.",
+                        "RFDS-Rev establishes new state-of-the-art in text-to-3D generation among 2D lifting methods.",
+                        "Demonstrate that rectified flow priors can outperform diffusion-based priors (SDS, VSD) in key tasks.",
+                        "Extend the applicability of score-matching and knowledge distillation approaches to rectified flow models."
+                    ]
+                }
+            },
+            {
+                "paper_id": "653ae1c9e69a218b4f847593e07448b23f1d3f1e",
+                "raw": "{\"methods\":[\"FlowIE: a flow-based image enhancement framework using rectified flow to estimate straight-line paths from an elementary distribution to high-quality images\",\"Conditioned rectified flow to construct a linear many-to-one transport mapping for image enhancement\",\"A faster inference algorithm inspired by Lagrange's Mean Value Theorem, using midpoint tangent direction for path estimation\"],\"problems\":[\"Robust and efficient image enhancement under complex real-world degradations\",\"Reducing inference time and computational cost of diffusion-based image enhancement methods\",\"Generalizing image enhancement to diverse tasks (denoising, deblurring, super-resolution, inpainting) with a unified framework\"],\"datasets\":[\"CelebA-Test (synthetic)\",\"LFW-Test (real-world)\",\"WIDER-Test (real-world)\",\"ImageNet (for tuning)\",\"RealSRSet\",\"Collect-100\"],\"metrics\":[\"FID (Fr\u00e9chet Inception Distance)\",\"IDS (Identity Similarity)\",\"MANIQA (Mean Opinion Score for Image Quality Assessment)\",\"Inference speed\"],\"results\":[{\"metric\":\"FID (CelebA-Test)\",\"value\":\"19.81\"},{\"metric\":\"IDS (CelebA-Test)\",\"value\":\"0.69\"},{\"metric\":\"FID (LFW-Test)\",\"value\":\"38.66\"},{\"metric\":\"FID (WIDER-Test)\",\"value\":\"32.41\"},{\"metric\":\"MANIQA (RealSRSet)\",\"value\":\"0.5953\"},{\"metric\":\"MANIQA (Collect-100)\",\"value\":\"0.6087\"},{\"metric\":\"Inference speed\",\"value\":\"~10x faster than diffusion-based methods\"}],\"novelty_claims\":[\"Proposes FlowIE, a flow-based image enhancement framework that leverages rectified flow for efficient and robust enhancement across diverse tasks.\",\"Introduces a linear many-to-one transport mapping via conditioned rectified flow, enabling straight-line probability transfer and significantly faster inference.\",\"Devises a mean value sampling algorithm inspired by Lagrange's Mean Value Theorem to further optimize path estimation and enhance visual quality.\",\"Demonstrates that FlowIE can generalize to various real-world image enhancement tasks with minimal fine-tuning and fewer than 5 inference steps.\"]}",
+                "parsed": {
+                    "methods": [
+                        "FlowIE: a flow-based image enhancement framework using rectified flow to estimate straight-line paths from an elementary distribution to high-quality images",
+                        "Conditioned rectified flow to construct a linear many-to-one transport mapping for image enhancement",
+                        "A faster inference algorithm inspired by Lagrange's Mean Value Theorem, using midpoint tangent direction for path estimation"
+                    ],
+                    "problems": [
+                        "Robust and efficient image enhancement under complex real-world degradations",
+                        "Reducing inference time and computational cost of diffusion-based image enhancement methods",
+                        "Generalizing image enhancement to diverse tasks (denoising, deblurring, super-resolution, inpainting) with a unified framework"
+                    ],
+                    "datasets": [
+                        "CelebA-Test (synthetic)",
+                        "LFW-Test (real-world)",
+                        "WIDER-Test (real-world)",
+                        "ImageNet (for tuning)",
+                        "RealSRSet",
+                        "Collect-100"
+                    ],
+                    "metrics": [
+                        "FID (Fr\u00e9chet Inception Distance)",
+                        "IDS (Identity Similarity)",
+                        "MANIQA (Mean Opinion Score for Image Quality Assessment)",
+                        "Inference speed"
+                    ],
+                    "results": [
+                        {
+                            "metric": "FID (CelebA-Test)",
+                            "value": "19.81"
+                        },
+                        {
+                            "metric": "IDS (CelebA-Test)",
+                            "value": "0.69"
+                        },
+                        {
+                            "metric": "FID (LFW-Test)",
+                            "value": "38.66"
+                        },
+                        {
+                            "metric": "FID (WIDER-Test)",
+                            "value": "32.41"
+                        },
+                        {
+                            "metric": "MANIQA (RealSRSet)",
+                            "value": "0.5953"
+                        },
+                        {
+                            "metric": "MANIQA (Collect-100)",
+                            "value": "0.6087"
+                        },
+                        {
+                            "metric": "Inference speed",
+                            "value": "~10x faster than diffusion-based methods"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Proposes FlowIE, a flow-based image enhancement framework that leverages rectified flow for efficient and robust enhancement across diverse tasks.",
+                        "Introduces a linear many-to-one transport mapping via conditioned rectified flow, enabling straight-line probability transfer and significantly faster inference.",
+                        "Devises a mean value sampling algorithm inspired by Lagrange's Mean Value Theorem to further optimize path estimation and enhance visual quality.",
+                        "Demonstrates that FlowIE can generalize to various real-world image enhancement tasks with minimal fine-tuning and fewer than 5 inference steps."
+                    ]
+                }
+            },
+            {
+                "paper_id": "480e756e42f065731325fc9ff38fd199889e65f1",
+                "raw": "{\"methods\":[\"Piecewise Rectified Flow (PeRFlow): divides flow trajectories into several time windows and applies reflow in each window to straighten trajectories and accelerate sampling\",\"Dedicated parameterization to inherit knowledge from pretrained diffusion models, bridging epsilon-prediction and velocity field\",\"Sampling starting noises by adding random noise to clean images according to marginal distributions\",\"Divide-and-conquer strategy for real-time simulation and training\"],\"problems\":[\"High computational cost and slow sampling in diffusion models due to many inference steps required for high-quality generation\",\"Inefficiency and quality gap in existing acceleration methods that rely on synthetic data and adversarial training\",\"Difficulty in accelerating pretrained diffusion models in a plug-and-play, universal manner without sacrificing quality or requiring extensive retraining\"],\"datasets\":[\"Stable Diffusion 1.5\",\"Stable Diffusion 2.1\",\"Stable Diffusion XL (SDXL)\",\"AnimateDiff\",\"Custom SD models\",\"ControlNets\",\"Multiview 3D generation workflows\"],\"metrics\":[\"FID (Fr\u00e9chet Inception Distance)\",\"Visual quality (qualitative and/or user study)\",\"Generation diversity\"],\"results\":[{\"metric\":\"Number of inference steps for high-quality generation\",\"value\":\"4 steps\"},{\"metric\":\"FID (Fr\u00e9chet Inception Distance)\",\"value\":\"PeRFlow achieves lower FID than state-of-the-art acceleration methods (exact values not specified in provided text)\"},{\"metric\":\"Visual quality\",\"value\":\"PeRFlow shows superior visual quality compared to other methods (qualitative assessment)\"},{\"metric\":\"Generation diversity\",\"value\":\"PeRFlow maintains or improves generation diversity compared to baselines\"}],\"novelty_claims\":[\"Proposes PeRFlow, a piecewise rectified flow method that straightens flow trajectories in multiple time windows, enabling few-step generation with high quality\",\"PeRFlow avoids the need for synthetic data and adversarial training, allowing real-time simulation and stable, efficient training\",\"Introduces a dedicated parameterization to inherit knowledge from pretrained diffusion models, enabling fast convergence and plug-and-play acceleration\",\"Demonstrates that the learned weight variation (\u0394W) can serve as a universal accelerator for a wide range of workflows based on pretrained diffusion models, including ControlNets and multiview 3D generation\",\"PeRFlow is lightweight, flexible, and compatible with both unconditional and conditional generative models across different data modalities\"]}",
+                "parsed": {
+                    "methods": [
+                        "Piecewise Rectified Flow (PeRFlow): divides flow trajectories into several time windows and applies reflow in each window to straighten trajectories and accelerate sampling",
+                        "Dedicated parameterization to inherit knowledge from pretrained diffusion models, bridging epsilon-prediction and velocity field",
+                        "Sampling starting noises by adding random noise to clean images according to marginal distributions",
+                        "Divide-and-conquer strategy for real-time simulation and training"
+                    ],
+                    "problems": [
+                        "High computational cost and slow sampling in diffusion models due to many inference steps required for high-quality generation",
+                        "Inefficiency and quality gap in existing acceleration methods that rely on synthetic data and adversarial training",
+                        "Difficulty in accelerating pretrained diffusion models in a plug-and-play, universal manner without sacrificing quality or requiring extensive retraining"
+                    ],
+                    "datasets": [
+                        "Stable Diffusion 1.5",
+                        "Stable Diffusion 2.1",
+                        "Stable Diffusion XL (SDXL)",
+                        "AnimateDiff",
+                        "Custom SD models",
+                        "ControlNets",
+                        "Multiview 3D generation workflows"
+                    ],
+                    "metrics": [
+                        "FID (Fr\u00e9chet Inception Distance)",
+                        "Visual quality (qualitative and/or user study)",
+                        "Generation diversity"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Number of inference steps for high-quality generation",
+                            "value": "4 steps"
+                        },
+                        {
+                            "metric": "FID (Fr\u00e9chet Inception Distance)",
+                            "value": "PeRFlow achieves lower FID than state-of-the-art acceleration methods (exact values not specified in provided text)"
+                        },
+                        {
+                            "metric": "Visual quality",
+                            "value": "PeRFlow shows superior visual quality compared to other methods (qualitative assessment)"
+                        },
+                        {
+                            "metric": "Generation diversity",
+                            "value": "PeRFlow maintains or improves generation diversity compared to baselines"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Proposes PeRFlow, a piecewise rectified flow method that straightens flow trajectories in multiple time windows, enabling few-step generation with high quality",
+                        "PeRFlow avoids the need for synthetic data and adversarial training, allowing real-time simulation and stable, efficient training",
+                        "Introduces a dedicated parameterization to inherit knowledge from pretrained diffusion models, enabling fast convergence and plug-and-play acceleration",
+                        "Demonstrates that the learned weight variation (\u0394W) can serve as a universal accelerator for a wide range of workflows based on pretrained diffusion models, including ControlNets and multiview 3D generation",
+                        "PeRFlow is lightweight, flexible, and compatible with both unconditional and conditional generative models across different data modalities"
+                    ]
+                }
+            },
+            {
+                "paper_id": "4e6244baf4236f4635e85f7dfb941a9a0a6c4a11",
+                "raw": "{\"methods\":[\"InterFlow: a generative model based on continuous-time normalizing flows using stochastic interpolants\",\"Quadratic loss objective for velocity field estimation, avoiding backpropagation through ODE solvers\",\"Optimization of the interpolant path length for optimal transport\",\"Generalization to allow optimization over the interpolant and base density parameters\"],\"problems\":[\"Efficiently learning normalizing flows between arbitrary base and target densities without costly ODE backpropagation\",\"Constructing generative models that can sample and estimate likelihoods efficiently\",\"Scaling ODE-based normalizing flows to high-dimensional and large image resolutions\",\"Providing a tractable alternative to diffusion models for generative modeling\"],\"datasets\":[\"Toy datasets (e.g., Gaussian mixtures)\",\"High-dimensional tabular datasets\",\"CIFAR-10\",\"ImageNet 32x32\",\"Oxford Flowers 128x128\"],\"metrics\":[\"Negative log-likelihood (NLL)\",\"Wasserstein-2 distance (W2)\",\"Image generation quality (e.g., FID, though not explicitly mentioned, implied by image generation tasks)\",\"Training cost (computational efficiency)\"],\"results\":[{\"metric\":\"Density estimation performance (NLL)\",\"value\":\"Matches or surpasses conventional continuous flows at a fraction of the cost\"},{\"metric\":\"Image generation quality on CIFAR-10 and ImageNet 32x32\",\"value\":\"Compares well with diffusion models\"},{\"metric\":\"Scalability\",\"value\":\"Method scales ODE flows to 128x128 image resolutions, previously unreachable\"}],\"novelty_claims\":[\"Proposes a new generative modeling approach (InterFlow) using stochastic interpolants for continuous-time normalizing flows\",\"Introduces a simple quadratic loss for velocity field estimation, avoiding the need for backpropagation through ODE solvers\",\"Separates the choice of interpolant path from the optimization objective, unlike conventional MLE-based flows\",\"Demonstrates that the method can be used for both sampling and likelihood estimation at any point along the interpolant\",\"Shows that the method can be optimized for path length, enabling optimal transport map construction\",\"Establishes a theoretical connection between the velocity field in their flow and the score in diffusion models, providing a bridge between ODE and SDE-based generative models\",\"Demonstrates scalability to high-dimensional and large image datasets, including 128x128 images\"]}",
+                "parsed": {
+                    "methods": [
+                        "InterFlow: a generative model based on continuous-time normalizing flows using stochastic interpolants",
+                        "Quadratic loss objective for velocity field estimation, avoiding backpropagation through ODE solvers",
+                        "Optimization of the interpolant path length for optimal transport",
+                        "Generalization to allow optimization over the interpolant and base density parameters"
+                    ],
+                    "problems": [
+                        "Efficiently learning normalizing flows between arbitrary base and target densities without costly ODE backpropagation",
+                        "Constructing generative models that can sample and estimate likelihoods efficiently",
+                        "Scaling ODE-based normalizing flows to high-dimensional and large image resolutions",
+                        "Providing a tractable alternative to diffusion models for generative modeling"
+                    ],
+                    "datasets": [
+                        "Toy datasets (e.g., Gaussian mixtures)",
+                        "High-dimensional tabular datasets",
+                        "CIFAR-10",
+                        "ImageNet 32x32",
+                        "Oxford Flowers 128x128"
+                    ],
+                    "metrics": [
+                        "Negative log-likelihood (NLL)",
+                        "Wasserstein-2 distance (W2)",
+                        "Image generation quality (e.g., FID, though not explicitly mentioned, implied by image generation tasks)",
+                        "Training cost (computational efficiency)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Density estimation performance (NLL)",
+                            "value": "Matches or surpasses conventional continuous flows at a fraction of the cost"
+                        },
+                        {
+                            "metric": "Image generation quality on CIFAR-10 and ImageNet 32x32",
+                            "value": "Compares well with diffusion models"
+                        },
+                        {
+                            "metric": "Scalability",
+                            "value": "Method scales ODE flows to 128x128 image resolutions, previously unreachable"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Proposes a new generative modeling approach (InterFlow) using stochastic interpolants for continuous-time normalizing flows",
+                        "Introduces a simple quadratic loss for velocity field estimation, avoiding the need for backpropagation through ODE solvers",
+                        "Separates the choice of interpolant path from the optimization objective, unlike conventional MLE-based flows",
+                        "Demonstrates that the method can be used for both sampling and likelihood estimation at any point along the interpolant",
+                        "Shows that the method can be optimized for path length, enabling optimal transport map construction",
+                        "Establishes a theoretical connection between the velocity field in their flow and the score in diffusion models, providing a bridge between ODE and SDE-based generative models",
+                        "Demonstrates scalability to high-dimensional and large image datasets, including 128x128 images"
+                    ]
+                }
+            },
+            {
+                "paper_id": "633e2fbfc0b21e959a244100937c5853afca4853",
+                "raw": "{\"methods\":[\"Score-based generative modeling via stochastic differential equations (SDEs)\",\"Reverse-time SDE sampling using neural network-based score estimation\",\"Predictor-Corrector (PC) samplers combining SDE solvers with score-based MCMC (e.g., Langevin MCMC, HMC)\",\"Deterministic sampling via probability flow ODE for exact likelihood computation\",\"Unified framework encapsulating SMLD and DDPM as special cases\",\"Controllable generation for inverse problems (e.g., class-conditional generation, inpainting, colorization)\"],\"problems\":[\"How to generate data from noise using a principled, flexible, and unified generative modeling framework\",\"How to improve sample quality and likelihood estimation in score-based generative models\",\"How to enable controllable and conditional generation (e.g., inpainting, colorization) without retraining\",\"How to solve inverse problems with generative models\"],\"datasets\":[\"CIFAR-10\"],\"metrics\":[\"Inception Score\",\"Fr\u00e9chet Inception Distance (FID)\",\"Bits per dimension (bits/dim)\"],\"results\":[{\"metric\":\"Inception Score (CIFAR-10)\",\"value\":\"9.89\"},{\"metric\":\"FID (CIFAR-10)\",\"value\":\"2.20\"},{\"metric\":\"Bits/dim (CIFAR-10, uniformly dequantized)\",\"value\":\"2.99\"}],\"novelty_claims\":[\"Proposes a unified framework for score-based generative modeling using SDEs, generalizing and connecting SMLD and DDPM approaches.\",\"Introduces the use of reverse-time SDEs for generative modeling, with neural networks estimating time-dependent scores.\",\"Develops Predictor-Corrector samplers that combine SDE solvers with score-based MCMC for improved sampling.\",\"Derives a probability flow ODE for deterministic sampling and exact likelihood computation.\",\"Enables controllable generation and solving inverse problems (e.g., inpainting, colorization) with a single unconditional model.\",\"Achieves state-of-the-art results on CIFAR-10 for both sample quality and likelihood, and demonstrates high-fidelity 1024x1024 image generation from a score-based model for the first time.\"]}",
+                "parsed": {
+                    "methods": [
+                        "Score-based generative modeling via stochastic differential equations (SDEs)",
+                        "Reverse-time SDE sampling using neural network-based score estimation",
+                        "Predictor-Corrector (PC) samplers combining SDE solvers with score-based MCMC (e.g., Langevin MCMC, HMC)",
+                        "Deterministic sampling via probability flow ODE for exact likelihood computation",
+                        "Unified framework encapsulating SMLD and DDPM as special cases",
+                        "Controllable generation for inverse problems (e.g., class-conditional generation, inpainting, colorization)"
+                    ],
+                    "problems": [
+                        "How to generate data from noise using a principled, flexible, and unified generative modeling framework",
+                        "How to improve sample quality and likelihood estimation in score-based generative models",
+                        "How to enable controllable and conditional generation (e.g., inpainting, colorization) without retraining",
+                        "How to solve inverse problems with generative models"
+                    ],
+                    "datasets": [
+                        "CIFAR-10"
+                    ],
+                    "metrics": [
+                        "Inception Score",
+                        "Fr\u00e9chet Inception Distance (FID)",
+                        "Bits per dimension (bits/dim)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Inception Score (CIFAR-10)",
+                            "value": "9.89"
+                        },
+                        {
+                            "metric": "FID (CIFAR-10)",
+                            "value": "2.20"
+                        },
+                        {
+                            "metric": "Bits/dim (CIFAR-10, uniformly dequantized)",
+                            "value": "2.99"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Proposes a unified framework for score-based generative modeling using SDEs, generalizing and connecting SMLD and DDPM approaches.",
+                        "Introduces the use of reverse-time SDEs for generative modeling, with neural networks estimating time-dependent scores.",
+                        "Develops Predictor-Corrector samplers that combine SDE solvers with score-based MCMC for improved sampling.",
+                        "Derives a probability flow ODE for deterministic sampling and exact likelihood computation.",
+                        "Enables controllable generation and solving inverse problems (e.g., inpainting, colorization) with a single unconditional model.",
+                        "Achieves state-of-the-art results on CIFAR-10 for both sample quality and likelihood, and demonstrates high-fidelity 1024x1024 image generation from a score-based model for the first time."
+                    ]
+                }
+            },
+            {
+                "paper_id": "bdbcb4f411bf2f52e1e3dc08d73fc67679b6a420",
+                "raw": "{\"methods\":[\"APNet2 vocoder: a neural vocoder that directly predicts amplitude and phase spectra from acoustic features and reconstructs waveforms using ISTFT\",\"Use of ConvNeXt v2 as the backbone network for both amplitude and phase spectrum predictors\",\"Introduction of a multi-resolution discriminator (MRD) and multi-period discriminator (MPD) in GAN-based loss functions\",\"Optimization of phase-related loss by updating the anti-wrapping function from a negative cosine to a linear function\",\"Use of hinge loss formulation in GAN losses\"],\"problems\":[\"Limited performance of previous APNet vocoder at higher sampling rates and longer frame shifts, affecting high-quality speech synthesis\",\"Difficulty in accurate phase prediction, especially with long-frame-shift spectra, leading to reduced phase prediction accuracy\",\"High computational cost and low inference efficiency in existing neural vocoders, especially for resource-constrained environments\",\"Insufficient phase modeling in previous vocoders (e.g., iSTFTNet, Vocos) due to lack of explicit phase constraints\"],\"datasets\":[\"Not explicitly named in the provided content, but experiments are conducted on standard TTS and analysis-synthesis tasks with 22.05 kHz sampling rate and 80-dim mel-spectrograms\"],\"metrics\":[\"Synthesized speech quality (likely MOS or similar subjective/objective metric)\",\"Inference speed\"],\"results\":[{\"metric\":\"Synthesized speech quality (MOS or equivalent)\",\"value\":\"APNet2 outperforms APNet and Vocos, and is comparable to HiFi-GAN and iSTFTNet at 22.05 kHz, 11.6 ms frame shift\"},{\"metric\":\"Inference speed\",\"value\":\"APNet2 is significantly faster than HiFi-GAN and iSTFTNet\"}],\"novelty_claims\":[\"APNet2 is the first neural vocoder to combine direct amplitude and phase spectrum prediction with ConvNeXt v2 backbone for both predictors\",\"Introduction of a multi-resolution discriminator (MRD) into GAN-based losses for vocoder training\",\"Optimization of phase-related loss by updating the anti-wrapping function to a linear form for more precise phase prediction\",\"APNet2 achieves high-quality speech synthesis at higher sampling rates and longer frame shifts with significantly improved inference speed compared to prior art\"]}",
+                "parsed": {
+                    "methods": [
+                        "APNet2 vocoder: a neural vocoder that directly predicts amplitude and phase spectra from acoustic features and reconstructs waveforms using ISTFT",
+                        "Use of ConvNeXt v2 as the backbone network for both amplitude and phase spectrum predictors",
+                        "Introduction of a multi-resolution discriminator (MRD) and multi-period discriminator (MPD) in GAN-based loss functions",
+                        "Optimization of phase-related loss by updating the anti-wrapping function from a negative cosine to a linear function",
+                        "Use of hinge loss formulation in GAN losses"
+                    ],
+                    "problems": [
+                        "Limited performance of previous APNet vocoder at higher sampling rates and longer frame shifts, affecting high-quality speech synthesis",
+                        "Difficulty in accurate phase prediction, especially with long-frame-shift spectra, leading to reduced phase prediction accuracy",
+                        "High computational cost and low inference efficiency in existing neural vocoders, especially for resource-constrained environments",
+                        "Insufficient phase modeling in previous vocoders (e.g., iSTFTNet, Vocos) due to lack of explicit phase constraints"
+                    ],
+                    "datasets": [
+                        "Not explicitly named in the provided content, but experiments are conducted on standard TTS and analysis-synthesis tasks with 22.05 kHz sampling rate and 80-dim mel-spectrograms"
+                    ],
+                    "metrics": [
+                        "Synthesized speech quality (likely MOS or similar subjective/objective metric)",
+                        "Inference speed"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Synthesized speech quality (MOS or equivalent)",
+                            "value": "APNet2 outperforms APNet and Vocos, and is comparable to HiFi-GAN and iSTFTNet at 22.05 kHz, 11.6 ms frame shift"
+                        },
+                        {
+                            "metric": "Inference speed",
+                            "value": "APNet2 is significantly faster than HiFi-GAN and iSTFTNet"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "APNet2 is the first neural vocoder to combine direct amplitude and phase spectrum prediction with ConvNeXt v2 backbone for both predictors",
+                        "Introduction of a multi-resolution discriminator (MRD) into GAN-based losses for vocoder training",
+                        "Optimization of phase-related loss by updating the anti-wrapping function to a linear form for more precise phase prediction",
+                        "APNet2 achieves high-quality speech synthesis at higher sampling rates and longer frame shifts with significantly improved inference speed compared to prior art"
+                    ]
+                }
+            },
+            {
+                "paper_id": "37e52ff4714c7a08900b518127e438a195b84611",
+                "raw": "{\"methods\":[\"MelGAN: a non-autoregressive, fully convolutional, feed-forward GAN architecture for audio waveform generation from mel-spectrograms\",\"Architectural changes and simple training techniques for stable GAN training on raw audio\",\"Ablation studies to evaluate model components\",\"General purpose discriminator and generator design guidelines for conditional sequence synthesis\"],\"problems\":[\"High-quality and efficient inversion of mel-spectrograms to raw audio waveforms\",\"Overcoming challenges in training GANs for coherent raw audio waveform generation\",\"Reducing inference time and model size for real-time audio synthesis applications\",\"Generalizing waveform synthesis to unseen speakers and various audio domains\"],\"datasets\":[\"Speech synthesis datasets (not explicitly named in the excerpt)\",\"Music domain translation datasets (not explicitly named in the excerpt)\",\"Unconditional music synthesis datasets (not explicitly named in the excerpt)\"],\"metrics\":[\"Mean Opinion Score (MOS)\",\"Inference speed (x real-time)\",\"Model parameter count\"],\"results\":[{\"metric\":\"Inference speed (GPU)\",\"value\":\"100x faster than real-time on GTX 1080Ti\"},{\"metric\":\"Inference speed (CPU)\",\"value\":\"2x faster than real-time on CPU\"},{\"metric\":\"Inference speed compared to WaveGlow\",\"value\":\"10x faster than WaveGlow (Prenger et al., 2019)\"},{\"metric\":\"Mean Opinion Score (MOS)\",\"value\":\"High quality (exact value not specified in excerpt)\"}],\"novelty_claims\":[\"First successful training of GANs for raw audio generation without additional distillation or perceptual loss functions, while achieving high quality text-to-speech synthesis.\",\"MelGAN is a non-autoregressive, fully convolutional GAN that is significantly faster and smaller than previous models, enabling real-time and efficient waveform synthesis.\",\"MelGAN generalizes to unseen speakers and various audio domains for mel-spectrogram inversion.\",\"Provides guidelines for designing general purpose discriminators and generators for conditional sequence synthesis tasks.\"]}",
+                "parsed": {
+                    "methods": [
+                        "MelGAN: a non-autoregressive, fully convolutional, feed-forward GAN architecture for audio waveform generation from mel-spectrograms",
+                        "Architectural changes and simple training techniques for stable GAN training on raw audio",
+                        "Ablation studies to evaluate model components",
+                        "General purpose discriminator and generator design guidelines for conditional sequence synthesis"
+                    ],
+                    "problems": [
+                        "High-quality and efficient inversion of mel-spectrograms to raw audio waveforms",
+                        "Overcoming challenges in training GANs for coherent raw audio waveform generation",
+                        "Reducing inference time and model size for real-time audio synthesis applications",
+                        "Generalizing waveform synthesis to unseen speakers and various audio domains"
+                    ],
+                    "datasets": [
+                        "Speech synthesis datasets (not explicitly named in the excerpt)",
+                        "Music domain translation datasets (not explicitly named in the excerpt)",
+                        "Unconditional music synthesis datasets (not explicitly named in the excerpt)"
+                    ],
+                    "metrics": [
+                        "Mean Opinion Score (MOS)",
+                        "Inference speed (x real-time)",
+                        "Model parameter count"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Inference speed (GPU)",
+                            "value": "100x faster than real-time on GTX 1080Ti"
+                        },
+                        {
+                            "metric": "Inference speed (CPU)",
+                            "value": "2x faster than real-time on CPU"
+                        },
+                        {
+                            "metric": "Inference speed compared to WaveGlow",
+                            "value": "10x faster than WaveGlow (Prenger et al., 2019)"
+                        },
+                        {
+                            "metric": "Mean Opinion Score (MOS)",
+                            "value": "High quality (exact value not specified in excerpt)"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "First successful training of GANs for raw audio generation without additional distillation or perceptual loss functions, while achieving high quality text-to-speech synthesis.",
+                        "MelGAN is a non-autoregressive, fully convolutional GAN that is significantly faster and smaller than previous models, enabling real-time and efficient waveform synthesis.",
+                        "MelGAN generalizes to unseen speakers and various audio domains for mel-spectrogram inversion.",
+                        "Provides guidelines for designing general purpose discriminators and generators for conditional sequence synthesis tasks."
+                    ]
+                }
+            },
+            {
+                "paper_id": "685af6d2bcdff7170574643b2c5ab4fbcc36f597",
+                "raw": "{\"methods\":[\"WaveGrad: a conditional generative model for waveform generation estimating gradients of the data log-density (score function)\",\"Gradient-based sampling (Langevin dynamics) starting from Gaussian noise, conditioned on mel-spectrogram\",\"Two variants: (1) discrete refinement step index conditioning, (2) continuous scalar noise level conditioning (continuous variant found more effective)\"],\"problems\":[\"High-fidelity speech synthesis with fast inference\",\"Bridging the gap between non-autoregressive and autoregressive models in terms of audio quality and inference speed\",\"Reducing the number of sequential operations required for waveform generation\"],\"datasets\":[],\"metrics\":[\"Subjective naturalness (e.g., Mean Opinion Score, MOS)\"],\"results\":[{\"metric\":\"Subjective naturalness (MOS)\",\"value\":\"WaveGrad matches strong autoregressive baseline and outperforms adversarial non-autoregressive baselines\"},{\"metric\":\"Number of refinement steps\",\"value\":\"High fidelity audio generated with as few as 6 iterations\"}],\"novelty_claims\":[\"WaveGrad estimates gradients of the data log-density for conditional waveform generation, rather than the density itself.\",\"WaveGrad is non-autoregressive and requires only a constant number of generation steps, enabling fast inference.\",\"WaveGrad allows trading off inference speed and sample quality by adjusting the number of refinement steps.\",\"WaveGrad bridges the gap between non-autoregressive and autoregressive models in terms of audio quality.\",\"The continuous noise-level conditioning variant enables flexible inference with different numbers of refinement steps.\"]}",
+                "parsed": {
+                    "methods": [
+                        "WaveGrad: a conditional generative model for waveform generation estimating gradients of the data log-density (score function)",
+                        "Gradient-based sampling (Langevin dynamics) starting from Gaussian noise, conditioned on mel-spectrogram",
+                        "Two variants: (1) discrete refinement step index conditioning, (2) continuous scalar noise level conditioning (continuous variant found more effective)"
+                    ],
+                    "problems": [
+                        "High-fidelity speech synthesis with fast inference",
+                        "Bridging the gap between non-autoregressive and autoregressive models in terms of audio quality and inference speed",
+                        "Reducing the number of sequential operations required for waveform generation"
+                    ],
+                    "datasets": [],
+                    "metrics": [
+                        "Subjective naturalness (e.g., Mean Opinion Score, MOS)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "Subjective naturalness (MOS)",
+                            "value": "WaveGrad matches strong autoregressive baseline and outperforms adversarial non-autoregressive baselines"
+                        },
+                        {
+                            "metric": "Number of refinement steps",
+                            "value": "High fidelity audio generated with as few as 6 iterations"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "WaveGrad estimates gradients of the data log-density for conditional waveform generation, rather than the density itself.",
+                        "WaveGrad is non-autoregressive and requires only a constant number of generation steps, enabling fast inference.",
+                        "WaveGrad allows trading off inference speed and sample quality by adjusting the number of refinement steps.",
+                        "WaveGrad bridges the gap between non-autoregressive and autoregressive models in terms of audio quality.",
+                        "The continuous noise-level conditioning variant enables flexible inference with different numbers of refinement steps."
+                    ]
+                }
+            },
+            {
+                "paper_id": "653debc5348a18bc356397537b7aac1277de6f63",
+                "raw": "{\"methods\":[\"FullSubNet+ framework for speech enhancement\",\"Lightweight multi-scale time sensitive channel attention (MulCA) module\",\"Use of all magnitude, real, and imaginary spectrograms as input\",\"Replacement of LSTM layers with stacked temporal convolutional network (TCN) blocks in the full-band model (full-band extractor)\",\"Deployment of independent full-band extractors for real and imaginary spectrograms\"],\"problems\":[\"Input-output mismatch in FullSubNet (magnitude-only input vs. complex mask output)\",\"Coarse processing of frequency bands in FullSubNet\",\"Limited use of phase information in noisy speech for enhancement\",\"Improving discriminative ability among different frequency bands in the input spectrogram\",\"Reducing model size and computation cost while maintaining or improving performance\"],\"datasets\":[\"DNS Challenge dataset\"],\"metrics\":[\"State-of-the-art (SOTA) performance (relative comparison)\"],\"results\":[{\"metric\":\"State-of-the-art (SOTA) performance on DNS Challenge dataset\",\"value\":\"FullSubNet+ outperforms FullSubNet and other existing speech enhancement approaches\"}],\"novelty_claims\":[\"Introduction of a lightweight multi-scale time sensitive channel attention (MulCA) module to focus on discriminative frequency bands for noise reduction\",\"Utilization of all magnitude, real, and imaginary spectrograms as input to fully exploit phase information in noisy speech\",\"Replacement of LSTM layers with stacked TCN blocks for a more efficient full-band extractor\",\"Deployment of independent full-band extractors for real and imaginary spectrograms to better use phase information\",\"FullSubNet+ achieves superior performance compared to previous SOTA methods on the DNS Challenge dataset\"]}",
+                "parsed": {
+                    "methods": [
+                        "FullSubNet+ framework for speech enhancement",
+                        "Lightweight multi-scale time sensitive channel attention (MulCA) module",
+                        "Use of all magnitude, real, and imaginary spectrograms as input",
+                        "Replacement of LSTM layers with stacked temporal convolutional network (TCN) blocks in the full-band model (full-band extractor)",
+                        "Deployment of independent full-band extractors for real and imaginary spectrograms"
+                    ],
+                    "problems": [
+                        "Input-output mismatch in FullSubNet (magnitude-only input vs. complex mask output)",
+                        "Coarse processing of frequency bands in FullSubNet",
+                        "Limited use of phase information in noisy speech for enhancement",
+                        "Improving discriminative ability among different frequency bands in the input spectrogram",
+                        "Reducing model size and computation cost while maintaining or improving performance"
+                    ],
+                    "datasets": [
+                        "DNS Challenge dataset"
+                    ],
+                    "metrics": [
+                        "State-of-the-art (SOTA) performance (relative comparison)"
+                    ],
+                    "results": [
+                        {
+                            "metric": "State-of-the-art (SOTA) performance on DNS Challenge dataset",
+                            "value": "FullSubNet+ outperforms FullSubNet and other existing speech enhancement approaches"
+                        }
+                    ],
+                    "novelty_claims": [
+                        "Introduction of a lightweight multi-scale time sensitive channel attention (MulCA) module to focus on discriminative frequency bands for noise reduction",
+                        "Utilization of all magnitude, real, and imaginary spectrograms as input to fully exploit phase information in noisy speech",
+                        "Replacement of LSTM layers with stacked TCN blocks for a more efficient full-band extractor",
+                        "Deployment of independent full-band extractors for real and imaginary spectrograms to better use phase information",
+                        "FullSubNet+ achieves superior performance compared to previous SOTA methods on the DNS Challenge dataset"
+                    ]
+                }
+            },
+            {
+                "paper_id": "4edfe0f30360089ad136481ba6eecf0e1f0f1a83",
+                "raw": "{\"methods\":[\"SemFlow: a unified framework for semantic segmentation and semantic image synthesis using rectified flow\",\"Training an ordinary differential equation (ODE) model to transport between distributions of real images and semantic masks\",\"Redefining the mapping function to directly learn from images to masks, removing Gaussian noise for determinism in segmentation\",\"Making the mapping reversible via rectified flow, enabling bi-directional transmission between images and masks\",\"Finite perturbation method: adding amplitude-limited noise to masks to enable multi-modal image synthesis without changing semantic categories\",\"Pseudo mask modeling\",\"Bi-directional training of segmentation and generation\"],\"problems\":[\"Lack of a unified framework for semantic segmentation and semantic image synthesis, which are typically treated as separate tasks\",\"Contradiction between the randomness of diffusion model outputs and the determinism required for segmentation labels\",\"High computational cost due to multiple inference steps in diffusion models for segmentation\",\"Irreversibility between semantic masks and images in existing models\",\"Limited diversity in semantic image synthesis without changing semantic categories\"],\"datasets\":[\"Popular semantic segmentation and image synthesis benchmarks (exact datasets not specified in the provided content)\"],\"metrics\":[\"Accuracy (for semantic segmentation)\",\"Inference speed\",\"Quality of synthesized images\"],\"results\":[],\"novelty_claims\":[\"Introduction of SemFlow, a unified framework that binds semantic segmentation and image synthesis via rectified flow\",\"First to model semantic segmentation and image synthesis as a pair of reverse problems using a single ODE-based framework\",\"Redefinition of the mapping function to remove Gaussian noise, improving determinism in segmentation\",\"Bi-directional training enabling reversible mapping between images and masks\",\"Finite perturbation strategy to enable multi-modal image synthesis without altering semantic categories\",\"Significantly narrows the gap between diffusion models and discriminative models in segmentation accuracy and inference speed\"]}",
+                "parsed": {
+                    "methods": [
+                        "SemFlow: a unified framework for semantic segmentation and semantic image synthesis using rectified flow",
+                        "Training an ordinary differential equation (ODE) model to transport between distributions of real images and semantic masks",
+                        "Redefining the mapping function to directly learn from images to masks, removing Gaussian noise for determinism in segmentation",
+                        "Making the mapping reversible via rectified flow, enabling bi-directional transmission between images and masks",
+                        "Finite perturbation method: adding amplitude-limited noise to masks to enable multi-modal image synthesis without changing semantic categories",
+                        "Pseudo mask modeling",
+                        "Bi-directional training of segmentation and generation"
+                    ],
+                    "problems": [
+                        "Lack of a unified framework for semantic segmentation and semantic image synthesis, which are typically treated as separate tasks",
+                        "Contradiction between the randomness of diffusion model outputs and the determinism required for segmentation labels",
+                        "High computational cost due to multiple inference steps in diffusion models for segmentation",
+                        "Irreversibility between semantic masks and images in existing models",
+                        "Limited diversity in semantic image synthesis without changing semantic categories"
+                    ],
+                    "datasets": [
+                        "Popular semantic segmentation and image synthesis benchmarks (exact datasets not specified in the provided content)"
+                    ],
+                    "metrics": [
+                        "Accuracy (for semantic segmentation)",
+                        "Inference speed",
+                        "Quality of synthesized images"
+                    ],
+                    "results": [],
+                    "novelty_claims": [
+                        "Introduction of SemFlow, a unified framework that binds semantic segmentation and image synthesis via rectified flow",
+                        "First to model semantic segmentation and image synthesis as a pair of reverse problems using a single ODE-based framework",
+                        "Redefinition of the mapping function to remove Gaussian noise, improving determinism in segmentation",
+                        "Bi-directional training enabling reversible mapping between images and masks",
+                        "Finite perturbation strategy to enable multi-modal image synthesis without altering semantic categories",
+                        "Significantly narrows the gap between diffusion models and discriminative models in segmentation accuracy and inference speed"
+                    ]
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,179 @@
+Below is a comprehensive research landscape analysis based on the provided submission and related papers.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the following methodological themes emerge:
+
+- **Diffusion Models**: Central to the landscape, with applications in image, video, and architectural floor plan generation. Variants include latent diffusion, text-to-image/video, and conditional diffusion models.
+- **Generative Adversarial Networks (GANs)**: Used for floor plan generation and layout refinement, often with conditional or graph-constrained extensions.
+- **Adapters and Plug-and-Play Modules**: Lightweight modules (e.g., IP-Adapter, T2I-Adapter, AnimateDiff) that extend or control pretrained diffusion models without full retraining.
+- **Transformer Architectures**: Replacing or augmenting U-Net backbones in diffusion models (e.g., DiT), and used in sequence-to-sequence models for language-guided generation.
+- **Conditioning and Control Mechanisms**: Conditioning on text, images, structural constraints (e.g., wall lines), or multimodal signals to guide generation.
+- **Upscaling and Super-Resolution**: Post-generation upscaling (e.g., SDXL, Imagen Video) to achieve high-resolution outputs efficiently.
+- **Meta-Optimization and Iterative Refinement**: Used in GAN-based layout refinement (e.g., House-GAN++) and in adapter-based control.
+
+### Methodological Clusters
+
+- **Cluster 1: Diffusion Model Innovations**
+  - Papers: Submission, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
+  - Focus: Advancements in diffusion model architectures, conditioning, sampling, and domain adaptation (e.g., U-Net customization, transformer backbones, adapters, upscaling, and multimodal control).
+  - Relationships: Many papers build on the core diffusion model framework, extending it to new domains (video, text-to-image, floor plans), improving efficiency (sampling, upscaling), or enhancing controllability (adapters, conditioning).
+
+- **Cluster 2: GAN-Based Floor Plan Generation**
+  - Papers: 1, 3
+  - Focus: Use of cGANs and relational GANs for floor plan and layout generation, with iterative and component-wise refinement.
+  - Relationships: These methods predate or run parallel to diffusion-based approaches, focusing on architectural design tasks.
+
+- **Cluster 3: Deep Learning for Floor Plan Generation and Evaluation**
+  - Papers: 4, 5
+  - Focus: Application of deep learning (beyond GANs/diffusion) for automatic floor plan generation, including language-guided generation and expert system integration.
+  - Relationships: These works explore alternative modalities (language, expert review) and evaluation strategies.
+
+- **Cluster 4: Adapter and Control Modules**
+  - Papers: 6, 8, 17
+  - Focus: Plug-and-play modules for extending diffusion models with new control signals (image prompts, structure, motion) without retraining the base model.
+  - Relationships: These methods are often complementary to the main diffusion model advances, enabling flexible, multimodal, and efficient control.
+
+### Methodological Trends and Patterns
+
+- **Diffusion Models as the Dominant Paradigm**: There is a clear shift from GANs to diffusion models for generative tasks, especially in high-fidelity image and video synthesis.
+- **Modular and Plug-and-Play Extensions**: Adapters and motion modules are increasingly used to add capabilities to large pretrained models without full retraining.
+- **Conditioning and Control**: There is a strong emphasis on conditioning generative models on various signals (text, images, structure), with increasing sophistication in how these signals are integrated (e.g., decoupled cross-attention, multi-condition adapters).
+- **Efficiency and Scalability**: Methods focus on reducing computational overhead (e.g., upscaling, efficient sampling, lightweight adapters) while scaling up model capacity (e.g., SDXL, DiT).
+- **Domain Adaptation**: Customization of general-purpose generative models to specific domains (e.g., architectural floor plans, subject-driven generation) is a recurring theme.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Efficient and High-Quality Floor Plan Generation**: Automating the creation of architectural floor plans, with attention to domain-specific constraints and professional quality (Submission, 1, 3, 4, 5, 7).
+- **Controllable and Conditional Generation**: Enabling user control over generated outputs via text, images, or structural constraints (5, 6, 7, 8, 15, 17, 18).
+- **Scalable and High-Fidelity Image/Video Synthesis**: Improving the quality, resolution, and scalability of generative models for images and videos (9, 10, 11, 12, 13, 14, 16).
+- **Efficient Model Adaptation and Personalization**: Adapting large generative models to new domains, tasks, or user-specific requirements with minimal data and compute (6, 8, 17, 18).
+- **Evaluation and Benchmarking**: Developing new metrics, benchmarks, and expert review protocols for assessing generative models (4, 5, 12).
+
+### Approaches to Similar Problems
+
+- **Floor Plan Generation**:
+  - GAN-based (1, 3): Focus on traditional cGANs and relational GANs, with iterative refinement and meta-optimization.
+  - Diffusion-based (Submission, 7): Adaptation of diffusion models, with architectural customization and conditioning on structural constraints.
+  - Deep Learning/Expert Systems (4): Integration of physics engines and expert review for both generation and evaluation.
+  - Language-Guided (5): Seq2Seq models and benchmarking for natural language to floor plan generation.
+
+- **Controllable Generation**:
+  - Adapters (6, 8): Lightweight modules for image/structure control in diffusion models.
+  - Conditioning (7, 9, 12, 15): Direct integration of control signals (text, wall lines, etc.) into the generative process.
+
+- **High-Resolution Synthesis**:
+  - Upscaling/Refinement (Submission, 9, 11, 12): Post-generation super-resolution and refinement models to achieve high fidelity with reduced compute.
+
+### Patterns in Problem Formulation
+
+- **Domain-Specific Adaptation**: Many works frame the problem as adapting general generative models to specific domains (e.g., architecture, subject-driven generation).
+- **Control and Flexibility**: Problems are increasingly formulated around user control, multimodal input, and composability of control signals.
+- **Efficiency and Scalability**: There is a recurring focus on reducing computational cost while scaling up model capacity and output resolution.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Architectural Floor Plans**: Macau Tong Lau dataset (1), Modified Swiss Dwellings (7), Tell2Design (5), custom/standard datasets (3, 4).
+- **Image Synthesis**: ImageNet (13, 16), COCO (12), DrawBench (12).
+- **Video Synthesis**: WebVid-10M (17), large-scale curated video datasets (10), Zero123XL and SyncDreamer (10).
+- **Custom Datasets**: For subject-driven generation (18), and for benchmarking new tasks (5, 12).
+
+### Evaluation Metrics
+
+- **Quantitative Metrics**:
+  - FID (Fréchet Inception Distance): Widely used for image synthesis (12, 13, 16).
+  - Inception Score, Precision: For image quality and diversity (13).
+  - Human Preference Studies: For subjective quality and alignment (10, 12, 15).
+  - Task-Specific Metrics: Numerical calculation of room relationships (4), standard floorplan evaluation metrics (3), subject/prompt fidelity (18), temporal smoothness/motion diversity (17).
+
+- **Qualitative Evaluation**:
+  - Expert Review: Used in architectural design evaluation (4).
+  - Human Evaluation: For photorealism, caption similarity, and sample quality (12, 15).
+
+### Patterns in Performance Measurement
+
+- **Image/Video Synthesis**: FID and human preference are standard; newer works introduce domain-specific or task-specific metrics.
+- **Floor Plan Generation**: Lacks standardized metrics; often uses custom or expert-driven evaluation.
+- **Control/Personalization**: Metrics for controllability, subject fidelity, and prompt alignment are emerging.
+
+### Comparison of Evaluation Approaches
+
+- **Standardization in Image/Video**: FID and human studies are common, enabling cross-paper comparison.
+- **Diversity in Floor Plan Evaluation**: Metrics are less standardized, with a mix of quantitative, qualitative, and expert-driven approaches.
+- **Emergence of New Benchmarks**: Papers like Tell2Design and DrawBench introduce new datasets and evaluation protocols for novel tasks.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Diffusion Model Core and Extensions
+
+- **Papers**: 2, 9, 10, 11, 12, 13, 14, 15, 16
+- **Characteristics**: Focus on advancing diffusion model architectures, sampling, conditioning, and scaling for image and video synthesis.
+- **Relationships**: These works form the backbone of the generative modeling landscape, with later papers building on or extending their methods.
+
+### Cluster 2: Domain-Specific Adaptation (Architecture/Floor Plans)
+
+- **Papers**: Submission, 1, 3, 4, 5, 7
+- **Characteristics**: Application and adaptation of generative models (GANs, diffusion, deep learning) to architectural floor plan generation, with attention to domain constraints and evaluation.
+- **Relationships**: These papers are closely related in problem space, with methodological diversity (GANs, diffusion, deep learning, language guidance).
+
+### Cluster 3: Adapter and Control Modules
+
+- **Papers**: 6, 8, 17
+- **Characteristics**: Development of lightweight, plug-and-play modules for extending and controlling pretrained diffusion models (image prompts, structure, motion).
+- **Relationships**: These methods are often layered on top of core diffusion models, enabling flexible and efficient adaptation.
+
+### Cluster 4: Personalization and Subject-Driven Generation
+
+- **Papers**: 18, 17
+- **Characteristics**: Techniques for personalizing generative models to specific subjects or motion patterns with minimal data.
+- **Relationships**: These works are complementary to the adapter/control cluster, focusing on user-specific adaptation.
+
+### Cluster 5: Language-Guided Generation
+
+- **Papers**: 5, 12, 15
+- **Characteristics**: Generation of images or floor plans from natural language, with attention to alignment and evaluation.
+- **Relationships**: These works bridge generative modeling and language understanding, often leveraging large language models.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From GANs to Diffusion Models**: Early works on floor plan generation used GANs (1, 3), but the field has shifted toward diffusion models (Submission, 7), mirroring broader trends in generative modeling (13).
+- **Scaling and Specialization**: Diffusion models have been scaled up (SDXL, DiT) and specialized for new domains (floor plans, video, subject-driven generation).
+- **Adapters and Modular Control**: The introduction of adapters (6, 8, 17) represents a move toward modular, efficient, and flexible model extension, enabling rapid adaptation to new tasks and control signals.
+- **Conditioning and Multimodality**: Conditioning mechanisms have evolved from simple text/image prompts to complex, multimodal, and composable controls (6, 8, 9, 17).
+- **Evaluation and Benchmarking**: New benchmarks and evaluation protocols (5, 12) have emerged to assess novel tasks (e.g., language-guided floor plan generation).
+
+### Building Blocks and Extensions
+
+- **U-Net and Transformer Backbones**: U-Net remains foundational, but transformer-based backbones (DiT) are gaining traction for scalability and performance.
+- **Latent Diffusion and Upscaling**: Latent diffusion models and post-generation upscaling/refinement are key for efficient high-resolution synthesis.
+- **Plug-and-Play Modules**: Adapters and motion modules are built as extensions to pretrained models, enabling new capabilities without retraining.
+
+### Competing and Complementary Approaches
+
+- **GANs vs. Diffusion Models**: Diffusion models have largely surpassed GANs in sample quality and flexibility, but GANs remain relevant for certain domain-specific tasks.
+- **Adapters vs. Full Fine-Tuning**: Adapters offer a lightweight alternative to full model fine-tuning, with strong generalization and composability.
+- **Language vs. Structural Conditioning**: Both approaches are used for controllable generation, with language guidance enabling broader user interaction and structural conditioning providing precise control.
+
+---
+
+# Summary
+
+The research landscape is characterized by a rapid evolution from GAN-based to diffusion-based generative models, with increasing emphasis on scalability, efficiency, and controllability. The submission paper sits at the intersection of these trends, adapting diffusion models for efficient, high-quality architectural floor plan generation—a domain previously dominated by GANs and deep learning expert systems. The broader context includes advances in adapters, multimodal conditioning, and evaluation protocols, reflecting a maturing field that balances technical innovation with practical, domain-specific application.

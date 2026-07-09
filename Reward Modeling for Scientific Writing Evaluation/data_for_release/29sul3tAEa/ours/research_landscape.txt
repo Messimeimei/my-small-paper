@@ -1,0 +1,186 @@
+Below is a comprehensive research landscape analysis based on the provided submission and related papers.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the following methodological paradigms dominate:
+
+- **Adapter-based Methods**: Inserting lightweight, trainable modules (adapters) into frozen pre-trained backbones for task-specific adaptation (e.g., HyperAdapter, EASE, C-ADA, SEMA, MoE-Adapters).
+- **Hypernetwork-based Methods**: Using hypernetworks to generate weights or masks for target networks, often conditioned on task or input features (e.g., HyperAdapter, HyperMask, Partial Hypernetworks, Dependency Preserving Hypernetworks, PHA).
+- **Prompt-based Methods**: Employing learnable prompts or prompt pools to steer frozen pre-trained models for new tasks (e.g., L2P, CODA-Prompt, DAP).
+- **Prototype-based Methods**: Leveraging class or task prototypes (first- and second-order statistics) for classification and knowledge retention (e.g., LayUP, RanPAC, PHA).
+- **Mixture-of-Experts (MoE) and Modular Routing**: Dynamically selecting or mixing among multiple adapters or experts for each input/task (e.g., SEMA, MoE-Adapters, PHA).
+- **Experience Replay and Rehearsal**: Using real or synthetic data to replay past experiences and mitigate forgetting (e.g., SSR, CLS-ER, CLEAR, I-LoRA).
+- **Attention and Masking**: Hard or soft attention mechanisms to control parameter updates or select relevant subspaces (e.g., HAT, HyperMask, CODA-Prompt).
+- **Parameter-efficient Tuning (PETL/PEFT)**: Fine-tuning only a small subset of parameters (e.g., LoRA, adapters, prompts) for scalability and efficiency (e.g., I-LoRA, SEMA, MoE-Adapters).
+
+### Method Clusters
+
+- **Adapter/Hypernetwork Cluster**: HyperAdapter, EASE, SEMA, MoE-Adapters, PHA, HyperMask, Partial Hypernetworks, Dependency Preserving Hypernetworks.
+- **Prompt-based Cluster**: L2P, CODA-Prompt, DAP, C-ADA.
+- **Prototype/Feature-based Cluster**: LayUP, RanPAC, PHA.
+- **Replay/Rehearsal Cluster**: SSR, CLS-ER, CLEAR, I-LoRA.
+- **Attention/Masking Cluster**: HAT, HyperMask, CODA-Prompt.
+- **Survey/Analysis/Taxonomy**: CL Survey, Forgetting Analysis.
+
+### Methodological Trends and Patterns
+
+- **Frozen Pre-trained Backbones**: Most methods freeze the backbone to prevent catastrophic forgetting and only adapt small modules (adapters, prompts, etc.).
+- **Parameter Efficiency and Scalability**: There is a strong trend toward methods that scale sub-linearly with the number of tasks (e.g., HyperAdapter, SEMA, MoE-Adapters).
+- **Task-agnostic Inference**: Increasing focus on methods that do not require task identity at inference (e.g., HyperAdapter, L2P, DAP, HyperMask).
+- **Dynamic/On-demand Expansion**: Several methods expand model capacity only when needed, based on distribution shifts or task novelty (e.g., SEMA, MoE-Adapters, CAL in C-ADA).
+- **Mixture and Routing**: Weighted mixtures of adapters/experts and dynamic routing are replacing hard selection (e.g., SEMA, MoE-Adapters, PHA).
+- **Prototype and Feature Statistics**: Use of first- and second-order statistics from multiple layers for robust, memory-efficient continual learning (e.g., LayUP, RanPAC).
+
+### Relationships Between Approaches
+
+- **Adapters vs. Prompts**: Both aim for parameter-efficient adaptation, but adapters modify intermediate representations, while prompts steer the model via input conditioning.
+- **Hypernetworks as Adapter Generators**: HyperAdapter and PHA use hypernetworks to generate adapter parameters, blending hypernetwork and adapter paradigms.
+- **Prototype-based and Adapter/Prompt Methods**: Some methods (PHA, LayUP) combine prototype-based task representations with adapter or hypernetwork-based adaptation.
+- **Replay vs. Rehearsal-free**: Some methods rely on replay (SSR, CLS-ER, CLEAR), while others are strictly rehearsal-free (HyperAdapter, C-ADA, CODA-Prompt, LayUP).
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Catastrophic Forgetting**: The central challenge—loss of previously acquired knowledge when learning new tasks sequentially.
+- **Rehearsal-free Continual Learning**: Learning without storing or replaying past data, often due to privacy or memory constraints.
+- **Scalability and Parameter Efficiency**: Avoiding linear growth in parameters or memory as the number of tasks increases.
+- **Task-agnostic Inference**: Eliminating the need for task identity at test time.
+- **Stability-Plasticity Dilemma**: Balancing retention of old knowledge (stability) with acquisition of new knowledge (plasticity).
+- **Domain and Distribution Shift**: Adapting to new domains or tasks with significant distributional differences from pre-training.
+- **Efficient Knowledge Transfer and Reuse**: Promoting positive transfer and avoiding negative transfer or interference.
+- **Generalization and Robustness**: Maintaining performance under domain shift, low-data regimes, or noisy task streams.
+
+### Approaches to Similar Problems
+
+- **Catastrophic Forgetting**: Tackled via frozen backbones (HyperAdapter, L2P), adapters/prompts (EASE, C-ADA, CODA-Prompt), hypernetworks (HyperAdapter, HyperMask), and replay (SSR, CLS-ER, CLEAR).
+- **Rehearsal-free CL**: Achieved by architectural innovations (adapters, prompts, hypernetworks) and prototype-based methods (LayUP, RanPAC), often with no access to prior data.
+- **Scalability**: HyperAdapter and SEMA use hypernetworks and modular expansion to keep parameter growth sub-linear; MoE-Adapters and SEMA use dynamic expert selection.
+- **Task-agnostic Inference**: HyperAdapter, L2P, DAP, HyperMask, and some prompt-based methods use input features or learned embeddings to select adaptation modules without explicit task IDs.
+- **Stability-Plasticity**: SEMA, I-LoRA, and CLS-ER use dual-memory or expansion strategies; C-ADA and EASE freeze old parameters and expand for new tasks.
+- **Domain Shift**: C-ADA introduces scaling/shifting modules; DAP and LayUP use instance-level adaptation and multi-layer statistics for robustness.
+
+### Patterns in Problem Formulation
+
+- **From Task-incremental to Realistic/Unstructured CL**: RealCL and related works move beyond idealized, structured task sequences to more realistic, random, or unstructured task orders.
+- **From Full-model to Parameter-efficient Tuning**: Shift from full fine-tuning to adapters, prompts, and LoRA for efficiency and scalability.
+- **From Hard Task Boundaries to Task-agnostic/Online CL**: Many methods now operate without explicit task boundaries or task IDs, reflecting real-world deployment scenarios.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Vision**: CIFAR-100, ImageNet-R, DomainNet, OfficeHome, Stanford Cars-196, TinyImagenet, ImageNet-A, ImageNet-Sketch, ImageNetV2.
+- **Language**: GLUE, SuperNI, AlpacaEval, MMLU, NLI, sentiment analysis datasets.
+- **Vision-Language**: CLIP-based datasets (not always named).
+- **Reinforcement Learning**: Atari, DMLab.
+
+### Evaluation Metrics
+
+- **Accuracy**: Most common, often average final accuracy across tasks.
+- **Error Rate**: Used in some vision benchmarks.
+- **Forgetting**: Quantitative measure of performance drop on previous tasks.
+- **Parameter/Memory/Compute Efficiency**: Model size, memory usage, compute cost.
+- **Sample/Data Efficiency**: Performance in low-data or few-shot settings.
+- **Novelty-specific Metrics**: Generality Destruction (GD), Syntactic/Semantic Forgetting (SynF/SemF), performance gain over SOTA, parameter training burden reduction.
+
+### Patterns in Performance Measurement
+
+- **Average Final Accuracy**: Standard for rehearsal-free and class-incremental settings.
+- **Forgetting and Retention**: Explicitly measured in many works, especially those focusing on stability-plasticity.
+- **Parameter/Memory Efficiency**: Increasingly reported as methods focus on scalability.
+- **Sample Efficiency**: Highlighted in few-shot and low-resource adaptation works (e.g., PHA).
+- **Plug-in and Ablation Studies**: Some works (LayUP) report gains as plug-ins to existing methods.
+
+### Comparison of Evaluation Approaches
+
+- **Vision vs. Language**: Vision CL uses more diverse datasets and benchmarks; language CL often focuses on generalization and knowledge retention.
+- **Rehearsal vs. Rehearsal-free**: Rehearsal-based methods compare buffer sizes and replay strategies; rehearsal-free methods emphasize architectural or algorithmic innovation.
+- **Task-agnostic vs. Task-aware**: Some methods report both settings, showing robustness to unknown task identity.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Adapter/Hypernetwork-based Continual Learning
+- **Papers**: HyperAdapter (submission), EASE, SEMA, MoE-Adapters, PHA, HyperMask, Partial Hypernetworks, Dependency Preserving Hypernetworks.
+- **Characteristics**: Use of adapters or hypernetworks for parameter-efficient, scalable, and often task-agnostic continual learning. Emphasis on modularity, dynamic expansion, and knowledge reuse.
+- **Relationships**: HyperAdapter and PHA both use hypernetworks to generate adapters; SEMA and MoE-Adapters use modular expansion and mixture-of-experts; EASE and C-ADA focus on adapter extensibility and freezing.
+
+### Cluster 2: Prompt-based Continual Learning
+- **Papers**: L2P, CODA-Prompt, DAP, C-ADA.
+- **Characteristics**: Use of learnable prompts or prompt pools to adapt frozen pre-trained models. Focus on task-agnostic inference, input-conditioned adaptation, and overcoming prompt selection inefficiencies.
+- **Relationships**: CODA-Prompt and L2P are foundational; DAP advances with instance-level, pool-free prompts; C-ADA moves beyond prompt learning to adapter-based methods.
+
+### Cluster 3: Prototype/Feature-based and Memory-efficient CL
+- **Papers**: LayUP, RanPAC, PHA.
+- **Characteristics**: Leverage class/task prototypes and feature statistics (including multi-layer and second-order) for robust, memory-efficient continual learning. Often compatible as plug-ins to other methods.
+- **Relationships**: LayUP and RanPAC focus on prototype-based classification; PHA combines prototypes with hypernetwork-generated adapters.
+
+### Cluster 4: Replay/Rehearsal and Dual-memory Methods
+- **Papers**: SSR, CLS-ER, CLEAR, I-LoRA.
+- **Characteristics**: Use of real or synthetic replay buffers, dual-memory systems, or parameter interpolation to balance stability and plasticity.
+- **Relationships**: SSR uses self-synthesized data; CLS-ER and CLEAR use experience replay; I-LoRA uses LoRA parameter interpolation in a dual-memory framework.
+
+### Cluster 5: Attention/Masking and Subspace Methods
+- **Papers**: HAT, HyperMask, EASE.
+- **Characteristics**: Use of attention masks or subspace partitioning to isolate task-specific knowledge and prevent interference.
+- **Relationships**: HAT and HyperMask use attention/masks; EASE uses subspace ensembles with adapters.
+
+### Cluster 6: Analysis, Taxonomy, and Benchmarking
+- **Papers**: CL Survey, Forgetting Analysis, RealCL.
+- **Characteristics**: Provide taxonomies, new evaluation metrics, and realistic benchmarks for continual learning.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **From Full Fine-tuning to Parameter-efficient Tuning**: Early CL methods fine-tuned all parameters, but the field has shifted to adapters, prompts, and LoRA for efficiency and scalability.
+- **From Task-specific to Task-agnostic Inference**: Methods now increasingly avoid requiring task identity at inference, using input features or learned embeddings for adaptation.
+- **From Static to Dynamic/Expandable Architectures**: SEMA, MoE-Adapters, and C-ADA introduce dynamic expansion, only growing the model when necessary.
+- **From Hard Selection to Mixture/Routing**: Weighted mixtures of adapters/experts (SEMA, MoE-Adapters, PHA) replace hard selection, improving flexibility and transfer.
+- **From Single-layer to Multi-layer Feature Utilization**: LayUP and RanPAC show the value of leveraging intermediate representations and higher-order statistics.
+- **From Real Data Replay to Synthetic/No-rehearsal**: SSR and other methods synthesize rehearsal data, while many new methods are strictly rehearsal-free.
+
+### Building Blocks and Extensions
+
+- **Adapters**: Evolved from static, per-task modules (EASE) to hypernetwork-generated (HyperAdapter, PHA) and mixture-of-experts (SEMA, MoE-Adapters).
+- **Hypernetworks**: Progressed from full weight generation (HyperMask, Dependency Preserving HN) to partial (Partial Hypernetworks) and adapter-specific (HyperAdapter, PHA).
+- **Prompts**: From prompt pools (L2P) to decomposed attention-based (CODA-Prompt) and instance-level, pool-free (DAP).
+- **Replay**: From experience replay (CLEAR) to self-synthesized (SSR) and dual-memory (CLS-ER, I-LoRA).
+
+### Competing and Complementary Approaches
+
+- **Adapters vs. Prompts**: Compete as parameter-efficient adaptation strategies; some works (C-ADA) argue for adapters over prompts in certain settings.
+- **Hypernetworks vs. Modular Expansion**: Hypernetworks generate parameters on demand, while modular expansion adds new modules; some methods combine both (HyperAdapter, PHA).
+- **Replay vs. Rehearsal-free**: Replay methods are effective but may be impractical due to privacy/memory; rehearsal-free methods are increasingly competitive.
+- **Prototype-based vs. Adapter/Prompt-based**: Prototype methods are memory-efficient and robust to domain shift; adapters/prompts offer more flexible adaptation.
+
+---
+
+# Summary Table
+
+| Cluster | Key Methods | Notable Papers | Key Innovations |
+|---------|-------------|---------------|-----------------|
+| Adapter/Hypernetwork | Adapters, hypernetworks, modular expansion | HyperAdapter, EASE, SEMA, MoE-Adapters, PHA, HyperMask | Parameter efficiency, scalability, dynamic expansion, task-agnostic inference |
+| Prompt-based | Prompt pools, attention-based, instance-level prompts | L2P, CODA-Prompt, DAP, C-ADA | Task-agnostic, input-conditioned adaptation, overcoming prompt inefficiencies |
+| Prototype/Feature-based | Prototypes, multi-layer statistics | LayUP, RanPAC, PHA | Memory efficiency, robustness to domain shift, plug-in compatibility |
+| Replay/Dual-memory | Experience replay, synthetic rehearsal, dual-memory | SSR, CLS-ER, CLEAR, I-LoRA | Balancing stability/plasticity, rehearsal without real data |
+| Attention/Masking | Hard/soft attention, masking, subspace partitioning | HAT, HyperMask, EASE | Knowledge isolation, interference reduction |
+| Analysis/Benchmarking | Taxonomy, new metrics, realistic benchmarks | CL Survey, Forgetting Analysis, RealCL | Evaluation frameworks, new metrics, realistic CL scenarios |
+
+---
+
+# Conclusion
+
+The research landscape in continual learning with pre-trained models is rapidly evolving toward parameter-efficient, scalable, and task-agnostic solutions. The **submission paper, HyperAdapter**, exemplifies this trend by combining hypernetworks and adapters for scalable, rehearsal-free continual learning, eliminating the need for task identity, and promoting positive transfer. It builds upon and extends prior work in adapters, hypernetworks, and task-agnostic adaptation, and is situated at the intersection of several active research clusters. The field is marked by a convergence of ideas from modularity, dynamic expansion, prototype-based learning, and efficient replay, with increasing emphasis on realistic, unstructured continual learning scenarios and robust, generalizable evaluation.

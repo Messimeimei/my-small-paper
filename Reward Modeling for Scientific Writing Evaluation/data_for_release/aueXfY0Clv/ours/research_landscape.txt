@@ -1,0 +1,211 @@
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the following methodological themes emerge:
+
+- **Foundation Models & Large-Scale Pretraining:** Several works (Submission, Metric3D v2, Depth Anything V2, ZoeDepth, UniDepth, Marigold, PatchRefiner, PatchFusion, MiDaS v3.1, Depth Anything, Metric3D) leverage large-scale pretraining, foundation models, or model zoos, often with transformer-based backbones.
+- **Transformer-Based Architectures:** Vision Transformers (ViT) and their variants (DPT, BEiT, Swin, etc.) are widely adopted for dense prediction (Submission, DPT, MiDaS v3.1, PatchRefiner, PatchFusion, Depth Anything V2, Metric3D v2).
+- **Diffusion Models:** Diffusion-based approaches for depth estimation are explored (Marigold, DMD).
+- **Tile/Patch-Based High-Resolution Estimation:** Patch-wise or tile-based frameworks for high-res depth (PatchRefiner, PatchFusion, Submission).
+- **Domain Generalization & Zero-Shot Transfer:** Methods for zero-shot generalization to unseen domains/cameras (UniDepth, ZoeDepth, Metric3D v2, DMD, ZeroDepth, SM4Depth, Submission).
+- **Synthetic Data & Pseudo-Labeling:** Leveraging synthetic data, pseudo-labeling, and teacher-student paradigms (PatchRefiner, Depth Anything V2, Marigold, Submission).
+- **Self-Supervised & Unlabeled Data:** Self-supervised learning from video or large-scale unlabeled data (Kick Back & Relax, Kick Back & Relax++, Depth Anything, Robust Geometry-Preserving, etc.).
+- **Camera Intrinsics & Scale Disambiguation:** Explicit modeling or estimation of camera intrinsics/focal length to resolve metric scale (Submission, UniDepth, DMD, Metric3D v2, ZeroDepth, SM4Depth).
+- **Boundary/Contour-Aware Losses:** Losses or metrics focused on boundary/contour accuracy (Submission, SharpNet, PatchRefiner).
+- **Adaptive Binning & Output Representations:** Adaptive binning (AdaBins, SM4Depth) and novel output representations (UniDepth’s pseudo-spherical, DMD’s log-scale).
+
+### Method Clusters
+
+- **Cluster 1: Transformer-Based Dense Prediction**
+  - *Papers:* Submission, DPT, MiDaS v3.1, PatchRefiner, PatchFusion, Depth Anything V2, Metric3D v2
+  - *Description:* Use of ViT or hybrid transformer-conv architectures for dense depth prediction, often with multi-scale or patch-based refinement for high-res outputs.
+  - *Trends:* Increasing model scale, multi-resolution features, and focus on high-res, fine-grained outputs.
+
+- **Cluster 2: Diffusion-Based Depth Estimation**
+  - *Papers:* Marigold, DMD
+  - *Description:* Repurposing or training diffusion models for depth estimation, with innovations in conditioning (e.g., FOV) and parameterization (log-scale, v-parameterization).
+  - *Trends:* Strong zero-shot generalization, leveraging pretrained generative models.
+
+- **Cluster 3: Domain Generalization & Zero-Shot Metric Depth**
+  - *Papers:* UniDepth, ZoeDepth, Metric3D v2, Metric3D, ZeroDepth, SM4Depth, Submission
+  - *Description:* Methods that explicitly address generalization to unseen domains/cameras, often via camera modeling, canonical transformations, or promptable modules.
+  - *Trends:* Focus on metric (absolute scale) depth, camera-agnostic models, and zero-shot transfer.
+
+- **Cluster 4: Synthetic Data, Pseudo-Labeling, and Self-Supervision**
+  - *Papers:* PatchRefiner, Depth Anything V2, Marigold, Depth Anything, Kick Back & Relax, Kick Back & Relax++
+  - *Description:* Use of synthetic data, pseudo-labeling, and self-supervised learning to overcome data scarcity and improve generalization.
+  - *Trends:* Scaling up data, teacher-student frameworks, and leveraging unlabeled or weakly labeled data.
+
+- **Cluster 5: Boundary/Contour-Aware Depth Estimation**
+  - *Papers:* Submission, SharpNet, PatchRefiner
+  - *Description:* Methods and losses focused on improving boundary accuracy and fine structure in depth maps.
+  - *Trends:* Dedicated metrics and loss terms for boundary recall/accuracy.
+
+- **Cluster 6: Adaptive Binning and Output Representations**
+  - *Papers:* AdaBins, SM4Depth, UniDepth
+  - *Description:* Adaptive binning or output representations to handle varying depth distributions and improve metric accuracy.
+
+### Methodological Trends & Relationships
+
+- **Transformer dominance:** Transformers have become the backbone of choice for dense prediction, with ViT and its variants replacing traditional CNNs.
+- **From relative to metric depth:** There is a clear shift from relative depth estimation to metric (absolute scale) depth, with increasing focus on camera-agnostic and zero-shot metric estimation.
+- **Data-centric approaches:** Synthetic data, pseudo-labeling, and self-supervised learning are increasingly used to overcome annotation bottlenecks and improve robustness.
+- **Boundary awareness:** There is growing recognition of the importance of boundary accuracy, with new metrics and loss functions being introduced.
+- **Diffusion models as priors:** Diffusion-based generative models are being repurposed for depth estimation, leveraging their strong priors for zero-shot generalization.
+- **Explicit camera modeling:** Many recent methods incorporate explicit modeling or estimation of camera intrinsics/focal length to resolve scale ambiguity.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Monocular Metric Depth Estimation (MMDE):** Estimating absolute (metric) depth from a single RGB image, often without camera intrinsics.
+- **Zero-Shot Generalization:** Achieving strong performance on unseen domains, scenes, or camera models without retraining or fine-tuning.
+- **High-Resolution & Fine-Grained Depth Maps:** Producing sharp, high-res depth maps with accurate object boundaries and fine structures.
+- **Boundary/Contour Accuracy:** Improving the accuracy of depth discontinuities and object boundaries.
+- **Domain Shift & Data Scarcity:** Overcoming the lack of diverse, high-quality, labeled real-world depth data.
+- **Scale Ambiguity:** Resolving the inherent scale ambiguity in monocular depth estimation, especially across different cameras.
+- **Efficient Inference:** Achieving low-latency, high-throughput depth estimation suitable for real-time applications.
+- **Self-Supervised & Unlabeled Data Utilization:** Leveraging unlabeled or weakly labeled data for training robust models.
+
+### Approaches to Similar Problems
+
+- **Zero-Shot Metric Depth:**
+  - *Submission, UniDepth, ZoeDepth, Metric3D v2, DMD, ZeroDepth, SM4Depth* all tackle zero-shot metric depth, but differ in:
+    - *Camera modeling:* Some estimate or encode camera intrinsics (Submission, UniDepth, DMD, Metric3D v2), others use canonical transformations (Metric3D, Metric3D v2), or FOV conditioning (DMD).
+    - *Data strategy:* Some rely on synthetic data (Marigold, PatchRefiner, Depth Anything V2), others on large-scale real or pseudo-labeled data (Depth Anything, Kick Back & Relax).
+    - *Output representation:* Pseudo-spherical (UniDepth), log-scale (DMD), adaptive bins (AdaBins, SM4Depth).
+
+- **High-Resolution/Fine-Grained Depth:**
+  - *Submission, PatchRefiner, PatchFusion, SharpNet* focus on high-res, sharp depth maps, using patch/tile-based refinement, boundary-aware losses, or multi-scale transformers.
+
+- **Boundary/Contour Accuracy:**
+  - *Submission, SharpNet, PatchRefiner* introduce explicit losses or metrics for boundary accuracy, with Submission proposing new evaluation metrics leveraging matting datasets.
+
+- **Domain Shift/Data Scarcity:**
+  - *PatchRefiner, Depth Anything V2, Marigold, Kick Back & Relax, Kick Back & Relax++* use synthetic data, pseudo-labeling, or self-supervision to overcome data limitations.
+
+- **Scale Ambiguity:**
+  - *UniDepth, DMD, Metric3D v2, ZeroDepth, SM4Depth, Submission* address scale ambiguity via camera modeling, FOV conditioning, or adaptive binning.
+
+### Patterns in Problem Formulation
+
+- **From dataset-specific to universal:** Early works often focused on specific datasets or domains; recent works aim for universal, camera-agnostic, and zero-shot solutions.
+- **From relative to metric:** There is a clear trend toward metric depth estimation, with explicit handling of scale and camera parameters.
+- **From global to local detail:** Increasing attention is paid to local details (boundaries, fine structures) alongside global depth accuracy.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **KITTI, NYU Depth v2, ScanNet, DIODE, ETH3D, CityScape, UnrealStereo4K, MVS-Synth, Middleburry 2014, AM-2k, DIS-.5k, HRWSI, MegaDepth, BUPT Depth, SlowTV, CribsTV, Mannequin Challenge, Open Images, BDD100K, SA-1B, Polymax, ibims1, Virtual KITTI, Hypersim, Pascal Context, ADE20K.**
+
+- *Synthetic datasets* (e.g., Unreal4KStereo, synthetic RGB-D, etc.) are widely used for pretraining or pseudo-labeling.
+
+### Evaluation Metrics
+
+- **Standard Depth Metrics:** RMSE, Abs Rel, REL, δ thresholds, scale-invariant RMSE, pixel-wise accuracy.
+- **Boundary/Contour Metrics:** Boundary recall, boundary accuracy, 2D localization of occluding contours.
+- **Zero-Shot/Generalization Metrics:** Zero-shot performance on unseen datasets, cross-dataset transfer.
+- **Efficiency Metrics:** Inference speed/runtime, model size.
+- **Other:** Surface normal estimation accuracy, 3D reconstruction accuracy, scale drift in SLAM.
+
+### Patterns in Performance Measurement
+
+- **Zero-shot evaluation** is increasingly standard, with models tested on unseen datasets or domains.
+- **Boundary/contour metrics** are gaining prominence, especially for high-res/fine-grained models.
+- **Efficiency (runtime, model size)** is reported for practical deployment.
+- **Synthetic-to-real transfer** is often evaluated to demonstrate domain generalization.
+- **Multi-task metrics** (e.g., surface normals, 3D reconstruction) are used in foundation models.
+
+### Comparison of Evaluation Approaches
+
+- **Submission** introduces new boundary accuracy metrics leveraging matting datasets, reflecting a trend toward more nuanced evaluation.
+- **PatchRefiner, PatchFusion, SharpNet** also emphasize boundary/contour metrics.
+- **Zero-shot and cross-dataset transfer** are key benchmarks for generalization (UniDepth, ZoeDepth, Metric3D v2, DMD, ZeroDepth, Kick Back & Relax).
+- **Synthetic data-based models** (Marigold, PatchRefiner, Depth Anything V2) are evaluated on real datasets to demonstrate transferability.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: **Foundation & Transformer-Based Models for Universal Depth**
+- *Papers:* Submission, Metric3D v2, Depth Anything V2, ZoeDepth, UniDepth, MiDaS v3.1, DPT, Metric3D
+- *Characteristics:* Large-scale pretraining, transformer backbones, universal/camera-agnostic models, zero-shot generalization, focus on both metric and relative depth, often multi-task (e.g., normals).
+- *Relationships:* These works build on each other, with newer models scaling up data, model size, and generalization capabilities.
+
+### Cluster 2: **Diffusion-Based Depth Estimation**
+- *Papers:* Marigold, DMD
+- *Characteristics:* Repurposing or training diffusion models for depth, strong zero-shot generalization, synthetic data reliance, FOV/camera conditioning.
+- *Relationships:* DMD extends Marigold by introducing FOV conditioning and log-scale parameterization for joint indoor/outdoor modeling.
+
+### Cluster 3: **Patch/Tile-Based High-Resolution Depth**
+- *Papers:* PatchRefiner, PatchFusion, Submission
+- *Characteristics:* Patch/tile-based refinement for high-res, sharp depth maps, often with boundary-aware losses/metrics.
+- *Relationships:* PatchFusion and PatchRefiner propose different fusion/refinement strategies; Submission integrates multi-scale ViT and boundary metrics.
+
+### Cluster 4: **Self-Supervised & Data-Centric Approaches**
+- *Papers:* Kick Back & Relax, Kick Back & Relax++, Depth Anything, Depth Anything V2, Robust Geometry-Preserving, PatchRefiner, Marigold
+- *Characteristics:* Large-scale self-supervised or synthetic data, pseudo-labeling, teacher-student frameworks, focus on generalization and data efficiency.
+- *Relationships:* Kick Back & Relax++ extends Kick Back & Relax with more data and stronger augmentations; Depth Anything V2 and PatchRefiner focus on synthetic-to-real transfer.
+
+### Cluster 5: **Camera Modeling & Scale Disambiguation**
+- *Papers:* UniDepth, DMD, Metric3D v2, ZeroDepth, SM4Depth, Submission
+- *Characteristics:* Explicit modeling or estimation of camera intrinsics/focal length, canonical transformations, FOV conditioning, adaptive binning.
+- *Relationships:* These works address scale ambiguity via different strategies, often enabling zero-shot metric depth.
+
+### Cluster 6: **Boundary/Contour-Aware Depth Estimation**
+- *Papers:* Submission, SharpNet, PatchRefiner
+- *Characteristics:* Dedicated losses/metrics for boundary accuracy, focus on fine-grained structure.
+- *Relationships:* Submission and PatchRefiner extend SharpNet’s ideas with transformer backbones and new metrics.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **From CNNs to Transformers:** Early models (e.g., AdaBins) used CNNs; recent works (DPT, MiDaS v3.1, Submission) adopt transformers for better global context and fine detail.
+- **From Relative to Metric Depth:** MiDaS and similar models focused on relative depth; ZoeDepth, UniDepth, Metric3D v2, and Submission move toward metric depth with explicit scale handling.
+- **From Dataset-Specific to Universal Models:** Early models were trained/tested on specific datasets; now, universal models (Metric3D v2, UniDepth, ZoeDepth, Submission) generalize across domains and cameras.
+- **From Supervised to Self-Supervised & Synthetic Data:** The field is moving toward leveraging synthetic data (Depth Anything V2, PatchRefiner, Marigold) and self-supervision (Kick Back & Relax, Depth Anything) to overcome data bottlenecks.
+- **From Global to Local Detail:** There is increasing focus on boundary/contour accuracy (SharpNet, Submission, PatchRefiner), with new metrics and loss functions.
+- **Diffusion Models as a New Paradigm:** Marigold and DMD introduce diffusion models for depth, showing strong priors and generalization.
+
+### Building Blocks and Extensions
+
+- **Transformer backbones** (DPT, MiDaS v3.1) are extended with multi-scale, patch-based, or tile-based refinement (PatchRefiner, PatchFusion, Submission).
+- **Camera modeling** (canonical transformations, FOV conditioning, promptable modules) is extended to enable zero-shot metric depth (Metric3D, Metric3D v2, UniDepth, DMD, Submission).
+- **Synthetic data and pseudo-labeling** are scaled up (Depth Anything V2, PatchRefiner) and combined with teacher-student frameworks.
+- **Boundary-aware losses** (SharpNet) are extended with new metrics and transformer architectures (Submission, PatchRefiner).
+
+### Competing and Complementary Approaches
+
+- **Diffusion vs. Discriminative Models:** Diffusion-based (Marigold, DMD) and discriminative transformer-based models (Submission, Depth Anything V2) compete in zero-shot generalization and fine detail, with recent discriminative models closing the gap in detail and speed.
+- **Patch/Tile-Based vs. Global Models:** PatchRefiner and PatchFusion focus on local refinement, while Submission and DPT aim for global context with multi-scale transformers.
+- **Synthetic vs. Real Data:** Some works argue for the sufficiency of synthetic data (Depth Anything V2, Marigold), while others combine synthetic and real (Submission, PatchRefiner) or focus on self-supervised real data (Kick Back & Relax).
+
+---
+
+# Summary Table
+
+| Cluster | Key Papers | Main Methods | Problems Addressed | Notable Trends |
+|---------|------------|--------------|--------------------|----------------|
+| Foundation/Transformer | Submission, Metric3D v2, ZoeDepth, UniDepth, DPT, MiDaS v3.1 | Large-scale ViT, multi-task, universal models | Zero-shot metric depth, generalization, high-res/fine detail | Transformers, multi-scale, universal/camera-agnostic |
+| Diffusion | Marigold, DMD | Diffusion models, FOV conditioning | Zero-shot metric depth, scale ambiguity | Generative priors, synthetic data |
+| Patch/Tile-Based | PatchRefiner, PatchFusion, Submission | Patch/tile refinement, boundary-aware losses | High-res, sharp depth, boundary accuracy | Local-global fusion, fine structure |
+| Data-Centric/Self-Supervised | Kick Back & Relax, Depth Anything, PatchRefiner, Marigold | Synthetic/self-supervised data, pseudo-labeling | Data scarcity, generalization | Scaling data, teacher-student, unlabeled data |
+| Camera Modeling/Scale | UniDepth, DMD, Metric3D v2, ZeroDepth, SM4Depth, Submission | Camera intrinsics estimation, canonical/FOV conditioning | Scale ambiguity, zero-shot metric depth | Explicit camera modeling |
+| Boundary/Contour | Submission, SharpNet, PatchRefiner | Boundary-aware losses/metrics | Boundary accuracy, fine structure | Dedicated metrics, transformer backbones |
+
+---
+
+# Conclusion
+
+The research landscape in monocular depth estimation is rapidly evolving toward **universal, high-resolution, and camera-agnostic models** that generalize across domains and produce fine-grained, metric-accurate depth maps. **Transformer-based architectures** and **large-scale pretraining** are now dominant, with **diffusion models** providing a strong generative prior for zero-shot generalization. **Synthetic data, pseudo-labeling, and self-supervised learning** are key strategies for overcoming data scarcity and domain shift. There is a growing emphasis on **boundary accuracy** and **fine structure**, with new metrics and loss functions being introduced. **Explicit camera modeling** is central to resolving scale ambiguity and enabling metric depth estimation in the wild. The field is characterized by **rapid scaling of data and models**, **integration of multiple tasks (e.g., normals, 3D reconstruction)**, and a shift from dataset-specific to truly universal depth estimation solutions. The **submission paper** stands at the intersection of these trends, combining a foundation model, efficient multi-scale ViT, synthetic and real data, novel boundary metrics, and zero-shot focal length estimation to advance the state of the art.

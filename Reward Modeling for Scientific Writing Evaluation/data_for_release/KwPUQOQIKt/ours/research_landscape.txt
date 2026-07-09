@@ -1,0 +1,176 @@
+# Research Landscape Analysis
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the submission and related papers, the following methodological themes emerge:
+
+- **Process Supervision & Reward Modeling:** Training models to evaluate or guide reasoning at the step level, rather than only at the final answer.
+- **Monte Carlo Tree Search (MCTS) & Tree Search Variants:** Using MCTS or inspired search algorithms to explore, generate, and select high-quality reasoning paths, often guided by reward models.
+- **Self-Consistency & Reranking:** Sampling multiple reasoning paths and selecting the most consistent or highest-scoring answer, sometimes using weighted voting or reward models.
+- **Reinforcement Learning (RL) with Reward Models:** Using outcome- or process-supervised reward models as RL signals, with techniques to mitigate reward hacking and stabilize training.
+- **Prompting Strategies:** Chain-of-Thought (CoT), Plan-and-Solve, and other prompting methods to elicit stepwise reasoning from LLMs.
+- **Self-Improvement & Self-Training:** LLMs generating their own training data or supervision signals, often using their own outputs filtered by confidence or reward models.
+
+### Method Clusters
+
+**Cluster 1: Process Supervision & Step-Level Reward Models**
+- *Papers:* Submission, Related 2 (Math-Shepherd), 5 (HGS-PRM), 6, 9, 10 (ReST-MCTS*), 16
+- *Description:* These works focus on collecting, generating, or utilizing step-level feedback (process supervision) to train reward models (PRMs) that can guide LLMs during training or inference. Methods include automatic annotation (often via MCTS), stepwise verification, and using PRMs for reranking or RL.
+
+**Cluster 2: MCTS and Tree Search for Reasoning Path Exploration**
+- *Papers:* Submission, 1, 2, 3, 10, 11
+- *Description:* These papers leverage MCTS or its variants to explore the space of possible reasoning paths, collect high-quality traces, or guide LLMs in multi-step reasoning. MCTS is often combined with reward models for step-level evaluation.
+
+**Cluster 3: Outcome Supervision & Value Models**
+- *Papers:* 4 (OVM), 6, 9, 16
+- *Description:* These works use outcome-based supervision (final answer correctness) to train value models that guide decoding or RL, aiming to avoid the cost of process annotation.
+
+**Cluster 4: Self-Consistency, Reranking, and Verifier-Based Decoding**
+- *Papers:* Submission, 7 (DiVeRSe), 8, 12, 16
+- *Description:* These methods sample multiple reasoning paths and select the most consistent or highest-scoring answer, using self-consistency, weighted voting, or reward/verifier models.
+
+**Cluster 5: Prompting Strategies for Reasoning**
+- *Papers:* 13, 14, 15
+- *Description:* These works focus on prompt engineering (CoT, Plan-and-Solve, etc.) to elicit better reasoning from LLMs, sometimes combined with self-consistency or reranking.
+
+**Cluster 6: RL with Reward Models & Reward Refinement**
+- *Papers:* 6, 10, 16
+- *Description:* These papers analyze and improve the use of reward models (process or outcome) as RL signals, introducing reward refinement techniques to prevent reward hacking and stabilize training.
+
+### Methodological Trends & Relationships
+
+- **Automated Process Supervision:** There is a clear trend toward automating the collection of process supervision data, primarily via MCTS or similar search algorithms, to avoid expensive human annotation (Submission, 2, 3, 10).
+- **Step-Level Feedback:** Increasingly, step-level feedback is used not just for training but also for inference (5), reranking (2, 7), and RL (6, 10).
+- **Combining Process and Outcome Supervision:** Some works (9, 16) explore hybrid reward models that combine both process and outcome signals for more robust evaluation and alignment.
+- **Self-Improvement Loops:** Several papers (12, 10, 3) propose self-improvement or self-training, where LLMs generate their own supervision signals, filtered by confidence or reward models.
+- **Prompting as a Foundation:** Prompting strategies (CoT, Plan-and-Solve) remain foundational, often serving as the base upon which more advanced search, reward, or RL methods are layered.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Improving Mathematical Reasoning in LLMs:** The central problem across nearly all papers is enhancing the ability of LLMs to perform complex, multi-step mathematical reasoning.
+- **Efficient and Scalable Supervision:** Many works address the challenge of collecting high-quality supervision (especially process-level) without prohibitive human annotation costs.
+- **Reducing Error Propagation:** Several papers focus on minimizing errors that accumulate across reasoning steps, which is a major issue in multi-step tasks.
+- **Alignment Beyond Human Supervision:** Some works (16) tackle the challenge of aligning LLMs on tasks that surpass human capabilities, requiring scalable oversight mechanisms.
+- **Reward Model Effectiveness and Stability:** Papers (6, 4, 9) analyze the effectiveness of different reward models (process vs. outcome) and address issues like reward hacking in RL.
+- **Generalization from Easy to Hard Tasks:** The problem of enabling models to generalize from tasks with available supervision to harder, unsupervised tasks is addressed in (16).
+
+### Approaches to Similar Problems
+
+- **Automated Process Supervision:** Submission, 2, 3, 10 all propose methods to automate process supervision, but differ in their search strategies (MCTS variants, beam search) and reward model integration.
+- **Reward Model Training:** Papers differ in whether they use process-based, outcome-based, or hybrid reward models, and in how these are used (for RL, reranking, or guided decoding).
+- **Inference-Time Guidance:** Some works (5, 7, 8) focus on using reward models or verifiers at inference to select or rerank outputs, while others (6, 10) focus on RL training.
+- **Prompting vs. Search:** Earlier works (13, 14, 15) focus on prompt engineering, while more recent works layer search and reward modeling on top of prompting.
+
+### Patterns in Problem Formulation
+
+- **From Outcome to Process:** There is a shift from focusing solely on final-answer correctness to emphasizing the quality and correctness of intermediate reasoning steps.
+- **From Human to Automated Supervision:** The field is moving from human-annotated process supervision to fully automated, scalable annotation pipelines.
+- **From Training to Inference:** Step-level feedback is increasingly used not just for training but also for inference-time guidance and reranking.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **GSM8K:** The most widely used benchmark for math word problems and multi-step reasoning.
+- **MATH / MATH500:** Used for evaluating performance on more challenging, higher-level math problems.
+- **Other Datasets:** ARC, SciQ, MBPP, HumanEval, Blocksworld, PrOntoQA, AsDiv, MultiArith, SVAMP, SingleEq, CLUTRR, Game of 24, SciBench, PRM800K, MetaMath.
+
+### Evaluation Metrics
+
+- **Accuracy / Success Rate:** The primary metric across all works, measured as the percentage of correct final answers.
+- **Trace Error Rate:** Used in (9) to measure errors in reasoning traces, not just final answers.
+- **Pass@1:** Used for code generation tasks (5).
+- **Relative Improvement:** Some works report improvements over baselines or previous SOTA.
+
+### Patterns in Performance Measurement
+
+- **Step-Level vs. Outcome-Level:** Some works (9, 2, 5) evaluate both the correctness of the final answer and the quality of intermediate steps.
+- **Comparisons to Baselines:** Most papers compare to strong baselines such as CoT prompting, self-consistency, or previous SOTA models.
+- **Ablation and Analysis:** Several works (12, 6) include ablation studies or analysis of reward model effectiveness and training stability.
+
+### Evaluation Approaches
+
+- **Automated Evaluation:** With the move to automated process supervision, evaluation is increasingly automated, with less reliance on human annotation.
+- **Reranking and Verification:** Some works (2, 7) use reward models or verifiers to rerank outputs, and report both reranked and raw model performance.
+- **Generalization Tests:** Some works (16) test generalization from easy (supervised) to hard (unsupervised) tasks.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster A: Automated Process Supervision & MCTS-Based Data Generation
+- *Papers:* Submission, 1, 2, 3, 10, 11
+- *Characteristics:* Use of MCTS or similar search to automate the collection of process supervision data, often for training process reward models. Emphasis on eliminating human annotation and scaling up data collection.
+- *Relationships:* These works build on each other by refining search strategies (e.g., divide-and-conquer MCTS in Submission, MCTS* in 10), integrating value models (3), and applying to self-training (10).
+
+### Cluster B: Step-Level Reward Models & Inference-Time Guidance
+- *Papers:* 2, 5, 7, 9, 16
+- *Characteristics:* Focus on process reward models (PRMs) for step-level feedback, used for reranking, verification, or guiding search during inference. Includes both math and code generation tasks.
+- *Relationships:* These works often use automated process supervision from Cluster A, and extend PRMs to new domains (code in 5), or combine with outcome models (16).
+
+### Cluster C: Outcome-Based Value Models & Efficient Decoding
+- *Papers:* 4, 6, 9, 16
+- *Characteristics:* Use of outcome-supervised value models (OVMs/ORMs) for guided decoding or RL, aiming for efficiency and scalability by avoiding process annotation.
+- *Relationships:* These works sometimes combine with process models (16), or analyze the tradeoffs between process and outcome supervision (6, 9).
+
+### Cluster D: Prompting & Self-Consistency
+- *Papers:* 8, 12, 13, 14, 15
+- *Characteristics:* Focus on prompt engineering (CoT, Plan-and-Solve), self-consistency decoding, and self-improvement via model-generated data. Often serve as baselines or foundations for more advanced methods.
+- *Relationships:* These methods are often combined with search or reward models in other clusters.
+
+### Cluster E: RL with Reward Models & Reward Refinement
+- *Papers:* 6, 10, 16
+- *Characteristics:* Analyze and improve the use of reward models in RL training, introducing techniques to prevent reward hacking and improve stability.
+- *Relationships:* These works often use data or models from Clusters A and B.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **Prompting → Self-Consistency → Reward Models:** The field began with prompt engineering (CoT, Plan-and-Solve), then moved to self-consistency and reranking, and now increasingly uses reward models for both training and inference.
+- **Outcome → Process Supervision:** Early works focused on outcome-based supervision; more recent works emphasize process supervision for finer-grained feedback and improved reasoning trace quality.
+- **Human → Automated Supervision:** There is a clear shift from human-annotated process data to fully automated, scalable process supervision using MCTS and related search algorithms.
+- **Inference → RL Training:** Step-level feedback, initially used for inference (reranking, verification), is now also used as RL signals, with attention to reward hacking and stability.
+- **Hybrid & Scalable Alignment:** The latest works (16) explore hybrid reward models and scalable alignment strategies that generalize from easy (human-supervised) to hard (unsupervised) tasks.
+
+### Building Blocks and Extensions
+
+- **MCTS as a Foundation:** MCTS and its variants are foundational for automated process supervision, with each new work refining the search strategy or integrating new reward/value models.
+- **Reward Model Integration:** PRMs and OVMs are increasingly integrated into both search and RL pipelines, with hybrid models (OPRM) emerging.
+- **Self-Improvement Loops:** Self-training and self-improvement (12, 10) close the loop, allowing LLMs to generate and learn from their own high-quality data.
+
+### Competing and Complementary Approaches
+
+- **Process vs. Outcome Supervision:** There is ongoing analysis of the tradeoffs between process and outcome supervision, with some works advocating for hybrid models.
+- **Search vs. Prompting:** While search-based methods (MCTS, beam search) offer more control and quality, prompting-based methods remain simple and effective, especially when combined with self-consistency.
+- **RL vs. Inference-Time Guidance:** Some works focus on RL training with reward models, while others use reward models for inference-time reranking or verification; these approaches are increasingly combined.
+
+---
+
+# Summary Table
+
+| Cluster | Key Methods | Representative Papers | Main Contribution |
+|---------|-------------|----------------------|-------------------|
+| A | Automated process supervision, MCTS | Submission, 1, 2, 3, 10, 11 | Scalable, automated collection of step-level supervision for LLM reasoning |
+| B | Step-level reward models, inference guidance | 2, 5, 7, 9, 16 | Using PRMs for reranking, verification, and guiding reasoning at inference |
+| C | Outcome-based value models | 4, 6, 9, 16 | Efficient decoding and RL with outcome supervision, avoiding process annotation |
+| D | Prompting, self-consistency | 8, 12, 13, 14, 15 | Prompt engineering and self-consistency for improved reasoning without extra training |
+| E | RL with reward models, reward refinement | 6, 10, 16 | Stable and effective RL training for reasoning using refined reward models |
+
+---
+
+# Conclusion
+
+The research landscape represented by these papers is rapidly evolving from simple prompting and outcome-based supervision to sophisticated, automated, and scalable process supervision pipelines. The field is converging on the use of MCTS and reward models (process, outcome, or hybrid) for both data generation and model training, with increasing automation and less reliance on human annotation. There is a strong trend toward integrating these methods into both RL training and inference-time guidance, with careful attention to stability, efficiency, and generalization to harder tasks. The submission paper exemplifies the state-of-the-art in this landscape, pushing the boundaries of automated process supervision and demonstrating substantial gains in mathematical reasoning for LLMs.

@@ -1,0 +1,188 @@
+# Research Landscape Analysis
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the provided papers, the research landscape is dominated by **retrieval-augmented language modeling (RALM)** and **semi-parametric generation**. The core idea is to enhance language models (LMs) by incorporating external knowledge or memory, typically via retrieval from large text corpora or datastores, and to do so in ways that improve efficiency, adaptability, factuality, and attribution.
+
+#### Method Clusters
+
+**Cluster 1: Retrieval-Augmented Language Models (RALM)**
+- **Standard RALM**: Prepending retrieved documents/passages to the LM input (e.g., In-Context RALM, REPLUG, Atlas, REALM).
+- **End-to-End RALM**: Jointly training retriever and generator (e.g., RAG, Atlas, REALM).
+- **Black-Box RALM**: Retrieval augmentation without access to LM internals (e.g., REPLUG, In-Context RALM).
+- **Active/Adaptive RALM**: Retrieval is triggered based on model uncertainty or context (e.g., FLARE, Self-RAG).
+
+**Cluster 2: Nearest Neighbor and Chunk-Based Retrieval**
+- **kNN-LM and Variants**: Interpolating LM predictions with k-nearest neighbor retrievals in embedding space (e.g., kNN-LM, adaptive kNN-LM, Efficient kNN-LM).
+- **Chunk-Based Retrieval**: Retrieving and injecting multi-token chunks or spans (e.g., Chunk-based kNN-MT, NEST, CHUNK-DISTILLED LM (submission), COG, RETRO).
+
+**Cluster 3: Speculative and Efficient Decoding**
+- **Speculative Decoding**: Using retrieval or draft models to propose multi-token continuations, verified by the main LM (e.g., REST, NEST).
+- **Efficiency-Focused Methods**: Datastore pruning, adaptive retrieval, and vector compression to reduce inference cost (e.g., Efficient kNN-LM, REST, Chunk-based kNN-MT).
+
+**Cluster 4: Copy/Segment-Based Generation**
+- **Copy-Generator (COG)**: Generation as copy-and-paste from indexed text segments, not token-by-token.
+- **Unified Generation-Retrieval**: Combining retrieval and generation with mechanisms to copy from retrieved candidates (e.g., UGRIC for image captioning).
+
+**Cluster 5: Domain/Behavior Adaptation without Retraining**
+- **Training-Free Adaptation**: Methods that adapt LMs to new domains or knowledge without retraining (e.g., CHUNK-DISTILLED LM, kNN-LM, COG, Proxy-tuning).
+- **Proxy/Decoding-Time Tuning**: Using small expert models to guide large black-box LMs at inference (e.g., Proxy-tuning).
+
+#### Methodological Trends and Relationships
+
+- **Shift from Token-Level to Chunk/Span-Level Retrieval**: Early kNN-LM and RALM methods focused on token-level augmentation; recent work (Chunk-based kNN-MT, NEST, CHUNK-DISTILLED LM, COG, RETRO) moves toward chunk or span retrieval for efficiency and fluency.
+- **Training-Free and Black-Box Approaches**: There is a clear trend toward methods that do not require retraining or access to LM internals, enabling practical deployment (In-Context RALM, REPLUG, REST, Proxy-tuning, CHUNK-DISTILLED LM).
+- **Active and Adaptive Retrieval**: Methods increasingly trigger retrieval based on model uncertainty or context, rather than at fixed intervals (FLARE, Self-RAG, adaptive kNN-LM).
+- **Attribution and Factuality**: Newer methods (NEST, Self-RAG, FLARE) emphasize not just knowledge injection but also attribution and factuality, often with explicit mechanisms for source tracking and self-critique.
+- **Efficiency and Scalability**: There is a strong focus on making retrieval-augmented methods efficient enough for real-world use, via chunking, adaptive retrieval, and datastore optimization.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Inefficiency of Token-Level Generation and Retrieval**
+   - Token-by-token generation is slow, especially in large LMs (CHUNK-DISTILLED LM, Chunk-based kNN-MT, NEST, REST, COG).
+2. **Adaptability and Domain/Knowledge Injection**
+   - LMs struggle to adapt to new data or domains without expensive retraining (CHUNK-DISTILLED LM, kNN-LM, COG, Proxy-tuning).
+3. **Factuality and Hallucination**
+   - LMs often generate factually incorrect or hallucinated content (Self-RAG, NEST, FLARE, Reliable LMs with Retrieval).
+4. **Attribution and Interpretability**
+   - Difficulty in attributing generated content to sources (NEST, Self-RAG, Reliable LMs with Retrieval).
+5. **Parameter and Compute Efficiency**
+   - Scaling LMs is expensive; retrieval-augmentation aims to achieve similar performance with smaller models (In-Context RALM, RETRO, Atlas).
+6. **Black-Box and API-Only LM Adaptation**
+   - Adapting LMs when internal weights are inaccessible (REPLUG, Proxy-tuning, In-Context RALM).
+7. **Efficient and Effective Retrieval**
+   - How to retrieve the most relevant information efficiently (adaptive kNN-LM, FLARE, Efficient kNN-LM, ReACC).
+
+### Approaches to Similar Problems
+
+- **Efficiency**: Chunk-based and speculative decoding methods (CHUNK-DISTILLED LM, Chunk-based kNN-MT, NEST, REST, COG) address inefficiency by generating multiple tokens at once or by reducing retrieval frequency.
+- **Adaptability**: Training-free methods (kNN-LM, CHUNK-DISTILLED LM, COG, Proxy-tuning) allow for rapid domain adaptation by swapping or augmenting datastores or using small expert models.
+- **Factuality/Attribution**: Self-reflective and attribution-focused methods (Self-RAG, NEST, FLARE) introduce mechanisms for self-critique, citation, and source tracking.
+- **Black-Box Adaptation**: In-Context RALM, REPLUG, and Proxy-tuning enable adaptation without model retraining or internal access, broadening applicability.
+
+### Patterns in Problem Formulation
+
+- **From General to Specific**: Early work frames the problem as general language modeling or QA improvement; recent work targets specific pain points (efficiency, factuality, attribution, black-box adaptation).
+- **From Model-Centric to System-Centric**: The focus shifts from improving the LM itself to improving the overall system (retriever, datastore, interaction, and infrastructure).
+- **From Static to Dynamic Retrieval**: Retrieval is increasingly seen as a dynamic, context-sensitive process rather than a static augmentation.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Language Modeling**: WikiText-103, The Pile, C4, PG-19
+- **Knowledge-Intensive Tasks**: NaturalQuestions, TriviaQA, WebQuestions, CuratedTrec, FEVER, MMLU, KILT
+- **Domain Adaptation**: Law-MT, En-Wiki, domain-specific datasets (e.g., FreeLaw, Stack Exchange)
+- **Code Generation**: The Stack, CodeXGLUE, CodeNet, HumanEval
+- **Long-Form/Reasoning**: 2WikiMultihopQA, StrategyQA, ASQA, WikiAsp
+- **Image Captioning**: MSCOCO
+
+### Evaluation Metrics
+
+- **Perplexity**: Standard for language modeling efficiency and quality (kNN-LM, In-Context RALM, RETRO, etc.).
+- **Accuracy/Exact Match/F1**: For QA and fact verification (RAG, Atlas, REALM, ReACC).
+- **ROUGE, BLEU, CIDEr, METEOR**: For generation and summarization tasks (NEST, UGRIC, FLARE).
+- **MAUVE, Human Preference**: For generation quality and human-likeness (COG).
+- **Attribution Rate, FACTSCORE, Citation Accuracy**: For factuality and source attribution (NEST, Self-RAG).
+- **Inference Speed/Decoding Latency**: For efficiency (Chunk-based kNN-MT, Efficient kNN-LM, REST, NEST).
+- **Task-Specific Metrics**: Code completion accuracy, reasoning accuracy, etc.
+
+### Patterns in Performance Measurement
+
+- **Perplexity remains the gold standard** for language modeling, but is increasingly supplemented by factuality, attribution, and efficiency metrics.
+- **Human evaluation and preference** are used for tasks where automatic metrics are insufficient (COG, UGRIC).
+- **Attribution and factuality metrics** are gaining prominence, reflecting the field’s concern with reliability and trustworthiness.
+- **Efficiency metrics** (speedup, latency) are critical for methods claiming practical deployment benefits.
+
+### Comparison of Evaluation Approaches
+
+- **Standardization**: Most language modeling and QA tasks use established datasets and metrics, enabling direct comparison.
+- **Task-Specificity**: Newer tasks (e.g., code completion, long-form generation) require custom or adapted metrics.
+- **Holistic Evaluation**: Recent work (Self-RAG, NEST, FLARE) evaluates not just accuracy but also factuality, attribution, and efficiency, reflecting a more comprehensive view of model utility.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: **Retrieval-Augmented Language Modeling (RALM)**
+- **Papers**: In-Context RALM, RAG, Self-RAG, Atlas, REALM, REPLUG, Reliable LMs with Retrieval, FLARE, Active Retrieval Augmented Generation
+- **Characteristics**: Focus on augmenting LMs with external retrieval, often via prepending or joint training; includes both parametric and non-parametric memory; addresses knowledge injection, factuality, and updatability.
+
+### Cluster 2: **Nearest Neighbor and Chunk-Based Retrieval**
+- **Papers**: kNN-LM, adaptive kNN-LM, Efficient kNN-LM, Chunk-based kNN-MT, NEST, RETRO, CHUNK-DISTILLED LM (submission), COG
+- **Characteristics**: Use of nearest neighbor search in embedding space; chunk/span retrieval for efficiency; focus on training-free adaptation and efficiency; includes both token-level and chunk-level approaches.
+
+### Cluster 3: **Speculative and Efficient Decoding**
+- **Papers**: REST, NEST, Efficient kNN-LM, Chunk-based kNN-MT
+- **Characteristics**: Methods to accelerate generation by proposing multi-token drafts or reducing retrieval frequency; often training-free and plug-and-play.
+
+### Cluster 4: **Copy/Segment-Based Generation**
+- **Papers**: COG, UGRIC, CHUNK-DISTILLED LM
+- **Characteristics**: Generation as copy-and-paste from indexed segments; supports multi-token generation and efficient domain adaptation.
+
+### Cluster 5: **Black-Box and Decoding-Time Adaptation**
+- **Papers**: In-Context RALM, REPLUG, Proxy-tuning, CHUNK-DISTILLED LM
+- **Characteristics**: Methods that adapt LMs without access to internal weights or retraining; focus on practical deployment and customization.
+
+### Cluster 6: **Attribution and Factuality-Focused Methods**
+- **Papers**: NEST, Self-RAG, FLARE, Reliable LMs with Retrieval
+- **Characteristics**: Emphasis on factuality, source attribution, and self-critique; often combine retrieval with explicit mechanisms for quality control.
+
+#### Relationships Between Clusters
+
+- **Overlap**: Many papers span multiple clusters (e.g., NEST is both chunk-based and attribution-focused; CHUNK-DISTILLED LM is chunk-based, efficient, and training-free).
+- **Complementarity**: Speculative decoding and chunk-based retrieval methods complement RALM by addressing efficiency bottlenecks.
+- **Progression**: The field evolves from token-level, retraining-heavy methods to chunk-based, training-free, and black-box compatible approaches.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **Early Stage**: kNN-LM and REALM introduce the idea of augmenting LMs with retrieval from external datastores, primarily at the token level and often requiring retraining or joint training.
+- **Scaling and Efficiency**: RETRO and Efficient kNN-LM scale retrieval to massive corpora and introduce efficiency improvements (datastore pruning, adaptive retrieval).
+- **Chunk/Span-Based Retrieval**: Chunk-based kNN-MT, NEST, RETRO, and COG move from token-level to chunk-level retrieval, enabling multi-token generation and significant speedups.
+- **Training-Free and Black-Box Methods**: In-Context RALM, REPLUG, REST, Proxy-tuning, and CHUNK-DISTILLED LM focus on methods that require no retraining or internal access, broadening applicability.
+- **Active/Adaptive Retrieval**: FLARE, Self-RAG, and adaptive kNN-LM introduce dynamic retrieval strategies based on model confidence or context.
+- **Attribution and Factuality**: NEST, Self-RAG, and Reliable LMs with Retrieval address the need for source attribution and factual correctness, introducing explicit mechanisms for these goals.
+- **Unified and Hybrid Approaches**: UGRIC and RAG combine generation and retrieval in unified frameworks, often with adversarial or joint training.
+
+### Building Blocks and Extensions
+
+- **kNN-LM**: Foundation for many chunk-based and adaptive retrieval methods.
+- **RAG/REALM**: Early end-to-end retrieval-augmented models, extended by Atlas and others for few-shot and general-purpose tasks.
+- **COG/Chunk-based kNN-MT**: Inspire chunk-based retrieval in both language modeling and machine translation.
+- **Speculative Decoding (REST, NEST)**: Extend retrieval-augmented methods to accelerate inference by proposing and verifying multi-token drafts.
+- **Proxy-tuning**: Extends the idea of training-free adaptation to black-box LMs using small expert models.
+
+### Competing and Complementary Approaches
+
+- **Token-Level vs. Chunk-Level**: Chunk-based methods (CHUNK-DISTILLED LM, NEST, COG) compete with token-level approaches on efficiency and fluency.
+- **Retraining vs. Training-Free**: End-to-end trained models (RAG, Atlas) compete with training-free, plug-and-play methods (In-Context RALM, REPLUG, REST, CHUNK-DISTILLED LM) on adaptability and deployment ease.
+- **Parametric vs. Non-Parametric Memory**: Some methods rely on parametric knowledge (LM weights), others on non-parametric memory (datastores), and some combine both (RAG, RETRO).
+- **Attribution-Focused vs. Pure Generation**: Methods like NEST and Self-RAG prioritize attribution and factuality, while others focus on generation quality or efficiency.
+
+---
+
+# Summary Table: Positioning the Submission Paper
+
+| Submission Paper: CHUNK-DISTILLED LM | Related Methods/Clusters | Key Differentiators |
+|--------------------------------------|-------------------------|---------------------|
+| Training-free, chunk-based retrieval and generation; multi-token chunk injection at inference; supports knowledge distillation and domain adaptation without retraining | Chunk-based kNN-MT, NEST, COG, REST, In-Context RALM, Proxy-tuning | Combines chunk-based retrieval with training-free, plug-and-play adaptation; supports both efficiency and adaptability; enables knowledge distillation and domain adaptation at inference; generalizes chunk-based retrieval to language modeling beyond translation |
+
+---
+
+# Conclusion
+
+The research landscape is rapidly evolving from token-level, retraining-heavy retrieval augmentation toward **chunk-based, training-free, and black-box compatible methods** that emphasize **efficiency, adaptability, factuality, and attribution**. The **CHUNK-DISTILLED LM** submission sits at the intersection of these trends, offering a **training-free, chunk-based retrieval-augmented language modeling approach** that enables both **efficient multi-token generation** and **flexible knowledge/domain adaptation** at inference time. This positions it as a natural extension and generalization of chunk-based retrieval methods, with broad applicability and practical deployment advantages.

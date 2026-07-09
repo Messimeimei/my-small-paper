@@ -1,0 +1,186 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Independent Positioning within the Research Landscape:**
+
+- **Problem Space:** The submission addresses the *persistence* of data poisoning attacks on LLMs when the poisoning occurs during *pre-training*, and whether such attacks survive *post-training alignment* (SFT and DPO). The focus is on four attack objectives: denial-of-service, belief manipulation, jailbreaking, and prompt stealing.
+
+- **Closest Prior Work:**
+  - **Pre-training Poisoning:** The most closely related cluster includes works on poisoning during pre-training or instruction tuning (e.g., "Concealed Data Poisoning Attacks on NLP Models" [Wallace et al., 2020], "Poisoning Language Models During Instruction Tuning" [Rando & Tramèr, 2024], and privacy backdoor works).
+  - **Post-training/Alignment Attacks:** "Universal Jailbreak Backdoors from Poisoned Human Feedback" (Wan et al., 2023) and "Universal and Transferable Adversarial Attacks on Aligned Language Models" (Carlini et al., 2023) focus on attacks during or after alignment, not pre-training.
+  - **Backdoor/Privacy Attacks:** Recent works on privacy backdoors and backdoor defenses in pre-training (e.g., "Privacy Backdoors: Enhancing Membership Inference through Poisoning Pre-trained Models") are highly relevant but not cited.
+
+- **Methodological Clusters:**
+  - The submission is situated at the intersection of *pre-training poisoning* (Cluster A) and *attack persistence through alignment* (a relatively new focus).
+  - It is distinct from the larger body of work on *fine-tuning/instruction tuning poisoning* and *post-training alignment attacks*.
+
+- **Evaluation Approaches:**
+  - The submission uniquely evaluates *attack persistence* after both SFT and DPO, whereas most prior work stops at fine-tuning or RLHF.
+  - Uses custom pre-training data and standardized safety benchmarks (JailbreakBench).
+
+**Summary:**  
+The submission is most closely related to works on pre-training and instruction tuning poisoning, but extends the evaluation to attack persistence through post-training alignment—a step not systematically addressed in prior work. It is less related to works focusing solely on post-training or inference-time attacks.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+
+- **Contrast with Post-training Attacks:**  
+  - The authors repeatedly contrast their work with attacks that "require tampering with data in post-training" (Wan et al., 2023; Rando & Tramèr, 2024), claiming that pre-training poisoning is more realistic due to the scale and unverifiability of pre-training data.
+  - They state: "direct post-training access enables more potent attacks, but is arguably less practical since proprietary alignment datasets are often manually verified and heavily curated, while pre-training datasets are to some degree unverifiable due to their sheer sizes."
+
+- **Positioning of Jailbreaking Attacks:**  
+  - They note that "most existing jailbreaking attacks target aligned language models, and use inference-time optimization" (Carlini et al., 2023; Zou et al., 2023; Arditi et al., 2024), implying their work is distinct by targeting pre-training.
+
+- **Backdoor Detection and Removal:**  
+  - The authors suggest that existing backdoor detection methods (Zeng et al., 2024; Rando et al., 2024) may not generalize to pre-training poisoning, but do not provide empirical evidence.
+
+- **Early Poisoning Attacks:**  
+  - They reference early poisoning attacks (Wallace et al., 2020; Kurita et al., 2020; Schuster et al., 2020; Yang et al., 2021) as targeting "small models (by current standards)" and not addressing persistence through alignment.
+
+**Discrepancies and Rhetorical Patterns:**
+
+- The authors consistently frame prior work as limited to *post-training* or *small-scale* attacks, emphasizing their own focus on *pre-training* and *persistence*.
+- There is some rhetorical overstatement: e.g., the claim that post-training attacks are "less practical" may not fully account for recent work on privacy backdoors or pre-training attacks in vision-language models.
+- The distinction between pre-training and instruction tuning poisoning is not always clearly articulated, potentially overstating the novelty.
+
+**Accuracy and Balance:**
+
+- The characterization of prior work as focusing on post-training or small models is generally accurate, but omits recent pre-training poisoning/backdoor works in vision-language and privacy domains.
+- The claim that prior work does not address persistence through alignment is largely accurate for text-only LLMs, but some recent works in other modalities or privacy attacks do touch on related issues.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claimed Contribution 1:** *First evaluation of whether LLMs can be compromised during pre-training and whether such compromises persist after post-training alignment (SFT and DPO).*
+
+- **Most Similar Prior Work:**  
+  - "Concealed Data Poisoning Attacks on NLP Models" (Wallace et al., 2020) and "Poisoning Language Models During Instruction Tuning" (Rando & Tramèr, 2024) both study poisoning during early training, but do not systematically evaluate persistence through SFT/DPO.
+  - "Privacy Backdoors: Enhancing Membership Inference through Poisoning Pre-trained Models" (not cited) studies pre-training poisoning for privacy leakage, but not for the same attack objectives or persistence through alignment.
+
+- **Actual Delta:**  
+  - The submission is the first to systematically evaluate *attack persistence* through both SFT and DPO for multiple attack objectives in text-only LLMs.
+  - Prior work either (a) focuses on fine-tuning/instruction tuning, (b) does not evaluate persistence through alignment, or (c) addresses different attack types (e.g., privacy backdoors).
+
+- **Substantive vs. Superficial:**  
+  - The difference is substantive in terms of evaluation scope (persistence through alignment), but the underlying poisoning techniques are similar to prior work.
+
+**Claimed Contribution 2:** *Demonstrates that poisoning as little as 0.1% of the pre-training dataset is sufficient for three out of four attacks to persist through post-training.*
+
+- **Most Similar Prior Work:**  
+  - Prior works report required poisoning rates for attack success, but typically in fine-tuning or instruction tuning settings, and not for persistence through alignment.
+
+- **Actual Delta:**  
+  - The specific finding about low poisoning rates for persistent attacks is new for the pre-training + alignment context.
+  - However, the methodology (varying poisoning rates and measuring attack success) is standard in the field.
+
+- **Substantive vs. Superficial:**  
+  - The novelty is in the *context* (pre-training + alignment), not in the measurement approach.
+
+**Claimed Contribution 3:** *Shows that simple attacks like denial-of-service can persist with a poisoning rate as low as 0.001%.*
+
+- **Most Similar Prior Work:**  
+  - No prior work systematically studies denial-of-service attacks via pre-training poisoning in LLMs and their persistence through alignment.
+
+- **Actual Delta:**  
+  - This is a new empirical result for the specific attack type and context.
+
+- **Substantive vs. Superficial:**  
+  - The result is substantive for the field, but the attack method itself is not novel.
+
+**Claimed Contribution 4:** *Contrasts with prior work focusing on poisoning during fine-tuning or post-training, highlighting the unique risks of pre-training poisoning.*
+
+- **Most Similar Prior Work:**  
+  - "Poisoning Language Models During Instruction Tuning" (Rando & Tramèr, 2024), "Concealed Data Poisoning Attacks on NLP Models" (Wallace et al., 2020), and privacy backdoor works.
+
+- **Actual Delta:**  
+  - The submission extends the attack surface to pre-training and evaluates persistence, which is a meaningful extension.
+  - However, the distinction between instruction tuning and pre-training is sometimes blurred in the literature, and some recent works in vision-language models (e.g., "Robust Contrastive Language-Image Pretraining against Data Poisoning and Backdoor Attacks") address similar issues.
+
+- **Substantive vs. Superficial:**  
+  - The extension is substantive for text-only LLMs, but less so if considering the broader multimodal literature.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  - The area of LLM poisoning and backdoor attacks is *rapidly evolving* but still relatively young, especially for pre-training attacks on large-scale LLMs.
+  - Most prior work focused on fine-tuning, instruction tuning, or RLHF; systematic study of pre-training poisoning is emerging.
+
+- **Recent Surveys/Literature Reviews:**  
+  - No comprehensive survey yet exists for pre-training poisoning in LLMs, but several recent reviews cover backdoor and poisoning attacks in NLP and vision-language models.
+
+- **Trends:**  
+  - Shift from fine-tuning to pre-training as the attack surface.
+  - Increasing focus on attack persistence, stealth, and universality.
+  - Growing use of standardized benchmarks (e.g., JailbreakBench).
+
+- **Incremental Advances:**  
+  - Many advances are incremental (e.g., new triggers, lower poisoning rates), but the move to pre-training poisoning and persistence through alignment is a notable step.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The claim of being the "first" to study pre-training poisoning is accurate for text-only LLMs and persistence through alignment, but less so if considering privacy backdoors or vision-language models.
+  - The distinction between pre-training and instruction tuning is sometimes blurred; some prior works on instruction tuning poisoning may be more similar than acknowledged.
+
+- **Empirical Improvements:**  
+  - The low poisoning rates required for persistent attacks may depend on implementation details (e.g., dataset composition, model size) rather than conceptual advances.
+
+- **Terminology Differences:**  
+  - The use of "pre-training poisoning" vs. "instruction tuning poisoning" may mask conceptual similarities with prior work.
+
+- **Routine Extensions:**  
+  - Evaluating attack persistence through alignment is a logical extension of prior work, but not a fundamentally new attack method.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted Relevant Work:**  
+  - Several recent works on pre-training poisoning and privacy backdoors (e.g., "Privacy Backdoors: Enhancing Membership Inference through Poisoning Pre-trained Models", "Robust Contrastive Language-Image Pretraining against Data Poisoning and Backdoor Attacks") are not cited.
+  - These works address similar issues in different modalities or attack types and should be discussed for completeness.
+
+- **Additional Comparisons Needed:**  
+  - The submission could compare with privacy backdoor attacks and defenses, as well as with pre-training poisoning in vision-language models.
+
+- **Potentially Misleading Characterizations:**  
+  - The claim that prior work does not address persistence through alignment is accurate for most text-only LLMs, but not for all modalities or attack types.
+
+- **Exaggerated Limitations of Prior Work:**  
+  - The practicality of post-training attacks may be understated; some attacks on instruction tuning or RLHF are feasible in real-world settings.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - The submission is the first to systematically evaluate the *persistence* of pre-training poisoning attacks through both SFT and DPO alignment in text-only LLMs for multiple attack objectives.
+  - The finding that very low poisoning rates (as low as 0.001%) can yield persistent attacks is new for this context.
+
+- **Main Relationships to Existing Research:**
+  - Builds directly on prior work in data poisoning and backdoor attacks during fine-tuning/instruction tuning.
+  - Extends the attack surface to pre-training and evaluates persistence, which is a meaningful but incremental advance.
+
+- **Strongest Differentiation:**
+  - Systematic evaluation of attack persistence through alignment.
+  - Empirical demonstration of low poisoning rates required for persistent attacks.
+
+- **Weakest Differentiation:**
+  - The underlying poisoning techniques are not novel.
+  - The distinction between pre-training and instruction tuning poisoning is sometimes overstated.
+
+- **Important Discrepancies:**
+  - Omission of relevant recent work on privacy backdoors and pre-training poisoning in other modalities.
+  - Occasional overstatement of the impracticality of post-training attacks.
+
+---
+
+**Overall, the submission makes a substantive and timely contribution by systematically evaluating the persistence of pre-training poisoning attacks through alignment in LLMs, but some novelty claims are slightly overstated, and the related work discussion could be more comprehensive.**

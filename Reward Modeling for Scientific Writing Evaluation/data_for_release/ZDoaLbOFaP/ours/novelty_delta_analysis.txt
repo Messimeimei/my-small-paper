@@ -1,0 +1,170 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+The submission, "Sparse coVariance Neural Networks (S-VNNs)," is positioned at the intersection of covariance-based neural networks and graph sparsification. It builds directly on the coVariance Neural Networks (VNNs) framework (Sihag et al., 2022, 2023, 2024), which applies graph convolutional operations to sample covariance matrices, and addresses known issues of instability, inefficiency, and spurious correlations in high-dimensional, low-sample settings.
+
+**Most Closely Related Prior Works:**
+- **VNNs (Sihag et al., 2022, 2023, 2024):** The foundational method for learning on covariance matrices with graph convolutions.
+- **Sparse PCA (Bickel & Levina, 2008b):** Classical approach for sparse covariance estimation.
+- **Graph Sparsification in GNNs:** DropEdge (Rong et al., 2020), DropMessage (Papp et al., 2021), and interpretability-driven sparsification (IGS, Kedge, Rathee et al., 2021; Li et al., 2023; Naber et al., 2024).
+- **Adaptive Functional Thresholding (Li et al., 2021):** For sparse covariance estimation in high dimensions.
+
+**Relation to Methodological Clusters:**
+- **Cluster 1 (Covariance-based GNNs):** S-VNNs are a direct extension of VNNs, introducing sparsification to the covariance matrix before graph convolution.
+- **Cluster 2 (Graph Sparsification):** S-VNNs adapt sparsification techniques (hard/soft thresholding, stochastic sparsification) from the broader GNN literature to the covariance domain.
+- **Cluster 3 (Randomization):** The stochastic sparsification in S-VNNs is conceptually related to DropEdge/DropMessage, but applied to covariance matrices rather than adjacency matrices.
+
+**Problem Space and Evaluation:**
+- **Problems:** S-VNNs address instability and inefficiency in VNNs due to dense, noisy covariance matrices, especially in high-dimensional, low-sample regimes.
+- **Evaluation:** Uses brain data, human action recognition, and synthetic datasets, with metrics for task performance, stability, and computational efficiency—mirroring standard practice in both covariance-based and sparsification GNN research.
+
+**Independent Assessment:**
+- The submission is best viewed as a method that fuses covariance-based learning (VNNs) with established sparsification techniques, aiming to improve both stability and efficiency. While the application of sparsification to covariance matrices in the context of VNNs is novel, the underlying sparsification methods themselves (thresholding, stochastic dropping) are well-established in both statistics and GNN literature.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+- The authors consistently position S-VNNs as a principled extension of VNNs, emphasizing improved stability and efficiency via sparsification.
+- They cite VNNs (Sihag et al., 2022, 2023, 2024) as the baseline, highlighting their stability to covariance perturbations but noting their limitations in dense, noisy settings.
+- DropEdge (Rong et al., 2020) and DropMessage (Papp et al., 2021) are referenced as analogous stochastic regularization techniques, but the authors claim S-VNNs are distinct in operating on covariance matrices.
+- Sparse PCA (Bickel & Levina, 2008b) and adaptive thresholding (Li et al., 2021) are cited as related to sparsification, but the authors suggest S-VNNs are unique in integrating these with VNNs and providing stability analysis.
+
+**Accuracy and Balance:**
+- The authors generally provide accurate technical descriptions of prior work, e.g., VNNs' stability to small perturbations, DropEdge's regularization effect, and the non-PSD nature of thresholded covariances.
+- However, there is a tendency to understate the generality of prior sparsification methods (e.g., adaptive thresholding, sparse PCA) and their potential applicability to covariance matrices in neural networks.
+- The claim that S-VNNs' stability analysis is "principally different" from Sihag et al. (2022) is accurate in that it considers the effect of sparsification, but the distinction may be somewhat overstated, as both analyze stability under covariance perturbations.
+
+**Discrepancies and Rhetoric:**
+- The authors sometimes frame prior work as not addressing the specific combination of covariance sparsification and neural network stability, which is technically true, but the underlying components (sparsification, stability analysis) are well-established.
+- There is some rhetorical emphasis on "overcoming the limitations" of dense VNNs, but the actual novelty is in the integration and analysis rather than fundamentally new sparsification techniques.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Contribution 1: S-VNNs—Sparsification of Covariance Matrices in VNNs**
+- **Most Similar Prior Work:** VNNs (Sihag et al., 2022) and sparse PCA (Bickel & Levina, 2008b).
+- **Claimed Difference:** S-VNNs apply sparsification (hard/soft thresholding, stochastic) to the covariance matrix before graph convolution, improving stability and efficiency.
+- **Independent Assessment:**  
+  - VNNs operate on dense covariance matrices; S-VNNs introduce explicit sparsification, which is not present in the original VNNs.
+  - Sparse PCA and adaptive thresholding provide sparsification for covariance estimation, but do not integrate with VNNs or provide neural network-specific stability analysis.
+  - The integration of sparsification into the VNN pipeline is a substantive, if incremental, extension.
+  - The sparsification techniques themselves are not novel; the novelty lies in their application within VNNs and the accompanying analysis.
+
+**Contribution 2: Stochastic Sparsification for Dense Covariances**
+- **Most Similar Prior Work:** DropEdge (Rong et al., 2020), DropMessage (Papp et al., 2021), stochastic GNNs.
+- **Claimed Difference:** S-VNNs use stochastic sparsification on covariance matrices, as opposed to adjacency matrices.
+- **Independent Assessment:**  
+  - The conceptual idea of stochastic edge dropping is well-established in GNNs, but its application to covariance matrices in VNNs is new.
+  - The regularization effect is similar to DropEdge/DropMessage, but the domain of application (covariance vs. adjacency) is the main difference.
+  - The technical novelty is moderate; the adaptation is straightforward, but the analysis in the covariance context is new.
+
+**Contribution 3: Theoretical Stability Analysis of S-VNNs**
+- **Most Similar Prior Work:** Stability analysis in VNNs (Sihag et al., 2022), sparse PCA (Bickel & Levina, 2008b), and GNN stability (Gama et al., 2020b).
+- **Claimed Difference:** Provides new stability bounds for S-VNNs under different sparsification strategies.
+- **Independent Assessment:**  
+  - The stability analysis extends prior work by considering the effect of sparsification, which is not covered in Sihag et al. (2022).
+  - The analysis is a logical extension, but not a fundamentally new theoretical framework.
+  - The claim that the analysis is "principally different" is somewhat overstated; it is a natural extension to a new setting.
+
+**Contribution 4: Empirical Improvements in Performance, Stability, and Efficiency**
+- **Most Similar Prior Work:** VNNs, DropEdge, DropMessage, FastGAT, adaptive thresholding.
+- **Claimed Difference:** S-VNNs outperform dense VNNs and other baselines on task performance, stability, and efficiency.
+- **Independent Assessment:**  
+  - Empirical improvements are plausible given the known benefits of sparsification and regularization.
+  - It is not clear if improvements are due to the conceptual advance or to implementation/parameter choices.
+  - The empirical gains are consistent with trends in the field, but not necessarily unique to S-VNNs.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+**Field Maturity:**
+- The area of covariance-based neural networks is relatively new but rapidly evolving, with VNNs (2022+) as a recent foundation.
+- Graph sparsification, both for efficiency and interpretability, is a mature and active area in GNN research.
+- Theoretical analysis of stability and transferability is increasingly common, reflecting a maturing field.
+
+**Recent Surveys/Literature Reviews:**
+- "Graph Neural Networks in Network Neuroscience" (Bessadok et al., 2022) and "Towards Sparsification of Graph Neural Networks" (2021) provide overviews of sparsification and GNNs in neuroimaging.
+- "Covariance Estimation for Matrix-valued Data" (2021) surveys covariance estimation techniques.
+
+**Trends:**
+- Growing emphasis on sparsification for both interpretability and efficiency.
+- Increasing integration of theoretical analysis with empirical work.
+- Movement from dense to sparse, from static to dynamic, and from black-box to interpretable/fair models.
+
+**Incremental Advances:**
+- Many recent papers propose incremental extensions (e.g., new sparsification strategies, adaptations to new domains, improved analysis).
+- Novelty is often in integration and application rather than fundamentally new algorithms.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The core sparsification techniques (thresholding, stochastic dropping) are not new; their application to VNNs is a logical extension.
+  - The stability analysis, while tailored to S-VNNs, follows directly from prior work on VNNs and sparse estimation.
+  - The distinction between stochastic sparsification in S-VNNs and DropEdge/DropMessage is primarily the domain of application, not the underlying principle.
+
+- **Empirical Improvements:**  
+  - Gains in performance and efficiency may be due to well-known effects of sparsification and regularization, not unique to S-VNNs.
+  - It is not clear if the improvements are robust to parameter choices or dataset selection.
+
+- **Terminology Differences:**  
+  - The use of "sparsification" in the covariance domain may obscure similarities to existing sparsification in GNNs and statistics.
+  - "Principally different" analysis may be more incremental than claimed.
+
+- **Routine Adaptations:**  
+  - The integration of sparsification into VNNs is a routine adaptation of established techniques, albeit with some new analysis.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Potentially Relevant Uncited Work:**
+  - Ricci Curvature-Based Graph Sparsification (continual learning, interpretability).
+  - GCNext (graph convolutions for human motion prediction).
+  - Community-preserving Graph Convolutions (brain networks).
+  - Adaptive Functional Thresholding (Li et al., 2021) is cited, but its full relevance to covariance sparsification could be more thoroughly discussed.
+  - Covariance Estimation for Matrix-valued Data (2021) provides a broader context for covariance sparsification.
+
+- **Areas for Additional Comparison:**
+  - More direct comparison with learned sparsification methods (IGS, Kedge) and adaptive thresholding in the context of covariance matrices.
+  - Consideration of low-rank and structured sparsification (CEPD, L0-norm DRL) as alternative efficiency strategies.
+
+- **Incomplete/Misleading Characterizations:**
+  - The limitations of dense VNNs are somewhat overstated; prior work does discuss stability and efficiency, though not with explicit sparsification.
+  - The uniqueness of S-VNNs' stability analysis is somewhat exaggerated; it is an extension rather than a new paradigm.
+
+- **Citation Practices:**
+  - The authors cite relevant works but could more fully acknowledge the breadth of sparsification and covariance estimation literature.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - S-VNNs are the first to explicitly integrate sparsification (hard/soft thresholding, stochastic) into the VNN framework, with accompanying stability analysis.
+  - The application of stochastic sparsification to covariance matrices in neural networks is new, though conceptually similar to DropEdge/DropMessage.
+
+- **Main Relationships to Existing Research:**
+  - S-VNNs are a direct extension of VNNs, leveraging established sparsification techniques from statistics and GNNs.
+  - Theoretical analysis builds on prior stability work in VNNs and sparse estimation.
+
+- **Strongest Differentiation:**
+  - The integration of sparsification into the VNN pipeline, with tailored stability analysis, is the most distinctive contribution.
+
+- **Weakest Differentiation:**
+  - The sparsification techniques themselves are not novel; stochastic sparsification is a direct adaptation of existing GNN regularization methods.
+
+- **Discrepancies Between Author Claims and Independent Assessment:**
+  - The novelty of the stability analysis is somewhat overstated; it is an extension of prior work.
+  - The uniqueness of S-VNNs is primarily in integration and application, not in the underlying methods.
+
+---
+
+**These observations are intended to inform reviewers' independent judgment regarding the novelty and contribution of S-VNNs relative to the existing literature.**

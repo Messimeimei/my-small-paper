@@ -1,0 +1,140 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+The submission introduces "Hierarchical Prompts with Context-Aware Calibration (HiCA)" for open-vocabulary object detection (OVD). It is positioned within the *Prompt Learning & Adaptation* cluster, with strong overlap into *Hierarchical & Contextual Modeling*. The method combines hierarchical prompt design (coarse/fine-grained semantic mapping) and context-aware calibration (visual context clustering, context-superclass distribution, and calibration layers).
+
+**Most Closely Related Prior Works:**
+- **PromptDet (Feng et al., 2022):** Learnable prompts for OVD, region-level adaptation.
+- **DetPro:** Prompt learning with background interpretation.
+- **HierKD:** Hierarchical knowledge distillation for OVD.
+- **ViLD (Gu et al., 2022):** Knowledge distillation from VLMs, region-level alignment.
+- **CORA, ACTOR, Bridging the Gap:** Region prompting, region-level adaptation, and prompt learning.
+- **DetCLIPv3, HTRPN:** Hierarchical/contextual modeling in OVD.
+
+**Methodological Cluster Placement:**
+- **Prompt Learning & Adaptation:** HiCA extends prompt learning by introducing hierarchical structure (superclass/class) and context-aware calibration.
+- **Hierarchical & Contextual Modeling:** HiCA leverages both semantic hierarchies and visual context, a trend seen in HierKD, DetCLIPv3, and HTRPN.
+- **Region-Level Adaptation:** While not the main focus, HiCA’s context calibration relates to region-level context modeling.
+
+**Problem Space & Evaluation:**
+- **Problem:** Overfitting to base classes, poor generalization to novel classes, underutilization of context.
+- **Evaluation:** Standard OVD datasets (OV-COCO, OV-LVIS), mAP and mAP50 metrics, comparison to SOTA.
+
+**Independent Assessment:**
+- The submission is methodologically closest to PromptDet, DetPro, and HierKD, but also relates to recent works on hierarchical/contextual modeling (DetCLIPv3, HTRPN).
+- The use of hierarchical prompts and context-aware calibration is a logical extension of trends in prompt learning and context modeling, but similar ideas (e.g., hierarchical distillation, context calibration) have appeared in recent literature.
+- The field is active, with rapid iteration and overlapping ideas; many works now combine prompt learning with context/hierarchy.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**PromptDet (Feng et al., 2022):**
+- *Citation Context:* "The prompts can either be handcrafted, as in RegionCLIP (Zhong et al., 2022) or learnable, as in PromptDet (Feng et al., 2022)."
+- *Pattern:* Authors use PromptDet as a reference for learnable prompts, positioning their work as a further development (hierarchical/context-aware).
+- *Assessment:* Accurate in that PromptDet uses learnable prompts, but PromptDet also explores region-level adaptation and some context modeling, which is not fully acknowledged.
+
+**ViLD (Gu et al., 2022):**
+- *Citation Contexts:*
+  - "ViLD (Gu et al., 2022) employs a knowledge distillation approach that aligns the region embeddings of detected objects to visual and text representations inferred by the teacher VLM."
+  - "Following the setting of (Gu et al., 2022), the original rare class has been further subdivided into novel classes, while the common and frequent classes are jointly divided into base classes."
+- *Pattern:* ViLD is cited as a baseline for knowledge distillation and dataset splits.
+- *Assessment:* Accurate, but ViLD also addresses region-level adaptation and background confusion, which are relevant to HiCA’s context calibration.
+
+**General Patterns:**
+- Authors position their work as a natural evolution of prompt learning (PromptDet) and knowledge distillation (ViLD), emphasizing their unique combination of hierarchy and context.
+- There is a tendency to understate the degree to which prior works (e.g., PromptDet, DetPro, HierKD) have already explored context, hierarchy, or region-level adaptation.
+- No direct comparison or citation of recent hierarchical/contextual OVD works (e.g., DetCLIPv3, HTRPN, HierKD), which are highly relevant.
+
+**Discrepancies:**
+- The claim that prior works do not integrate both high-level semantic and contextual information is overstated; several recent works (DetCLIPv3, HierKD, HTRPN) do so, though with different mechanisms.
+- The distinction between "hierarchical prompts" and "hierarchical distillation" is not clearly articulated, potentially overstating novelty.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Claimed Contribution 1: **Hierarchical Prompts (coarse/fine-grained semantic mapping)**
+- **Most Similar Prior Work:** HierKD (hierarchical distillation), DetCLIPv3 (hierarchical label generation), HTRPN (hierarchical region proposal), PromptDet (prompt learning).
+- **Claimed Difference:** HiCA introduces explicit hierarchical prompts (superclass/class) for both coarse and fine-grained mapping.
+- **Independent Assessment:**
+  - *HierKD* uses hierarchical knowledge distillation, leveraging class hierarchies for better generalization, but does not use explicit hierarchical prompts in the same way.
+  - *DetCLIPv3* generates hierarchical labels and uses them in detection, but focuses on generative modeling.
+  - *PromptDet* uses learnable prompts but does not explicitly model class hierarchies.
+  - *HTRPN* uses hierarchical region proposals, not prompts.
+- **Delta:** The explicit use of hierarchical prompts (as opposed to hierarchical distillation or generative labels) is a technical distinction, but the conceptual idea of leveraging class hierarchies is not new. The main difference is the *prompt* mechanism, not the use of hierarchy per se.
+- **Substantive vs. Superficial:** The difference is more in implementation (prompt-based vs. distillation/generative) than in the underlying idea of hierarchy.
+
+## Claimed Contribution 2: **Context-Aware Calibration (visual context clustering, Distribution Generation Layer, context-class calibration)**
+- **Most Similar Prior Work:** DetPro (background interpretation), HierKD (contextual distillation), DetCLIPv3 (contextual modeling), PromptDet (region-level adaptation).
+- **Claimed Difference:** HiCA uses unsupervised clustering for visual context and calibrates predictions based on context-class distributions.
+- **Independent Assessment:**
+  - *DetPro* interprets background and calibrates predictions, but does not use unsupervised clustering for context.
+  - *HierKD* includes context in distillation, but not via explicit clustering or distribution layers.
+  - *DetCLIPv3* models context for generative detection, but with different mechanisms.
+  - *PromptDet* adapts prompts at the region level, which can be seen as a form of context adaptation.
+- **Delta:** The use of unsupervised clustering and a Distribution Generation Layer for context calibration is a technical novelty, but the broader idea of context-aware calibration is present in prior work.
+- **Substantive vs. Superficial:** The clustering and distribution layer are new technical details, but the conceptual advance is incremental.
+
+## Claimed Contribution 3: **Integration of High-Level Semantic and Contextual Information**
+- **Most Similar Prior Work:** HierKD, DetCLIPv3, HTRPN, Multi-Faceted Distillation.
+- **Claimed Difference:** HiCA claims to be the first to integrate both high-level semantic (hierarchy) and contextual (visual context) information in prompt learning for OVD.
+- **Independent Assessment:**
+  - *HierKD* integrates hierarchy and context in distillation, not prompt learning.
+  - *DetCLIPv3* integrates hierarchy and context in generative detection.
+  - *HTRPN* and *Multi-Faceted Distillation* also combine semantic and contextual cues.
+- **Delta:** The integration within a *prompt learning* framework is a specific technical combination, but the conceptual integration of hierarchy and context is not unique.
+- **Substantive vs. Superficial:** The novelty is in the *combination* within prompt learning, but the individual components are well-explored.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** OVD is a highly active and rapidly evolving field, with many new methods and overlapping ideas published in the last 2–3 years.
+- **Recent Surveys:** "A Survey on Open-Vocabulary Detection and Segmentation: Past, Present, and Future" (2023) provides a comprehensive overview.
+- **Trends:** Increasing sophistication in prompt learning, hierarchical/contextual modeling, and region-level adaptation. Many works now combine these elements.
+- **Incremental Advances:** Many recent papers introduce new technical mechanisms (e.g., prompt types, calibration layers, clustering) that build on similar conceptual foundations.
+- **Reviewer Calibration:** Novelty is often incremental and technical; conceptual advances are rare due to the field’s maturity and rapid iteration.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The claim of being the first to integrate hierarchy and context is overstated; several recent works do so, though not always within prompt learning.
+- **Empirical Improvements:** Gains in mAP may result from implementation details, hyperparameter tuning, or dataset splits, not just conceptual advances.
+- **Terminology Differences:** "Hierarchical prompts" vs. "hierarchical distillation" or "hierarchical labels" may mask conceptual similarities.
+- **Routine Adaptations:** The use of clustering for context calibration is a technical extension, but not a conceptual leap.
+- **Author Characterization:** Authors tend to understate the sophistication of prior work in context/hierarchy integration.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted Relevant Work:** No discussion of DetCLIPv3, HierKD, HTRPN, CORA, ACTOR, or recent descriptor/generative approaches, all of which are highly relevant.
+- **Additional Comparisons Needed:** Direct comparison to DetCLIPv3 and HierKD would clarify the delta in hierarchy/context integration.
+- **Incomplete Characterizations:** Prior works’ use of context and hierarchy is not fully acknowledged; e.g., HierKD’s hierarchical distillation, DetCLIPv3’s generative hierarchy.
+- **Exaggerated Limitations:** The claim that prior works do not integrate both semantic and contextual information is not fully accurate.
+- **Citation Patterns:** Authors cite PromptDet and ViLD as main baselines, but omit more recent and directly relevant works.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - HiCA introduces explicit *hierarchical prompts* (superclass/class) and *unsupervised context clustering* with a Distribution Generation Layer for calibration within a prompt learning framework.
+- **Main Relationships to Existing Research:**
+  - Closest to PromptDet (prompt learning), HierKD (hierarchical/contextual distillation), and DetCLIPv3 (hierarchical/contextual generative detection).
+  - The conceptual ideas of hierarchy and context are well-established; the technical novelty is in their specific combination within prompt learning.
+- **Strongest Differentiation:**
+  - The technical mechanism of unsupervised context clustering and distribution-based calibration in prompt learning.
+- **Weakest Differentiation:**
+  - The conceptual integration of hierarchy and context, which is present in several recent works (though via different mechanisms).
+- **Discrepancies:**
+  - Authors overstate the lack of hierarchy/context integration in prior work and omit direct comparison to the most relevant recent methods.
+  - The distinction between prompt-based and distillation/generative approaches is not always clearly articulated, potentially overstating novelty.
+
+---
+
+**These observations are intended to help reviewers independently assess the true novelty and contribution of the submission, distinguishing between technical implementation details and broader conceptual advances in the context of a rapidly evolving field.**

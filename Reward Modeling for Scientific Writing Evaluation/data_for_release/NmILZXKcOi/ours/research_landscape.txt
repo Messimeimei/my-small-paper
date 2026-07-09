@@ -1,0 +1,223 @@
+---
+# METHODOLOGICAL LANDSCAPE
+
+**Overview:**  
+The collection of papers reveals a vibrant and rapidly evolving methodological landscape for Text-to-SQL, driven by the rise of large language models (LLMs). The main methodological approaches can be grouped into several clusters, with significant cross-pollination and innovation at their intersections.
+
+### Cluster 1: LLM-Centric Approaches (Prompting & Fine-Tuning)
+- **Prompt-based (In-Context Learning):**  
+  - Systematic prompt engineering and demonstration selection (Related Papers 1, 12, 13, 14).
+  - Zero-shot and few-shot evaluation of LLMs (Related Papers 10, 13, 14).
+  - Database-related knowledge augmentation in prompts (12).
+  - Execution-based self-consistency prompting (13).
+- **Fine-Tuning LLMs:**  
+  - Supervised fine-tuning of open-source and closed-source LLMs for Text-to-SQL (Submission, 1, 2, 4, 9, 13, 16).
+  - Parameter-efficient fine-tuning (5).
+  - Incremental pre-training on SQL-centric corpora (4).
+  - Synthetic data augmentation for fine-tuning (9, 13).
+
+**Trends:**  
+- Increasing focus on open-source LLMs and their fine-tuning (Submission, 4, 9).
+- Prompt engineering remains a strong baseline, with fine-tuning often providing further gains.
+- Hybrid approaches (prompting + fine-tuning) are common.
+
+### Cluster 2: System and Benchmark Development
+- **Benchmark Suites and Evaluation Pipelines:**  
+  - Open, extensible benchmarking platforms (Submission, 1, 7, 14, 15).
+  - New datasets for realistic, large-scale, or domain-specific evaluation (4, 5, 11, 14, 15, 17).
+  - Comprehensive evaluation frameworks covering multiple sub-tasks (14).
+- **Production-Ready Systems:**  
+  - End-to-end, privacy-preserving, and extensible systems for real-world deployment (2, 3).
+
+**Trends:**  
+- Movement toward open, reproducible, and extensible evaluation (Submission, 14, 15).
+- Emphasis on bridging the gap between academic benchmarks and real-world applications (15).
+
+### Cluster 3: Specialized Modeling Techniques
+- **Schema Handling:**  
+  - Decoupling schema linking and skeleton parsing (16).
+  - Strategic prompt construction for schema linking (4).
+  - Omission of schema linking in favor of LLM reasoning (8).
+  - Efficient column/table selection (13, 16).
+- **Candidate Generation and Selection:**  
+  - Multi-path reasoning and candidate selection (6).
+  - LogicalBeam decoding for ambiguity (11).
+  - Ensemble and preference-based selection (6, 9).
+- **Retrieval Augmented Generation (RAG) and Knowledge Integration:**  
+  - RAG for knowledge-augmented Text-to-SQL (2).
+  - Multi-source knowledge ingestion (2, 3).
+
+**Trends:**  
+- Schema linking is being re-examined in the LLM era (8, 16).
+- Advanced candidate generation and selection methods are emerging to handle ambiguity and complexity (6, 11).
+
+### Cluster 4: Domain and Task Specialization
+- **Domain-Specific Solutions:**  
+  - Financial (5), healthcare (17), and large-scale/realistic databases (15).
+- **Task Expansion:**  
+  - Beyond Text-to-SQL: SQL debugging, optimization, schema linking, SQL-to-text (14).
+
+**Relationships:**  
+- Many system/benchmark papers (Submission, 14, 15) provide the infrastructure for evaluating the modeling innovations in other clusters.
+- Prompting and fine-tuning are often combined, with system-level innovations enabling more robust and reproducible comparisons.
+
+---
+
+# PROBLEM SPACE MAPPING
+
+**Key Problem Areas:**
+
+### 1. Benchmarking and Evaluation
+- **Lack of Standardized, Open Benchmarks:**  
+  - Submission, 1, 7, 14, 15 highlight the need for open, reproducible, and comprehensive benchmarks for Text-to-SQL, especially for LLMs.
+- **Reproducibility and Comparability:**  
+  - Submission, 1, 14, 15 address the challenge of comparing models fairly, especially with the high computational cost of LLM fine-tuning.
+
+### 2. Model Performance and Adaptation
+- **Bridging the Gap Between Open-Source and Closed-Source LLMs:**  
+  - 4, 9 focus on improving open-source LLMs to match or surpass closed-source models.
+- **Improving Text-to-SQL Accuracy and Robustness:**  
+  - 2, 4, 6, 8, 9, 13, 16 tackle accuracy, robustness, and generalization, especially on complex, cross-domain, or ambiguous queries.
+- **Handling Ambiguity and Complexity:**  
+  - 6, 8, 11, 13, 16 address ambiguity, complex queries, and schema complexity.
+
+### 3. Real-World Applicability
+- **Domain Adaptation and Specialization:**  
+  - 5 (finance), 17 (healthcare), 15 (large-scale/realistic databases).
+- **Privacy and Security:**  
+  - 2, 3 focus on privacy-preserving, production-ready systems.
+
+### 4. Methodological Gaps
+- **Prompt Engineering vs. Fine-Tuning:**  
+  - Submission, 1, 12, 13, 14 explore the trade-offs and under-explored areas between prompt-based and fine-tuned approaches.
+- **Schema Linking Necessity:**  
+  - 8, 16 question and innovate on the role of schema linking in modern LLM pipelines.
+
+**Patterns in Problem Formulation:**
+- Many papers frame their contributions as addressing gaps in benchmarking, evaluation, or real-world applicability.
+- There is a trend toward formulating problems in terms of system-level reliability (7), ambiguity (11), and efficiency (15).
+
+---
+
+# EVALUATION LANDSCAPE
+
+**Datasets:**
+- **Spider** is the de facto standard, used in almost all papers.
+- **BIRD** (15) is emerging as a large-scale, realistic benchmark.
+- **Domain-Specific Datasets:**  
+  - BULL (finance, 5), MIMICSQL (healthcare, 17), AmbiQT (ambiguity, 11), DB-GPT-Hub (Submission).
+- **Variants and Diagnostic Sets:**  
+  - Spider-DK, Spider-SYN, Spider-Realistic, Dr.Spider, ADVETA, EHRSQL, etc.
+
+**Metrics:**
+- **Accuracy/Execution Accuracy:**  
+  - Most common, often measured as exact match or execution match.
+- **Task-Specific Metrics:**  
+  - Token efficiency (1), Valid Efficiency Score (VES, 15), penalty-based reliability (7), top-k coverage (11), robustness (4), user study/survey (2).
+- **Multi-Task Evaluation:**  
+  - Some frameworks (14) evaluate across multiple sub-tasks (SQL debugging, optimization, etc.).
+
+**Evaluation Approaches:**
+- **Prompt-based vs. Fine-Tuned:**  
+  - Direct comparison of zero/few-shot LLMs with fine-tuned models (10, 13, 14).
+- **Systematic Benchmarking:**  
+  - Standardized pipelines and open leaderboards (Submission, 1, 14, 15).
+- **Reliability and Robustness:**  
+  - New metrics for abstention, ambiguity, and efficiency (7, 11, 15).
+
+**Patterns:**
+- Increasing emphasis on realistic, large-scale, and domain-specific evaluation.
+- Movement toward multi-dimensional evaluation (accuracy, efficiency, reliability, robustness).
+- Open-source datasets and benchmarks are proliferating, enabling more reproducible research.
+
+---
+
+# RESEARCH CLUSTERS
+
+**Cluster A: Benchmarking and Evaluation Frameworks**
+- **Papers:** Submission, 1, 7, 14, 15
+- **Characteristics:**  
+  - Focus on open, extensible, and comprehensive benchmarking.
+  - Introduction of new datasets and evaluation pipelines.
+  - Emphasis on reproducibility, transparency, and multi-task evaluation.
+
+**Cluster B: LLM Model Development and Adaptation**
+- **Papers:** 4, 9, 13, 16
+- **Characteristics:**  
+  - Development of open-source LLMs and adaptation techniques.
+  - Innovations in fine-tuning, synthetic data generation, and schema handling.
+  - Focus on bridging the performance gap with closed-source models.
+
+**Cluster C: System-Level and Production-Ready Solutions**
+- **Papers:** 2, 3
+- **Characteristics:**  
+  - End-to-end, privacy-preserving, and extensible systems.
+  - Integration of RAG, multi-agent frameworks, and knowledge ingestion.
+  - Emphasis on real-world deployment and user experience.
+
+**Cluster D: Prompt Engineering and In-Context Learning**
+- **Papers:** 1, 12, 13, 14
+- **Characteristics:**  
+  - Systematic study of prompt design, demonstration selection, and in-context learning.
+  - Analysis of prompt-based vs. fine-tuned performance.
+
+**Cluster E: Specialized Techniques and Domain Applications**
+- **Papers:** 5, 6, 8, 11, 17
+- **Characteristics:**  
+  - Domain-specific solutions (finance, healthcare).
+  - Advanced candidate generation/selection and ambiguity handling.
+  - Re-examination of schema linking and handling of complex queries.
+
+**Relationships:**
+- Clusters A and B are tightly coupled: new benchmarks drive model innovation, and vice versa.
+- Cluster C leverages advances from A and B to build deployable systems.
+- Cluster D provides foundational insights that inform both model and system development.
+- Cluster E addresses specialized needs, often building on advances from other clusters.
+
+---
+
+# TECHNICAL EVOLUTION
+
+**Progression of Ideas:**
+- **From Template-Based to LLM-Centric:**  
+  - Early Text-to-SQL relied on template and seq2seq models; the field has shifted decisively to LLMs, both for prompting and fine-tuning.
+- **From Closed to Open-Source LLMs:**  
+  - Initial SOTA was dominated by closed-source models (e.g., GPT-4); recent work (4, 9) shows open-source LLMs can approach or match SOTA with proper adaptation.
+- **From Prompting to Hybrid and Fine-Tuned Approaches:**  
+  - Prompt engineering was the first LLM application; now, fine-tuning and hybrid methods are increasingly explored (Submission, 1, 4, 9, 13).
+- **From Academic to Real-World Benchmarks:**  
+  - Datasets like BIRD (15), BULL (5), and MIMICSQL (17) reflect a shift toward realistic, large-scale, and domain-specific evaluation.
+- **From Single-Task to Multi-Task and System-Level Evaluation:**  
+  - New frameworks (14) and systems (2, 3) evaluate across multiple sub-tasks and integrate LLMs into production-ready pipelines.
+- **From Schema Linking to LLM Reasoning:**  
+  - Schema linking, once central, is now being questioned (8, 16) as LLMs demonstrate strong reasoning with full schemas.
+
+**Building Blocks and Extensions:**
+- **Benchmarks and Datasets:**  
+  - New datasets (BIRD, BULL, AmbiQT, MIMICSQL) extend the evaluation landscape.
+- **Modeling Innovations:**  
+  - Techniques like ranking-enhanced encoding (16), multi-path reasoning (6), and logical beam search (11) build on LLM capabilities.
+- **System Integration:**  
+  - RAG, multi-agent frameworks, and privacy mechanisms (2, 3) extend LLMs for real-world use.
+
+**Competing and Complementary Approaches:**
+- **Prompting vs. Fine-Tuning:**  
+  - Some works argue for the sufficiency of prompting (10, 12, 13), while others show fine-tuning provides further gains (Submission, 4, 9, 13).
+- **Schema Linking vs. LLM Reasoning:**  
+  - Debate over the necessity of schema linking (8, 16).
+- **Open vs. Closed Source:**  
+  - Ongoing competition, with open-source models rapidly closing the gap (4, 9).
+
+---
+
+# SUMMARY
+
+The research landscape for Text-to-SQL with LLMs is characterized by:
+- A strong methodological focus on both prompt-based and fine-tuned LLMs, with increasing attention to open-source models and hybrid approaches.
+- Rapid development of open, extensible benchmarks and evaluation frameworks, enabling more realistic and reproducible research.
+- System-level innovations for privacy, extensibility, and real-world deployment.
+- Specialized modeling techniques for schema handling, candidate selection, and ambiguity.
+- Expansion into domain-specific and large-scale, realistic settings.
+- A visible technical evolution from template-based models to LLM-centric, system-integrated, and domain-adapted solutions.
+
+The submission paper, **DB-GPT-Hub**, sits at the intersection of these trends, providing an open, extensible benchmarking suite for LLM-empowered Text-to-SQL, with a particular emphasis on fine-tuning and reproducible evaluation—addressing key gaps identified across the landscape.

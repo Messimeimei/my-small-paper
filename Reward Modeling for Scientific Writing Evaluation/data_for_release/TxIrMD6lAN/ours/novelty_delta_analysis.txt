@@ -1,0 +1,139 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+- The submission is positioned within the *adapter/parameter-efficient fine-tuning (PEFT)* cluster, specifically targeting *incremental/continual learning* in vision (CIFAR-100, ImageNet).
+- It proposes using *task-specific adapters* as feature modifiers, co-trained with a backbone, and integrates with regularization-based methods (LwF, EWC).
+- The most closely related prior works are:  
+  - **Adapter-based continual learning**: InfLoRA (Bhat et al., 2023), Liang & Li (2024), Zhang et al. (2020a), Pham et al. (2021), Wang et al. (2022), Rajasegaran et al. (2020).
+  - **Regularization-based methods**: EWC (Kirkpatrick et al., 2017), LwF (Li & Hoiem, 2017), LwM (Dhar et al., 2019), MAS (Aljundi et al., 2018), PathInt (Zenke et al., 2017).
+- The submission’s approach is most similar to *adapter-based continual learning* methods that freeze the backbone and only train adapters (e.g., Liang & Li, 2024; Zhang et al., 2020a; InfLoRA), but differs by co-training the backbone and adapters with a regularization term.
+- Within the problem space, it addresses *catastrophic forgetting* and the *stability-plasticity dilemma*, aiming for efficient memory usage and compatibility with existing regularization-based approaches.
+- Evaluation is standard: classification accuracy on CIFAR-100 and ImageNet, consistent with the field.
+
+**Independent Assessment:**
+- The submission is a *modular, parameter-efficient adaptation* method, extending the adapter paradigm by allowing backbone co-training (with regularization) rather than freezing.
+- It is not the first to use adapters in continual learning, but claims a novel training regime and integration with regularization-based methods.
+- The approach is compatible with both *adapter/PEFT* and *regularization/distillation* clusters, aiming for plug-and-play extensibility.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+- Authors consistently group prior adapter-based continual learning works (Rajasegaran et al., 2020; Bhat et al., 2023; Pham et al., 2021; Wang et al., 2022; Liang & Li, 2024; Zhang et al., 2020a) as “freezing the backbone” and “relying on custom, complex loss functions.”
+- They claim their method differs by *co-training* the backbone and adapters, using a *regularization term* for shared features, and being more compatible with regularization/prediction-based approaches (LwF, EWC).
+
+**Accuracy and Balance:**
+- The characterization that prior works “freeze the backbone” is accurate for some (Liang & Li, 2024; Zhang et al., 2020a; InfLoRA), but not all. For example, some works (e.g., Rajasegaran et al., 2020; Wang et al., 2022) use prompt-based or meta-learning approaches that may involve more flexible backbone adaptation.
+- The claim that prior works “do not incorporate regularization- or prediction-based approaches” is somewhat overstated. Some prior works (e.g., InfLoRA, AdapterFusion) do explore compatibility with regularization or distillation, though perhaps not in the exact form proposed here.
+- The authors’ rhetoric sometimes overstates the novelty of “co-training” and “regularization” as unique, when these are common strategies in the field (see EWC, LwF, AdapterFusion).
+
+**Discrepancies:**
+- The claim that “none incorporates regularization- or prediction-based approaches” is not fully accurate; some prior works do combine adapters with regularization/distillation, though perhaps not with the same regularization term or in the same architecture.
+- The authors understate the flexibility of some prior adapter-based methods, which may allow partial backbone adaptation or more nuanced integration with regularization.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Main Claimed Contributions and Closest Prior Work:**
+
+### (a) **Adapters as Feature Modifiers for Incremental Learning**
+- **Closest prior work:** InfLoRA (Bhat et al., 2023), Liang & Li (2024), Zhang et al. (2020a), AdapterFusion.
+- **Claimed difference:** Repurposing adapters as feature modifiers, not just for parameter efficiency but for capturing task-specific details in incremental learning.
+- **Independent assessment:** Prior works (InfLoRA, AdapterFusion) already use adapters for task-specific adaptation in continual learning. The “feature modifier” framing is a matter of emphasis; the technical novelty is limited unless the adapter design or integration is substantially different (not clear from the summary).
+- **Delta:** The main difference is the *co-training* of backbone and adapters, not the use of adapters per se.
+
+### (b) **Co-training Backbone and Adapters (vs. Freezing Backbone)**
+- **Closest prior work:** Liang & Li (2024), Zhang et al. (2020a), InfLoRA.
+- **Claimed difference:** Prior works freeze the backbone; this work co-trains both, with a regularization term.
+- **Independent assessment:** It is accurate that many adapter-based continual learning methods freeze the backbone. Co-training with regularization is a plausible extension, but not a fundamentally new concept—regularization-based co-training is common in the field (e.g., EWC, LwF, AdapterFusion).
+- **Delta:** The specific combination of co-training backbone/adapters with a regularization term is a modest extension, not a conceptual leap.
+
+### (c) **Regularization Term for Shared Feature Learning**
+- **Closest prior work:** EWC (Kirkpatrick et al., 2017), LwF (Li & Hoiem, 2017), AdapterFusion, InfLoRA.
+- **Claimed difference:** Introduces a regularization term to encourage the backbone to learn shared features.
+- **Independent assessment:** Regularization to encourage shared features is a standard approach (EWC, LwF, AdapterFusion). The novelty depends on the specific form of the regularization term, which is not detailed here. If it is a standard weight or output regularization, the contribution is incremental.
+- **Delta:** Likely a routine adaptation of regularization to the adapter setting.
+
+### (d) **Integration with LwF/EWC and Outperforming Non-adapter Baselines**
+- **Closest prior work:** AdapterFusion, InfLoRA, Unified PETL.
+- **Claimed difference:** Seamless integration with established regularization-based methods, outperforming non-adapter baselines.
+- **Independent assessment:** Many prior works (AdapterFusion, InfLoRA) also demonstrate compatibility with regularization/distillation methods. Outperforming non-adapter baselines is expected for adapter-based methods; the key comparison is with other adapter-based or PEFT methods.
+- **Delta:** The integration is not unique; the main difference is the specific co-training/regularization regime.
+
+**Summary:**  
+- The *substantive difference* is the co-training of backbone and adapters with a regularization term, rather than freezing the backbone.  
+- The *novelty* is incremental, as co-training and regularization are well-established; the specific combination in this context is new but not a conceptual leap.  
+- Some author claims about the uniqueness of their approach are overstated; prior works have explored similar directions.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field maturity:** The area of continual/incremental learning is highly active, with rapid evolution in adapter/PEFT methods, regularization, and modular architectures.
+- **Recent surveys:**  
+  - *A Continual Learning Survey: Defying Forgetting in Classification Tasks* (De Lange et al., 2022)
+  - *Class-Incremental Learning: Survey and Performance Evaluation on Image Classification* (Masana et al., 2022)
+  - *Unified PETL: A Unified View of Parameter-Efficient Transfer Learning* (He et al., 2021)
+- **Trends:**  
+  - Increasing use of adapters, prompts, and PEFT for scalable continual learning.
+  - Emphasis on modular, plug-and-play architectures.
+  - Growing interest in task-agnostic and data-free approaches.
+- **Incremental advances:**  
+  - Many recent papers propose new combinations or minor extensions of existing techniques (e.g., new regularization terms, adapter variants, integration with existing frameworks).
+  - Substantial conceptual advances are rare; most progress is incremental and empirical.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated novelty:**  
+  - The use of adapters for incremental learning is not new; the main novelty is co-training the backbone and adapters with regularization.
+  - Regularization for shared feature learning is a standard technique; the specific form may be new, but the concept is not.
+- **Empirical improvements:**  
+  - Gains over non-adapter baselines are expected; the key comparison should be with other adapter-based or PEFT methods.
+  - Improvements may be due to implementation details (e.g., better tuning, larger adapters) rather than conceptual advances.
+- **Terminology differences:**  
+  - “Feature modifiers” vs. “adapters” may be a rhetorical distinction; the underlying mechanism is similar to prior work.
+- **Routine extensions:**  
+  - Integrating adapters with LwF/EWC is a natural, routine extension, not a conceptual leap.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Potentially relevant but uncited work:**  
+  - *TAIL: Task-specific Adapters for Imitation Learning with Large Pretrained Models* (adapters in continual learning/control).
+  - *Unsupervised Domain Adaptation for Event Detection using Domain-specific Adapters* (adapters for domain adaptation).
+- **Additional comparisons needed:**  
+  - Direct comparison with InfLoRA, AdapterFusion, and TAIL would clarify the delta.
+  - More nuanced discussion of prompt-based continual learning (e.g., L2P, ATTEMPT) could be relevant.
+- **Incomplete characterizations:**  
+  - The claim that prior works do not integrate with regularization/prediction-based approaches is not fully accurate.
+  - Some prior works allow partial backbone adaptation or more flexible integration than acknowledged.
+- **Exaggerated limitations:**  
+  - The limitations of “freezing the backbone” are real but may be overstated; some methods achieve strong performance with frozen backbones.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most significant independently verified difference:**  
+  - The main technical delta is *co-training* the backbone and adapters with a regularization term, rather than freezing the backbone as in many prior adapter-based continual learning methods.
+- **Main relationships to existing research:**  
+  - The submission is an incremental extension of adapter-based continual learning, integrating standard regularization techniques for shared feature learning.
+- **Strongest differentiation:**  
+  - The specific co-training regime and regularization for backbone/adapters, if novel in form, is the main point of differentiation.
+- **Weakest differentiation:**  
+  - The use of adapters as feature modifiers, and integration with LwF/EWC, are not unique and have been explored in prior work.
+- **Discrepancies between author claims and independent assessment:**  
+  - Authors overstate the novelty of their approach and understate the flexibility and integration capabilities of prior adapter-based methods.
+  - The claim that “none incorporates regularization- or prediction-based approaches” is not fully accurate.
+- **Reviewer guidance:**  
+  - The submission is a plausible, incremental advance in adapter-based continual learning, with the main novelty being the co-training of backbone and adapters with regularization.  
+  - The field is highly active, and such incremental advances are common; reviewers should calibrate expectations accordingly and focus on empirical rigor and clarity of the technical delta.
+
+---

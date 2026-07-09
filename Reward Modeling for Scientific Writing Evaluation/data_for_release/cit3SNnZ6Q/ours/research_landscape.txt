@@ -1,0 +1,203 @@
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the provided papers, the dominant methodological theme is **sparsity in large language models (LLMs)**, with a focus on both **activation sparsity** (reducing the number of active neurons/parameters per inference) and **structural/model sparsity** (Mixture-of-Experts, pruning, etc.). The methods can be grouped as follows:
+
+#### **Cluster 1: Activation Sparsity via Activation Functions and Regularization**
+- **Q-Sparse (Submission):** Top-K activation sparsification with straight-through estimator, block sparsity, and squared ReLU.
+- **Turbo Sparse:** dReLU activation for improved sparsity, neuron sparsification in FFN experts.
+- **ProSparse:** ReLUfication, progressive L1 regularization, activation threshold shifting (FATReLU).
+- **ReLU Strikes Back:** ReLU/shifted ReLU activations, fine-tuning, and additional ReLU layers for sparsity.
+- **SparseInfer:** Training-free predictor for activation sparsity in ReLU-fied LLMs.
+
+**Commonalities:** All these methods focus on increasing the number of zero activations in FFN layers, either by changing the activation function (to ReLU, dReLU, squared ReLU) or by regularizing activations during training. Some (Q-Sparse, ProSparse) introduce new regularization or thresholding techniques, while others (SparseInfer) focus on efficient inference given existing sparsity.
+
+#### **Cluster 2: Mixture-of-Experts (MoE) and Expert Routing**
+- **Switch Transformers:** Simplified MoE with gating, selective precision, and expert regularization.
+- **MoE-LLaVA:** MoE for vision-language models, learnable routers, top-k expert activation.
+- **Turbo Sparse:** Neuron sparsification in MoE FFN experts.
+- **Taming Sparsely Activated Transformer (THOR):** Random expert activation, consistency regularization.
+- **Towards More Effective and Economic SAM:** Hierarchical routing, expert grouping, alignment losses.
+- **FedFMSL & FedMS:** MoE in federated learning, combining global/local experts, sparsely activated LoRA.
+
+**Commonalities:** These methods use expert-based architectures to activate only a subset of model parameters per input, reducing compute. Innovations include new routing mechanisms (random, hierarchical, learnable), expert regularization, and adaptation to federated settings.
+
+#### **Cluster 3: Structured Pruning and Model Compression**
+- **Sheared LLaMA:** Targeted structured pruning (layers, heads, dimensions), dynamic batch loading.
+- **Q-Sparse (Submission):** Block sparsity for efficient batch training/inference.
+
+**Commonalities:** These methods reduce model size or active parameters via structured pruning or block-wise sparsity, aiming to maintain performance while reducing compute.
+
+#### **Cluster 4: Contextual/On-the-fly Sparsity Prediction**
+- **Deja Vu:** Contextual sparsity prediction per input, NNS for attention/MLP, asynchronous lookahead.
+- **SparseInfer:** Training-free, sign-bit-based activation sparsity prediction.
+
+**Commonalities:** Both focus on dynamically predicting which parts of the model to activate at inference, based on input context, to maximize efficiency.
+
+#### **Cluster 5: Benchmarking and Analysis**
+- **From Words to Watts:** Systematic benchmarking of LLM inference energy and compute costs.
+
+### Methodological Trends and Relationships
+
+- **Activation Function Engineering:** There is a clear trend toward revisiting and engineering activation functions (ReLU, dReLU, squared ReLU) to maximize intrinsic sparsity, often combined with regularization or thresholding.
+- **Expert-based Sparsity:** MoE and its variants remain a popular approach for scaling models efficiently, with ongoing innovation in routing and expert selection.
+- **Inference-time Adaptivity:** Recent methods (Deja Vu, SparseInfer) emphasize adaptivity at inference, predicting sparsity patterns on the fly for further efficiency.
+- **Compatibility with Quantization:** The submission paper (Q-Sparse) and others highlight compatibility with quantized models, broadening the applicability of sparsity.
+- **Federated and Personalized Learning:** MoE and sparsity are being adapted for federated learning, addressing resource and data heterogeneity challenges.
+
+**Relationships:**  
+- Activation sparsity methods (Q-Sparse, ProSparse, Turbo Sparse, ReLU Strikes Back) are often complementary to MoE approaches and can be combined.
+- Contextual/on-the-fly sparsity prediction (Deja Vu, SparseInfer) can be layered atop models trained for high intrinsic sparsity.
+- Structured pruning (Sheared LLaMA) and block sparsity (Q-Sparse) are orthogonal to activation/MoE sparsity and can be combined for further gains.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **High Computational and Memory Cost of LLMs (Inference and Training)**
+   - Addressed by nearly all papers via activation sparsity, MoE, pruning, or efficient inference.
+
+2. **Inefficiency of Existing Sparsity Methods**
+   - Submission and related works note that prior methods (weight sparsity, partial activation sparsity) are insufficient for LLMs.
+
+3. **Maintaining Model Performance under Sparsity**
+   - Many works (ProSparse, Turbo Sparse, Switch Transformers, Sheared LLaMA) focus on achieving high sparsity without degrading accuracy.
+
+4. **Efficient Scaling and Adaptation**
+   - MoE-based works (Switch Transformers, MoE-LLaVA, THOR, FedFMSL, FedMS) address scaling to larger models or adapting to new domains/users.
+
+5. **Inference-time Efficiency and Adaptivity**
+   - Deja Vu and SparseInfer focus on dynamic, input-dependent sparsity for real-time efficiency.
+
+6. **Resource Constraints (Edge Devices, Federated Learning)**
+   - Turbo Sparse, FedFMSL, FedMS, and ReLU Strikes Back address deployment on resource-constrained hardware.
+
+7. **Energy and Compute Benchmarking**
+   - From Words to Watts provides empirical analysis of inference costs.
+
+### Approaches to Similar Problems
+
+- **Activation Sparsity vs. MoE:**  
+  Both aim to reduce active computation, but activation sparsity works at the neuron level (within layers), while MoE sparsity works at the expert/module level (across layers or sub-networks).
+- **Inference-time Adaptivity:**  
+  Deja Vu and SparseInfer differ in that Deja Vu predicts contextual sparsity for both attention and MLP layers, while SparseInfer focuses on predicting ReLU activation sparsity.
+- **Performance Preservation:**  
+  ProSparse and Turbo Sparse use progressive regularization and data mixture strategies to avoid performance loss at high sparsity, while Q-Sparse introduces scaling laws to guide optimal sparsity.
+
+### Patterns in Problem Formulation
+
+- **Efficiency vs. Performance Trade-off:**  
+  Most works explicitly frame the problem as maximizing sparsity/efficiency while minimizing performance loss.
+- **Scalability:**  
+  Several papers (Switch Transformers, MoE-LLaVA, Sheared LLaMA) focus on scaling models to larger sizes or more domains/users.
+- **Adaptivity and Personalization:**  
+  Federated learning papers (FedFMSL, FedMS) and Deja Vu emphasize adaptation to user/device/data heterogeneity.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **LLM Benchmarks:** LLaMA2 (7B, 13B), OPT, Mistral, Mixtral, MiniCPM, and downstream tasks (Alpaca, GSM8K, ScienceQA, MMBench, etc.).
+- **Translation Tasks:** WMT'16, WMT'14, multilingual/low-resource tasks.
+- **Vision-Language:** POPE, MM-Vet, LLaVA^W.
+- **Pre-training Data:** C4, mT5, GitHub, domain-specific corpora.
+
+### Evaluation Metrics
+
+- **Model Performance:** Accuracy, perplexity, BLEU (for translation), downstream task accuracy, open-ended generation quality.
+- **Sparsity Metrics:** Activation sparsity (%), number of activated parameters, sparsity ratio.
+- **Efficiency Metrics:** Inference speed (tokens/sec), decoding speedup (x times), inference latency (wall-clock), compute cost (FLOPs, energy consumption).
+- **Resource Utilization:** Memory footprint, energy consumption (From Words to Watts).
+- **Communication Cost:** Especially in federated learning settings.
+
+### Patterns in Performance Measurement
+
+- **Sparsity vs. Performance:** Most works report model accuracy/performance at various sparsity levels, often comparing to dense baselines at the same compute budget.
+- **Speedup and Latency:** Decoding/inference speedup is a key metric, with some works (Deja Vu, Turbo Sparse) reporting wall-clock time improvements.
+- **Resource-constrained Evaluation:** Several works (Turbo Sparse, ReLU Strikes Back, FedFMSL) evaluate on mobile/edge devices or in federated settings.
+- **Energy Benchmarking:** Only From Words to Watts systematically benchmarks energy usage.
+
+### Comparison of Evaluation Approaches
+
+- **Comprehensive vs. Task-specific:** Some works (Switch Transformers, Sheared LLaMA) evaluate across many tasks, while others focus on a few representative benchmarks.
+- **Hardware-aware Evaluation:** Deja Vu and From Words to Watts emphasize real-world speedup and energy, not just theoretical FLOPs.
+- **Sparsity Control:** ProSparse and Q-Sparse provide analysis of optimal sparsity ratios and scaling laws.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: **Activation Sparsity in LLMs**
+- **Papers:** Q-Sparse (Submission), Turbo Sparse, ProSparse, ReLU Strikes Back, SparseInfer
+- **Characteristics:** Focus on maximizing activation sparsity via activation function engineering, regularization, and efficient inference. Emphasis on maintaining or improving performance at high sparsity.
+- **Relationships:** These works often cite or build upon each other (e.g., ProSparse improves over ReLU Strikes Back), and their methods are complementary (e.g., Q-Sparse's block sparsity can be combined with ProSparse's regularization).
+
+### Cluster 2: **Mixture-of-Experts and Expert Routing**
+- **Papers:** Switch Transformers, MoE-LLaVA, Turbo Sparse, THOR, Towards More Effective and Economic SAM, FedFMSL, FedMS
+- **Characteristics:** Use of expert-based architectures to scale models efficiently. Innovations in routing (random, hierarchical, learnable), expert regularization, and adaptation to federated/personalized settings.
+- **Relationships:** Switch Transformers is foundational; others extend or adapt MoE for new domains (vision-language, federated learning) or propose new routing/regularization.
+
+### Cluster 3: **Inference-time Sparsity Prediction and Adaptivity**
+- **Papers:** Deja Vu, SparseInfer
+- **Characteristics:** Focus on dynamic, input-dependent sparsity prediction for real-time efficiency. Emphasis on wall-clock speedup and hardware-aware implementation.
+- **Relationships:** These methods can be layered atop models from Clusters 1 or 2.
+
+### Cluster 4: **Structured Pruning and Model Compression**
+- **Papers:** Sheared LLaMA, Q-Sparse (block sparsity)
+- **Characteristics:** Structured pruning of layers/heads/dimensions, block-wise sparsity for efficient training/inference.
+- **Relationships:** Orthogonal to activation/MoE sparsity; can be combined for further gains.
+
+### Cluster 5: **Benchmarking and Analysis**
+- **Papers:** From Words to Watts
+- **Characteristics:** Systematic benchmarking of inference energy and compute costs.
+- **Relationships:** Provides empirical context for the efficiency claims of other clusters.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Weight to Activation Sparsity:** Early sparsity work focused on weight pruning; recent work (Q-Sparse, ProSparse, ReLU Strikes Back) shifts to activation sparsity, which is more amenable to efficient inference in LLMs.
+- **Activation Function Innovation:** The field has moved from standard activations (GELU, Swish) to ReLU, dReLU, squared ReLU, and thresholded variants to maximize sparsity.
+- **From Static to Dynamic Sparsity:** Methods like Deja Vu and SparseInfer represent a shift toward input-dependent, contextual sparsity, enabling further efficiency at inference.
+- **MoE Evolution:** Switch Transformers simplified MoE for scale; subsequent work (THOR, MoE-LLaVA, SAM routing) innovates on routing, regularization, and application to new domains (vision-language, federated learning).
+- **Integration with Quantization and Federated Learning:** Q-Sparse and FedFMSL/FedMS show that sparsity methods are being adapted for quantized models and federated/personalized learning, broadening their impact.
+- **Structured Pruning and Block Sparsity:** Sheared LLaMA and Q-Sparse's block sparsity show a trend toward structured, hardware-friendly sparsity patterns.
+
+### Building Blocks and Extensions
+
+- **Activation Sparsity as a Foundation:** Many methods (SparseInfer, Deja Vu) assume or build upon models with high intrinsic activation sparsity.
+- **MoE as a Scalable Backbone:** MoE architectures serve as a backbone for scaling, with ongoing innovation in routing and expert selection.
+- **Inference-time Adaptivity:** Recent methods extend static sparsity with dynamic, input-dependent mechanisms.
+
+### Competing and Complementary Approaches
+
+- **Activation Sparsity vs. MoE:** These are complementary; activation sparsity can be applied within experts in MoE models.
+- **Static vs. Dynamic Sparsity:** Static sparsity (from training) is being complemented by dynamic, contextual sparsity at inference.
+- **Pruning vs. Sparsity:** Structured pruning (Sheared LLaMA) and activation/MoE sparsity can be combined for maximal efficiency.
+
+---
+
+# Summary Table
+
+| Cluster | Key Methods | Main Papers | Focus |
+|---------|-------------|-------------|-------|
+| Activation Sparsity | ReLU/dReLU/squared ReLU, regularization, thresholding | Q-Sparse, Turbo Sparse, ProSparse, ReLU Strikes Back, SparseInfer | Maximize neuron-level sparsity, efficient inference |
+| MoE/Expert Routing | MoE, routing, regularization, federated adaptation | Switch Transformers, MoE-LLaVA, THOR, SAM routing, FedFMSL, FedMS | Scale models, reduce compute via expert selection |
+| Inference-time Adaptivity | Contextual sparsity prediction, sign-bit predictors | Deja Vu, SparseInfer | Dynamic, input-dependent sparsity for real-time efficiency |
+| Structured Pruning | Layer/head pruning, block sparsity | Sheared LLaMA, Q-Sparse | Model compression, hardware-friendly sparsity |
+| Benchmarking | Energy/compute benchmarking | From Words to Watts | Empirical analysis of inference costs |
+
+---
+
+# Conclusion
+
+The research landscape is rapidly evolving from static, weight-based sparsity to dynamic, activation-based and expert-based sparsity, with a strong emphasis on maintaining or improving model performance while drastically reducing computational and memory costs. The submission paper, **Q-Sparse**, is at the forefront of this evolution, enabling full activation sparsity in LLMs and bridging the gap between activation sparsity and practical, hardware-efficient inference. The field is also moving toward more adaptive, context-aware sparsity (Deja Vu, SparseInfer), and expanding the applicability of sparsity to federated and resource-constrained settings (FedFMSL, FedMS, Turbo Sparse). The interplay between these approaches—activation function engineering, expert routing, structured pruning, and dynamic inference—defines the current frontier of efficient LLM research.

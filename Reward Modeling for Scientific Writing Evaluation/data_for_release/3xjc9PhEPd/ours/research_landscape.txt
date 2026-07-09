@@ -1,0 +1,184 @@
+Below is a comprehensive research landscape analysis based on the provided submission and related papers.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the papers, the following methodological themes emerge:
+
+- **Parameter-Efficient Fine-Tuning (PEFT):** Includes adapters, LoRA, prompt tuning, and their federated or quantization-aware variants (Papers 1, 2, 5, 6, 11).
+- **Model Compression:** Encompasses distillation, quantization, pruning (structured/unstructured), and hybrid approaches (Papers 1, 6, 10, 12, 13).
+- **Retrieval-Augmented Generation (RAG):** Standard and hardware-optimized RAG, including contrastive learning for embeddings and noise-aware training (Papers 1, 3).
+- **On-Device/Edge Customization:** Adapter blending, hybrid inference, and on-device personalization with self-supervised data selection (Papers 1, 4, 9).
+- **Cloud-Edge Collaboration:** Knowledge transfer frameworks and hybrid inference strategies (Papers 4, 7).
+- **Efficient Model Architectures:** Deep-and-thin models, grouped-query attention, and MoE-based inference engines (Papers 8, 14).
+- **Scaling Laws and Systematic Benchmarking:** Empirical studies on scaling, ablation, and benchmarking of methods (Papers 1, 2, 11).
+
+### Method Clusters
+
+- **Cluster A: PEFT and Adapter-Based Methods**
+  - Papers: 1, 2, 5, 6, 11
+  - Methods: LoRA, adapters, prompt tuning, quantization-aware PEFT, federated PEFT, ablation on adapter placement.
+  - Trends: Increasing focus on reducing trainable parameters, integrating with quantization, and adapting to federated/non-iid settings.
+
+- **Cluster B: Model Compression and Pruning**
+  - Papers: 1, 10, 12, 13, 6
+  - Methods: Distillation, quantization, structured/unstructured pruning, group-wise quantization, dynamic batch loading.
+  - Trends: Move from generic pruning to task-aware and hardware-aware compression; recognition of the nuanced impact of pruning on task difficulty.
+
+- **Cluster C: Retrieval-Augmented and Hybrid Generation**
+  - Papers: 1, 3
+  - Methods: RAG, contrastive learning for embeddings, hardware-optimized RAG (CiM), noise-aware training.
+  - Trends: Adapting RAG for edge deployment, addressing hardware constraints, and improving robustness.
+
+- **Cluster D: On-Device Customization and Personalization**
+  - Papers: 1, 4, 9
+  - Methods: Adapter blending, self-supervised data selection, data synthesis, hybrid inference.
+  - Trends: Shift toward privacy-preserving, user-specific, and training-free customization.
+
+- **Cluster E: Cloud-Edge Collaboration and Knowledge Transfer**
+  - Papers: 4, 7
+  - Methods: Guidance-based knowledge transfer, hybrid inference, batch generation.
+  - Trends: Reducing cloud costs, enabling plug-and-play deployment, and supporting user customization.
+
+- **Cluster F: Efficient Model Architectures and Inference Engines**
+  - Papers: 8, 14
+  - Methods: MoE inference engines, expert-wise quantization, deep-and-thin architectures, grouped-query attention.
+  - Trends: Hardware-aware model design, memory and I/O optimization, and achieving large-model performance on small devices.
+
+### Methodological Trends and Relationships
+
+- **Integration of PEFT and Compression:** Increasingly, PEFT is combined with quantization/pruning for maximal efficiency (Papers 6, 12).
+- **Hardware-Aware Optimization:** Methods are tailored for specific hardware constraints (edge, CiM, mobile), with quantization and memory management as key enablers (Papers 3, 6, 8, 14).
+- **Personalization and Privacy:** On-device learning and customization are prioritized to address privacy and data heterogeneity (Papers 4, 9, 5).
+- **Empirical and Systematic Benchmarking:** There is a strong trend toward empirical, systematic studies to guide method selection and deployment (Papers 1, 2, 11).
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Resource-Constrained LLM Deployment:** How to deploy and customize LLMs on devices with limited compute, memory, and energy (Papers 1, 3, 4, 6, 8, 14).
+- **Efficient Fine-Tuning and Adaptation:** Reducing the cost and data requirements for adapting LLMs to new tasks/users (Papers 1, 2, 5, 6, 11).
+- **Model Compression and Acceleration:** Reducing model size and inference latency without sacrificing accuracy (Papers 1, 10, 12, 13, 8).
+- **Personalization and Privacy:** Enabling user-specific LLMs without cloud data transfer or extensive annotation (Papers 1, 4, 9, 5).
+- **Cloud-Edge Collaboration:** Balancing computation between cloud and edge for cost, privacy, and performance (Papers 4, 7).
+- **Robustness to Hardware Constraints:** Ensuring LLMs remain accurate and efficient under hardware-induced noise, low precision, and memory limitations (Papers 3, 6, 8).
+
+### Approaches to Similar Problems
+
+- **Resource Constraints:** Addressed via model compression (distillation, quantization, pruning), PEFT, and efficient architectures (Papers 1, 6, 8, 10, 12, 14).
+- **Personalization:** Tackled through on-device fine-tuning, adapter blending, self-supervised data selection, and federated learning (Papers 1, 4, 5, 9).
+- **Cloud-Edge Collaboration:** Solved by hybrid inference, knowledge transfer frameworks, and offloading demanding queries to the cloud (Papers 4, 7).
+- **Task Adaptation:** PEFT, adapters, and prompt tuning are used to adapt LLMs to new tasks with minimal data and compute (Papers 1, 2, 5, 6, 11).
+
+### Patterns in Problem Formulation
+
+- **Trade-off Analysis:** Many papers explicitly frame their problem as a trade-off between efficiency (compute, memory, latency) and performance (accuracy, generalization).
+- **Task and Data Regime Sensitivity:** Several works highlight that optimal methods depend on task difficulty, data availability, and user requirements (Papers 1, 2, 13).
+- **Hardware and System Constraints:** Problems are increasingly formulated with explicit reference to hardware limitations and deployment scenarios (Papers 3, 6, 8, 14).
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **General LLM Benchmarks:** Alpaca, MMLU, WMT, GSM8K, CSQA, DOLLY, MedDialog, Prosocial-Dialog, Empathetic-Dialog, MultiArith, AddSub, SingleEq, and various QA and summarization datasets.
+- **Custom/On-Device Benchmarks:** Some works create new benchmarks for on-device or personalized LLM evaluation (Papers 4, 9).
+- **Edge/Hardware-Specific:** Evaluation on real edge devices (Raspberry Pi, Jetson TX2) and with hardware-in-the-loop (CiM) (Papers 3, 8).
+
+### Evaluation Metrics
+
+- **Accuracy:** Task accuracy, zero-shot accuracy, 5-shot accuracy, exact-match, ROUGE, BLEU.
+- **Efficiency:** Inference speed, training time, memory footprint, update density, compute cost.
+- **Stability and Robustness:** Performance stability, performance retention after compression, robustness to hardware noise.
+- **Personalization/Customization:** User-specific content generation accuracy, fine-tuning speed, privacy preservation.
+
+### Patterns in Performance Measurement
+
+- **Multi-Factor Evaluation:** Most papers report both accuracy and efficiency metrics, reflecting the dual goals of high performance and low resource usage.
+- **Task-Specific Metrics:** Metrics are tailored to the downstream task (e.g., ROUGE for summarization, BLEU for translation, accuracy for QA).
+- **Relative Performance:** Many results are reported as improvements over baselines or as a percentage of original/teacher model performance.
+- **Hardware-Realistic Evaluation:** Increasing use of real device measurements (latency, memory) and hardware-aware metrics.
+
+### Comparison of Evaluation Approaches
+
+- **Empirical Benchmarking:** Submission and several related papers conduct systematic, empirical benchmarking across multiple axes (model size, data, method).
+- **Ablation and Sensitivity Analysis:** Some works perform ablation studies to isolate the effect of method components (Papers 1, 2, 11).
+- **Task Difficulty Analysis:** Paper 13 introduces formal metrics for task difficulty and analyzes method fragility accordingly.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: PEFT and Adapter-Based Fine-Tuning
+- **Papers:** 1, 2, 5, 6, 11
+- **Characteristics:** Focus on reducing trainable parameters, enabling efficient adaptation, and integrating with quantization/federated learning. Strong empirical benchmarking and ablation studies.
+- **Relationships:** Papers build on each other by extending PEFT to new settings (federated, quantized, on-device) and by providing frameworks for systematic comparison.
+
+### Cluster 2: Model Compression and Pruning
+- **Papers:** 1, 10, 12, 13, 6
+- **Characteristics:** Explore structured/unstructured pruning, quantization, and their impact on downstream tasks. Some focus on hardware-aware or task-agnostic compression.
+- **Relationships:** Papers 10 and 12 propose new pruning frameworks; Paper 13 provides a theoretical/empirical analysis of pruning's impact on task difficulty.
+
+### Cluster 3: On-Device/Edge Customization and Personalization
+- **Papers:** 1, 4, 9, 5
+- **Characteristics:** Methods for on-device adaptation, privacy-preserving personalization, and hybrid inference. Emphasis on user data, sparse annotation, and minimal training.
+- **Relationships:** Papers 4 and 9 propose new frameworks for on-device customization; Paper 5 extends PEFT to federated settings.
+
+### Cluster 4: Hardware-Aware and Efficient Inference
+- **Papers:** 3, 6, 8, 14
+- **Characteristics:** Methods tailored for specific hardware (CiM, edge devices, mobile), including quantization, memory management, and efficient architectures.
+- **Relationships:** Papers 3 and 8 focus on hardware-optimized inference; Paper 6 integrates quantization with PEFT; Paper 14 designs architectures for mobile.
+
+### Cluster 5: Cloud-Edge Collaboration and Knowledge Transfer
+- **Papers:** 4, 7
+- **Characteristics:** Hybrid inference, guidance-based knowledge transfer, and efficient cloud-edge deployment.
+- **Relationships:** Both propose frameworks for balancing computation and customization between cloud and edge.
+
+### Cluster 6: Scaling Laws and Systematic Benchmarking
+- **Papers:** 1, 2, 11
+- **Characteristics:** Systematic empirical studies, scaling law analysis, and benchmarking of methods across tasks and data regimes.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Full Fine-Tuning to PEFT:** Early works focused on full-model fine-tuning; the field has shifted to PEFT (adapters, LoRA, prompt tuning) for efficiency.
+- **Integration with Compression:** PEFT is now often combined with quantization and pruning for further efficiency, especially for edge deployment (Papers 6, 12).
+- **Hardware-Aware Methods:** There is a clear trend toward methods that are not just model- but also hardware-aware, optimizing for specific device constraints (Papers 3, 6, 8, 14).
+- **Personalization and Privacy:** The field is moving toward on-device, privacy-preserving personalization, with methods for efficient data selection, sparse annotation, and hybrid inference (Papers 4, 5, 9).
+- **Systematic Empirical Guidance:** Recent works (including the submission) emphasize empirical, systematic benchmarking to provide actionable deployment guidelines.
+
+### Building Blocks and Extensions
+
+- **Adapters/LoRA:** Extended from basic PEFT to federated (SLoRA), quantization-aware (QA-LoRA), and on-device blending (Crayon).
+- **Pruning/Quantization:** Evolved from generic methods to structured, task-aware, and hardware-aware approaches (LLM-Pruner, Sheared LLaMA, QA-LoRA).
+- **RAG:** Extended from standard retrieval-augmented generation to hardware-optimized, noise-resilient RAG for edge devices (RoCR).
+- **Hybrid Inference:** From pure on-device or cloud inference to hybrid, adaptive strategies (Crayon, GKT).
+
+### Competing and Complementary Approaches
+
+- **PEFT vs. Compression:** Some works suggest PEFT is preferable for certain tasks/data regimes, while others show that compression (distillation, quantization) can be more effective for resource constraints.
+- **On-Device vs. Cloud-Edge:** On-device methods prioritize privacy and personalization, while cloud-edge collaboration offers scalability and cost benefits.
+- **Pruning vs. Quantization:** Paper 13 highlights that pruning and quantization have fundamentally different effects on model robustness and task difficulty.
+
+---
+
+## SUMMARY
+
+The research landscape is rapidly evolving toward **efficient, personalized, and hardware-aware deployment of LLMs on edge and mobile devices**. The field is characterized by:
+
+- A strong focus on **parameter-efficient adaptation** (PEFT, adapters, LoRA) and **model compression** (pruning, quantization, distillation).
+- Increasing attention to **hardware constraints** and **on-device learning**, with methods tailored for specific device limitations.
+- A shift toward **privacy-preserving, user-specific customization** and **hybrid cloud-edge inference**.
+- Emphasis on **empirical, systematic benchmarking** and **guideline development** for real-world deployment.
+- Recognition of the **complex trade-offs** between efficiency, accuracy, stability, and personalization, with solutions often being **task- and data-dependent**.
+
+The submission paper stands out by providing a **comprehensive empirical study and deployment guidelines** that synthesize and extend many of these trends, offering actionable insights for practitioners seeking to deploy LLMs under real-world resource constraints.

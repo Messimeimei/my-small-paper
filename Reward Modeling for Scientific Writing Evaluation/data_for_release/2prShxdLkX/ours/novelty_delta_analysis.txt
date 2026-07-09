@@ -1,0 +1,137 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Independent Positioning within the Landscape:**
+
+- **MoDGS** is situated within the most active and competitive cluster: *Dynamic Gaussian Splatting (GS) for Monocular/Dynamic Scenes*. This cluster includes MoSca, Dynamic Gaussian Marbles, GauFRe, Deformable 3D Gaussians, SC-GS, Shape of Motion, and others.
+- The *core problem* addressed—novel view synthesis of dynamic scenes from casually captured monocular videos with static or slow-moving cameras—is a central challenge in this cluster.
+- **Most closely related prior works** (by technical approach and problem):  
+  - **MoSca (Lei et al., 2024):** Uses explicit motion representation, depth estimation, and video tracking priors for dynamic GS from monocular video.
+  - **Dynamic Gaussian Marbles (Stearns et al., 2024):** Hierarchical learning of dynamic GS from monocular video.
+  - **Deformable 3D Gaussians (Yang et al., 2023):** Introduces deformation MLP for dynamic GS, but primarily for multi-view or more constrained monocular settings.
+  - **SC-GS (Huang et al., 2024):** Sparse control for dynamic GS, with a focus on editability.
+  - **Shape of Motion (Wang et al., 2024b):** Explicit motion representation, depth/flow priors, and initialization for monocular dynamic scenes.
+- **Methodological relationship:** MoDGS, like MoSca and Shape of Motion, leverages depth priors for initialization and regularization, but claims a novel 3D-aware initialization and a robust ordinal depth loss.
+- **Problem space:** The submission targets the *most challenging monocular dynamic scenario* (casual, static/slow camera, weak multiview cues), which is a current frontier in the field.
+- **Evaluation:** Standard datasets (Nvidia, DyNeRF, DAVIS, in-the-wild) and metrics (PSNR, SSIM, LPIPS) are used, consistent with the field.
+
+**Verification:**  
+The submission is not the first to attempt monocular dynamic GS with depth priors (see MoSca, Shape of Motion, Dynamic Gaussian Marbles), but claims specific technical advances in initialization and depth loss.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+
+- **MoSca, Shape of Motion:** Cited as using explicit motion representation and depth/tracking priors for initialization. The authors position MoDGS as introducing a "novel 3D-aware initialization" and a "robust ordinal depth loss," implying prior methods are less effective or less principled in initialization and depth supervision.
+- **Dynamic Gaussian Marbles:** Described as using "Gaussian marbles and a hierarchical learning strategy." The authors do not specify whether this method uses depth priors or ordinal loss, suggesting a differentiation in learning strategy.
+- **Deformable 3D Gaussians, SC-GS:** Cited as requiring multiview videos or failing on static monocular videos. The authors claim MoDGS overcomes these limitations.
+- **GauFRe, Gaussian-Flow:** Mentioned as exploring different motion encoding bases, but not directly compared on depth or initialization.
+- **DepthSplat, Consistent Video Depth Estimation:** Cited in the context of depth distillation and self-supervised depth estimation, not as direct competitors in dynamic GS.
+- **Dataset papers (Nvidia, DyNeRF, DAVIS):** Used for benchmarking, not as methodological baselines.
+
+**Accuracy and Balance:**
+
+- The authors generally characterize prior work as either (a) requiring multiview input, (b) lacking robust initialization or depth supervision, or (c) using less effective motion encoding.
+- In some cases (e.g., Deformable 3D Gaussians, SC-GS), the claim that these methods "fail" on static monocular video is plausible but may overstate the gap, as some prior works have attempted monocular settings with varying degrees of success.
+- The distinction between "novel 3D-aware initialization" and prior depth/tracking-based initialization (MoSca, Shape of Motion) is asserted but not fully substantiated in the citation context.
+- The claim of a "novel ordinal depth loss" is positioned as a key differentiator, but the extent to which prior works (e.g., DepthSplat, Consistent Video Depth Estimation) use similar or related losses is not fully discussed.
+
+**Potential Overstatements:**
+
+- The claim of being the "first" to render high-quality novel views from casually captured monocular videos with static/slow cameras may be overstated, as MoSca and Dynamic Gaussian Marbles address similar settings.
+- The characterization of prior methods as "failing" or being "limited" may understate their capabilities, especially if differences are due to implementation or parameter choices rather than conceptual advances.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claimed Contribution 1:**  
+*First method to render high-quality novel views of dynamic scenes from casually captured monocular videos with static or slow-moving cameras, overcoming weak multiview constraints.*
+
+- **Most similar prior work:** MoSca, Dynamic Gaussian Marbles, Shape of Motion.
+- **Actual difference:**  
+  - MoSca and Shape of Motion also target monocular dynamic scenes with weak multiview cues, using depth/tracking priors and explicit motion modeling.
+  - Dynamic Gaussian Marbles uses hierarchical learning for monocular dynamic GS.
+  - MoDGS claims a more robust initialization and depth loss, but the *problem setting* is not unique.
+- **Delta:** The main difference is in the *specific technical approach* (3D-aware initialization, ordinal loss), not in the overall problem addressed.
+- **Author characterization vs. reality:** The "first" claim is not fully substantiated; the technical delta is incremental rather than categorical.
+
+**Claimed Contribution 2:**  
+*Proposes a 3D-aware initialization scheme for the deformation field, improving learning of 4D representations from monocular input.*
+
+- **Most similar prior work:** MoSca, Shape of Motion (both use depth/tracking-based initialization).
+- **Actual difference:**  
+  - MoDGS's "3D-aware" scheme may differ in how it fuses depth priors or parameterizes the deformation field, but prior works also use depth/tracking for initialization.
+  - The novelty may be in the *specifics* (e.g., using ordinal depth, a new parameterization), but not in the *concept* of depth-guided initialization.
+- **Delta:** Likely a technical refinement or improved implementation, not a fundamentally new idea.
+- **Author characterization vs. reality:** The distinction is somewhat overstated; prior works already use depth/tracking for initialization.
+
+**Claimed Contribution 3:**  
+*Introduces a novel ordinal depth loss to address scale inconsistency and depth supervision issues across frames, enabling better use of estimated depth maps for dynamic scene geometry learning.*
+
+- **Most similar prior work:** DepthSplat, Consistent Video Depth Estimation, Shape of Motion.
+- **Actual difference:**  
+  - Ordinal depth loss is a known technique for handling scale ambiguity in monocular depth; its application to dynamic GS is new, but related ideas (e.g., depth fusion, geometric consistency) are present in prior work.
+  - The specific formulation and integration with GS may be novel, but the *concept* of using ordinal or relative depth constraints is not unique.
+- **Delta:** The contribution is a technical adaptation of known losses to the GS context.
+- **Author characterization vs. reality:** The novelty is in the *application* and *integration*, not in the underlying loss concept.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field maturity:** The area is *highly active and rapidly evolving*, with many concurrent works in 2023–2024. There is a strong trend toward monocular dynamic GS, depth/flow priors, and regularization.
+- **Recent surveys/literature reviews:** No comprehensive survey is cited, but the research landscape is well-mapped in recent dynamic GS and monocular view synthesis papers.
+- **Trends:**  
+  - Shift from NeRF to GS for efficiency and editability.
+  - Increasing use of 2D/3D priors and regularization for monocular settings.
+  - Emphasis on real-time, scalable, and editable representations.
+- **Incremental advances:** Most recent papers offer *incremental technical improvements* (e.g., new losses, initialization schemes, motion bases) rather than paradigm shifts.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated novelty:** The "first" claim is not fully supported; several concurrent works address the same problem with similar high-level approaches.
+- **Alignment of novelty claims:** The main advances are in *technical details* (initialization, loss), not in the overall problem or methodology.
+- **Empirical improvements:** Reported gains may be due to better implementation, hyperparameters, or integration of priors, rather than fundamentally new concepts.
+- **Terminology differences:** "3D-aware initialization" and "ordinal depth loss" may be new terms for refinements of existing ideas (depth-guided initialization, relative depth constraints).
+- **Routine extensions:** The adaptation of ordinal loss to GS is a logical extension, not a conceptual leap.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited relevant work:**  
+  - *CoherentGS, HDR-GS, MultiDiff, GFlow, MINE, Periodic Vibration Gaussian* are not cited, though some address monocular or dynamic GS, depth consistency, or efficiency.
+- **Additional comparisons needed:**  
+  - MoDGS should be compared to MoSca, Dynamic Gaussian Marbles, and Shape of Motion on both technical and empirical grounds.
+  - The relationship to DepthSplat and Consistent Video Depth Estimation (for depth loss/consistency) should be clarified.
+- **Incomplete characterizations:**  
+  - The limitations of prior methods (e.g., "fail" on monocular video) may be exaggerated; some prior works do address monocular settings, albeit with different trade-offs.
+- **Citation vs. reality:**  
+  - Some cited works (e.g., Deformable 3D Gaussians, SC-GS) are presented as less capable than they may actually be, especially if implementation details or parameter choices are the main differentiators.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most significant independently verified differences:**  
+  - MoDGS introduces a *specific* 3D-aware initialization and ordinal depth loss for dynamic GS from monocular video, which may improve stability and depth consistency.
+- **Main relationships to existing research:**  
+  - MoDGS is an *incremental advance* within the dynamic monocular GS cluster, building on ideas from MoSca, Shape of Motion, and Dynamic Gaussian Marbles.
+- **Strongest differentiation:**  
+  - The integration of ordinal depth loss with GS for dynamic monocular scenes is a notable technical refinement.
+- **Weakest differentiation:**  
+  - The overall problem setting and use of depth/tracking priors for initialization are shared with several recent works; the "first" claim is not fully substantiated.
+- **Discrepancies between author characterization and independent assessment:**  
+  - The novelty is more incremental than claimed; prior works address similar problems with related techniques.
+  - Some prior methods' limitations may be overstated, and the technical delta is primarily in implementation and integration details.
+
+---
+
+**In summary:**  
+MoDGS is a well-positioned, technically refined contribution within a highly active area. Its main advances are in the *specifics* of initialization and loss design, rather than in the overall problem or methodology. The field is characterized by rapid, incremental progress, and the submission's claims of being "first" or uniquely capable should be interpreted in the context of several concurrent, closely related works. Reviewers should focus on the *empirical impact* of the technical refinements and the *clarity of comparative evaluation* with the most similar recent methods.

@@ -1,0 +1,188 @@
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the following methodological approaches are prominent:
+
+- **Bias Measurement and Analysis**: Most papers focus on measuring bias, both intrinsic (within the model) and extrinsic (in downstream tasks), using a variety of metrics and probing techniques.
+- **Bias Mitigation**: Several works propose or evaluate methods to reduce bias, either during pre-training, fine-tuning, or via prompt-based adaptation.
+- **Prompt-based Adaptation and Evaluation**: Recent works, including the submission, emphasize prompt-based adaptation (zero- and few-shot) as an alternative to fine-tuning for downstream tasks.
+- **Systematic Evaluation and Factor Analysis**: Some papers conduct large-scale, systematic evaluations of factors influencing model behavior, such as prompt design, instruction type, or dataset composition.
+- **Correlation and Transferability Studies**: Multiple papers analyze the relationship between intrinsic and extrinsic bias, and the transferability of bias or mitigation effects across tasks and adaptation methods.
+- **Dataset Creation and Benchmarking**: A few works introduce new datasets specifically designed to probe or quantify bias in LLMs.
+
+### Methodological Clusters
+
+- **Cluster 1: Bias Transfer and Correlation Analysis**
+  - *Papers*: Submission, Related 1, 3, 7, 8, 10
+  - *Description*: These works systematically analyze the relationship between intrinsic and extrinsic bias, often via correlation analysis, and test the bias transfer hypothesis under various adaptation regimes (fine-tuning, prompt-based, etc.).
+  - *Trends*: Earlier works (7, 10) focus on fine-tuning and masked language models (MLMs), often finding weak or no correlation between intrinsic and extrinsic bias. The submission paper, in contrast, finds strong correlation in causal LLMs under prompt adaptation, marking a methodological shift.
+
+- **Cluster 2: Bias Mitigation Strategies**
+  - *Papers*: Related 2, 7, 10, 6
+  - *Description*: These papers propose or evaluate bias mitigation techniques, such as upstream bias mitigation, debiasing during fine-tuning, prompt engineering, and adversarial objectives.
+  - *Trends*: There is a progression from task-specific, repeated mitigation (fine-tuning) to more general, upstream or prompt-based approaches. The effectiveness and transferability of mitigation are critically examined.
+
+- **Cluster 3: Prompt-based Learning and Factor Analysis**
+  - *Papers*: Submission, Related 4, 6
+  - *Description*: These works focus on prompt-based adaptation, systematically varying prompt factors (e.g., instruction type, in-context examples) and analyzing their impact on model predictions, robustness, and bias.
+  - *Trends*: There is increasing recognition of the volatility and influence of prompt design, with instruction type emerging as a particularly impactful factor.
+
+- **Cluster 4: Dataset Creation and Large-scale Benchmarking**
+  - *Papers*: Related 5, 8
+  - *Description*: These works introduce new, large-scale datasets for evaluating specific biases (socioeconomic, name-nationality) and use them to systematically probe LLMs.
+  - *Trends*: The field is moving toward more comprehensive, intersectional, and out-of-distribution evaluations.
+
+- **Cluster 5: Surveys and Meta-Analysis**
+  - *Papers*: Related 3, 9
+  - *Description*: These provide broad overviews of bias metrics, mitigation techniques, and the current state of research, identifying gaps and offering recommendations.
+
+### Methodological Trends and Relationships
+
+- **Shift from Fine-tuning to Prompt-based Adaptation**: The submission and recent works focus on prompt-based adaptation, reflecting the growing importance of this paradigm for LLMs.
+- **From Masked to Causal LLMs**: Earlier studies often used MLMs (e.g., BERT, RoBERTa), while newer work (submission, Related 5) targets causal LLMs (e.g., Llama, Falcon, Mistral).
+- **Increasing Systematicity and Scale**: There is a trend toward more systematic, large-scale, and holistic evaluations, both in terms of prompt factors and dataset coverage.
+- **Correlation and Transferability as Central Questions**: The relationship between intrinsic and extrinsic bias, and the transferability of mitigation, are recurring methodological themes, with evolving findings as model architectures and adaptation methods change.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Bias Transfer Hypothesis (BTH)**: Does bias in pre-trained language models transfer to downstream tasks, and under what adaptation regimes (fine-tuning, prompt-based)?
+- **Effectiveness of Bias Mitigation**: How effective are various bias mitigation strategies (upstream, downstream, prompt-based) in reducing bias in LLMs?
+- **Measurement and Evaluation of Bias**: How should bias be measured? What is the relationship between intrinsic and extrinsic bias, and which metrics are reliable?
+- **Impact of Prompt Design and Adaptation Choices**: How do prompt factors (instruction type, in-context examples, sample composition) affect bias and model behavior?
+- **Intersectionality and Socioeconomic Bias**: How do biases manifest and amplify across intersecting demographic attributes?
+- **Disparities between LLM and Human Perception**: How do LLMs' biases compare to human judgments, especially in tasks like media bias detection?
+
+### Approaches to Similar Problems
+
+- **Bias Transfer**: 
+  - *Submission, Related 7, 8, 10*: All address BTH, but differ in adaptation regime (prompting vs. fine-tuning), model type (causal vs. masked), and downstream tasks (coreference, summarization, occupation prediction).
+  - *Submission* uniquely finds strong bias transfer in causal LLMs under prompt adaptation, contrasting with weak/no transfer in fine-tuned MLMs (7, 10).
+
+- **Bias Mitigation**:
+  - *Related 2, 7, 10, 6*: Explore upstream vs. downstream mitigation, debiasing during fine-tuning, and prompt engineering. The consensus is that mitigation is more effective when tailored to the adaptation regime and task.
+
+- **Bias Measurement**:
+  - *Related 1, 3, 10*: Compare and critique bias metrics, highlighting incompatibilities and the limitations of intrinsic-only measures.
+
+- **Prompt-based Factors**:
+  - *Submission, Related 4, 6*: Systematically vary prompt factors and analyze their impact, with instruction type identified as especially influential.
+
+- **Intersectionality and Socioeconomic Bias**:
+  - *Related 5*: Focuses on intersectional amplification of bias, a less-explored but increasingly important problem.
+
+### Patterns in Problem Formulation
+
+- **From General to Specific**: Early works focus on general bias transfer and mitigation; newer works (submission, 5, 8) target specific biases (gender, socioeconomic, nationality) and adaptation regimes.
+- **From Model-centric to Task-centric**: There is a shift from analyzing model-internal properties to evaluating real-world downstream impacts.
+- **From Single to Multi-factor Analysis**: Recent studies systematically vary multiple factors (prompt design, dataset composition, demographic attributes) to understand their interactions.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Occupation Prediction/Biographies**: Used in several works (7, 10) for gender bias evaluation.
+- **Coreference Resolution**: Used in the submission and Related 2.
+- **Hate/Toxicity Detection**: Used in Related 2, 7.
+- **FlipBias**: Used in Related 6 for media bias detection.
+- **Novel Datasets**: Related 5 and 8 introduce new datasets for socioeconomic and name-nationality bias, respectively.
+
+### Evaluation Metrics
+
+- **Intrinsic Bias Metrics**: Likelihood scores, information-theoretic probing, WEAT, embedding-based metrics.
+- **Extrinsic Bias Metrics**: Downstream task disparities (e.g., F1, accuracy, false positive rates for protected groups), hallucination rates, socioeconomic bias scores.
+- **Correlation Coefficients**: Used to relate intrinsic and extrinsic bias (submission, 1, 8, 10).
+- **Robustness and Consistency**: Metrics for prompt-based learning stability (4).
+- **Intersectionality Amplification**: Quantifies bias amplification across demographic intersections (5).
+
+### Patterns in Performance Measurement
+
+- **Correlation Analysis**: Central to studies of bias transfer (submission, 1, 8, 10).
+- **Task-specific vs. General Metrics**: There is a tension between using general intrinsic metrics and task-specific extrinsic metrics, with recent work favoring the latter for deployment decisions.
+- **Holistic and Multi-dimensional Evaluation**: Newer works (4, 5, 8) emphasize multi-factor, intersectional, and out-of-distribution evaluations.
+
+### Comparison of Evaluation Approaches
+
+- **Intrinsic-only Metrics Are Insufficient**: Multiple papers (1, 3, 10) caution against relying solely on intrinsic metrics, as they may not predict downstream bias.
+- **Downstream Task Evaluation Is Increasingly Favored**: There is a trend toward evaluating bias in the context of real-world tasks and user-facing outputs.
+- **Prompt-based Evaluation**: The submission and Related 4, 6 highlight the need for prompt-specific evaluation protocols, given the volatility of prompt-based adaptation.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Bias Transfer and Correlation Studies
+
+- **Papers**: Submission, 1, 7, 8, 10
+- **Characteristics**: Systematic analysis of the relationship between intrinsic and extrinsic bias, testing the bias transfer hypothesis under various adaptation regimes.
+- **Relationships**: The submission paper builds directly on this cluster, extending the analysis to causal LLMs and prompt-based adaptation, and finding results that contrast with earlier findings for fine-tuned MLMs.
+
+### Cluster 2: Bias Mitigation and Debiasing
+
+- **Papers**: 2, 7, 10, 6
+- **Characteristics**: Propose and evaluate bias mitigation strategies, including upstream mitigation, debiasing during fine-tuning, and prompt engineering.
+- **Relationships**: There is overlap with Cluster 1, as mitigation effectiveness is often evaluated via bias transfer analysis.
+
+### Cluster 3: Prompt-based Learning and Factor Analysis
+
+- **Papers**: Submission, 4, 6
+- **Characteristics**: Focus on prompt-based adaptation, systematically varying prompt factors and analyzing their impact on bias and model behavior.
+- **Relationships**: The submission paper is at the intersection of this cluster and Cluster 1, as it studies bias transfer specifically in the context of prompt-based adaptation.
+
+### Cluster 4: Dataset Creation and Large-scale Benchmarking
+
+- **Papers**: 5, 8
+- **Characteristics**: Introduce new datasets for systematic, large-scale evaluation of specific biases, enabling more comprehensive and intersectional analysis.
+
+### Cluster 5: Surveys and Meta-Analysis
+
+- **Papers**: 3, 9
+- **Characteristics**: Provide overviews of bias metrics, mitigation techniques, and the state of research, identifying gaps and offering recommendations.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Fine-tuning to Prompt-based Adaptation**: Early studies of bias transfer and mitigation focused on fine-tuning and MLMs. The field is now shifting toward prompt-based adaptation in causal LLMs, as reflected in the submission and recent works.
+- **From Intrinsic to Extrinsic Focus**: There is growing recognition that intrinsic bias metrics are insufficient, and that downstream, task-specific evaluation is necessary for real-world impact assessment.
+- **From Single-factor to Multi-factor and Intersectional Analysis**: The field is moving toward more systematic, multi-factor evaluations, including intersectionality and out-of-distribution scenarios.
+- **From Ad-hoc to Systematic and Holistic Evaluation**: Recent works employ large-scale grid searches, statistical analyses, and comprehensive datasets to provide more robust and generalizable findings.
+
+### Building Blocks and Extensions
+
+- **Bias Transfer Hypothesis (BTH)**: The central question of whether and how bias transfers from pre-training to downstream tasks is a recurring theme, with evolving answers as model architectures and adaptation methods change.
+- **Bias Mitigation Techniques**: There is a progression from task-specific, repeated mitigation to more general, upstream or prompt-based approaches, with ongoing debate about their effectiveness and transferability.
+- **Prompt Engineering and Factor Analysis**: The importance of prompt design is increasingly recognized, with instruction type identified as a particularly volatile and influential factor.
+
+### Competing and Complementary Approaches
+
+- **Competing Findings on Bias Transfer**: Earlier works (7, 10) found weak or no correlation between intrinsic and extrinsic bias in fine-tuned MLMs, while the submission finds strong correlation in prompt-adapted causal LLMs, suggesting that adaptation regime and model type are critical factors.
+- **Complementary Approaches to Evaluation**: The move toward multi-dimensional, intersectional, and out-of-distribution evaluation complements earlier, more narrow studies, providing a fuller picture of LLM bias.
+
+---
+
+# Summary Table
+
+| Cluster | Key Papers | Focus | Methodological Trends | Key Findings |
+|---------|------------|-------|----------------------|--------------|
+| Bias Transfer & Correlation | Submission, 1, 7, 8, 10 | Relationship between intrinsic and extrinsic bias | From fine-tuning/MLMs to prompt-based/causal LLMs | Bias transfer is strong in prompt-based causal LLMs (submission), weak in fine-tuned MLMs |
+| Bias Mitigation | 2, 7, 10, 6 | Upstream, downstream, and prompt-based debiasing | From task-specific to general mitigation | Upstream mitigation can help, but adaptation regime matters |
+| Prompt-based Learning | Submission, 4, 6 | Impact of prompt factors on bias and robustness | Systematic, holistic evaluation of prompt design | Instruction type is highly influential; prompt-based adaptation is volatile |
+| Dataset Creation | 5, 8 | New datasets for bias evaluation | Large-scale, intersectional, out-of-distribution | Enables more comprehensive and nuanced bias analysis |
+| Surveys & Meta-Analysis | 3, 9 | Overview of metrics, mitigation, and research gaps | Critical assessment, recommendations | Intrinsic metrics often insufficient; need for downstream evaluation |
+
+---
+
+# Conclusion
+
+The research landscape on bias in language models is rapidly evolving, with a clear shift toward prompt-based adaptation, causal LLMs, and more systematic, intersectional evaluation. The submission paper stands at the intersection of these trends, providing the first systematic evidence of strong bias transfer in prompt-adapted causal LLMs, in contrast to earlier findings for fine-tuned MLMs. This highlights the need for fairness at the pre-training stage, as prompt-based adaptation is increasingly prevalent in real-world applications. The field is also moving toward more holistic, multi-factor, and downstream-focused evaluation, with new datasets and comprehensive surveys supporting this progression.

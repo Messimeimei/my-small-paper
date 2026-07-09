@@ -1,0 +1,210 @@
+---
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, several methodological themes emerge, particularly around **instruction tuning**, **code generation**, **optimization via LLMs**, **data selection/augmentation**, and **parameter-efficient adaptation**. The submission paper, *LLaMoCo*, sits at the intersection of instruction tuning and domain-specific code generation for optimization.
+
+#### Method Clusters
+
+**Cluster 1: Instruction Tuning and Data Curation**
+- *LLaMoCo* (submission), OpenMathInstruct-1, Instruction Tuning with GPT-4, MAmmoTH, LlaSMol, Scaling Instruction-Finetuned LMs, What Makes Good Data for Alignment, LESS, Otter
+  - Focus: Creating or curating high-quality, often domain-specific, instruction datasets and using them to fine-tune LLMs for improved alignment, reasoning, or domain expertise.
+  - Methods: Instruction tuning, hybrid rationales (CoT/PoT), automatic data selection (e.g., EVOL, LESS), in-context instruction tuning, multi-modal instruction tuning.
+
+**Cluster 2: Code Generation and Program Synthesis**
+- *LLaMoCo*, CodeGen, Code Llama, CodeGeeX, Evaluating LLMs Trained on Code, AlphaCode, Program Synthesis with LLMs
+  - Focus: Training and evaluating LLMs for code generation, including multi-turn synthesis, multilingual code, and competitive programming.
+  - Methods: Transformer-based code models, multi-turn synthesis, code infilling, repeated sampling, multilingual pre-training.
+
+**Cluster 3: LLMs for Optimization**
+- *LLaMoCo*, Large Language Models as Optimizers (OPRO), OptiMUS, Large Language Models as Evolution Strategies (EvoLLM), LEO, Using LLMs for Hyperparameter Optimization
+  - Focus: Using LLMs as optimizers—either by generating code for optimizers, directly optimizing via prompting, or acting as evolutionary optimizers.
+  - Methods: Prompt-based optimization, code-to-code generation, evolutionary strategies, population-based search, meta-prompting, iterative refinement.
+
+**Cluster 4: Parameter-Efficient Adaptation**
+- LoRA, LESS (uses LoRA for data selection)
+  - Focus: Reducing the resource requirements for adapting/fine-tuning large models.
+  - Methods: Low-rank adaptation, efficient gradient-based data selection.
+
+**Cluster 5: Data Selection and Augmentation**
+- What Makes Good Data for Alignment, LESS, OptiMUS (data augmentation), OpenMathInstruct-1 (data synthesis)
+  - Focus: Selecting or generating the most effective data for instruction tuning or model improvement.
+  - Methods: Evolution-based scoring, gradient similarity, automated rephrasing, synthetic data generation.
+
+#### Methodological Trends and Relationships
+
+- **Instruction tuning** is a dominant paradigm, with increasing focus on *domain-specific* (math, chemistry, code, optimization) and *data-efficient* approaches.
+- **Code generation** methods are evolving from single-turn, general-purpose models to *multi-turn*, *multilingual*, and *domain-specialized* systems.
+- **LLMs as optimizers** is an emerging area, with methods ranging from prompt-based meta-optimization (OPRO) to evolutionary strategies (EvoLLM, LEO) and code generation for optimization routines (LLaMoCo, OptiMUS).
+- **Data selection/augmentation** is increasingly automated and optimizer-aware, aiming for efficiency and transferability (LESS, EVOL).
+- **Parameter-efficient adaptation** (LoRA) is enabling broader experimentation and fine-tuning, often combined with instruction/data selection methods.
+
+#### Relationships
+
+- *LLaMoCo* builds on instruction tuning and code generation, but uniquely targets **optimization code** with a two-phase learning strategy (contrastive + seq2seq).
+- Methods like OPRO, EvoLLM, and LEO treat LLMs as direct optimizers, while LLaMoCo and OptiMUS use LLMs to generate code that performs optimization.
+- Data selection/augmentation methods (LESS, EVOL, OptiMUS) are often used to improve instruction tuning, which in turn enhances code generation or optimization performance.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Instruction Tuning for Domain Expertise**
+   - How to adapt LLMs to follow instructions and perform well in specialized domains (math, chemistry, code, optimization).
+   - *LLaMoCo* addresses the lack of domain-specific knowledge in LLMs for optimization code generation.
+
+2. **Code Generation and Program Synthesis**
+   - Automating the synthesis of correct, efficient code from natural language or code-based descriptions.
+   - Handling multi-turn, multilingual, and competitive programming scenarios.
+
+3. **LLMs as Optimizers**
+   - Using LLMs to directly solve optimization problems (black-box, derivative-free, evolutionary, hyperparameter).
+   - Generating robust, instance-specific optimizers for diverse tasks.
+
+4. **Data Efficiency and Selection**
+   - How to select or generate the most impactful data for instruction tuning and model alignment.
+   - Reducing the need for large, manually curated datasets.
+
+5. **Parameter-Efficient Adaptation**
+   - Reducing the computational and memory footprint of fine-tuning large models.
+
+### Approaches to Similar Problems
+
+- **Optimization Code Generation**: 
+  - *LLaMoCo* uses instruction tuning with a code-to-code approach and a two-phase learning strategy.
+  - OptiMUS translates natural language to optimization code, with self-fixing and data augmentation.
+  - OPRO, EvoLLM, and LEO use LLMs as optimizers via prompting or evolutionary strategies, not code generation per se.
+
+- **Instruction Tuning for Alignment/Expertise**:
+  - OpenMathInstruct-1, MAmmoTH, LlaSMol, and What Makes Good Data for Alignment focus on high-quality, domain-specific instruction datasets.
+  - LESS and EVOL propose automatic, optimizer-aware data selection.
+
+- **Code Generation**:
+  - CodeGen, Code Llama, CodeGeeX, AlphaCode, and Evaluating LLMs Trained on Code focus on model architecture, training, and evaluation for code synthesis, with increasing specialization (multi-turn, multilingual, infilling).
+
+- **Hyperparameter Optimization**:
+  - Using LLMs to suggest and refine hyperparameters, sometimes generating code for model training (Using LLMs for HPO).
+
+### Patterns in Problem Formulation
+
+- Problems are increasingly **domain-specific** (math, chemistry, optimization) rather than general-purpose.
+- There is a shift from *prompt engineering* to *instruction tuning* and *data-centric* approaches for model adaptation.
+- Optimization is tackled both as a **meta-problem** (LLMs optimizing prompts or solutions) and as a **code generation task** (LLMs generating code that performs optimization).
+- Data selection is framed as an **influence estimation** or **evolutionary process** rather than random or manual curation.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Code Generation**: HumanEval, MBPP, APPS, MultiPL-E, HumanEval-X, MTPB
+- **Math/Reasoning**: GSM8K, MATH, BBH, MMLU, MathQA, AQuA-RAT, TheoremQA, College-Math, MathInstruct, SVAMP, SAT, Mathematics, SimulEq, NumGLUE
+- **Optimization**: Synthetic and realistic optimization problems (LLaMoCo), NLP4LP (OptiMUS), BBOB (EvoLLM), engineering optimization datasets (LEO)
+- **Instruction Tuning/Alignment**: MT-Bench, AlpacaEval, Open LLM Leaderboard, SFT datasets (various)
+- **Chemistry**: SMolInstruct
+
+### Evaluation Metrics
+
+- **Code Generation**: Pass@1, pass@10, pass@100, functional correctness (unit tests), user-reported efficiency
+- **Math/Reasoning**: Accuracy (often on test sets or benchmarks)
+- **Optimization**: Optimization performance (objective value), solve rate, robustness, efficiency (e.g., number of rounds), zero-shot generalization
+- **Instruction Tuning/Alignment**: Human evaluation (alignment criteria), automatic evaluation (e.g., ROUGE-L, MT-Bench, AlpacaEval)
+- **Parameter Efficiency**: Number of trainable parameters, GPU memory, training throughput
+
+### Patterns in Performance Measurement
+
+- **Functional correctness** (via unit tests) is standard for code generation.
+- **Accuracy** is the main metric for math, reasoning, and chemistry tasks.
+- **Optimization performance** is measured by best objective value, solve rate, or improvement over baselines.
+- **Human and automatic evaluations** are used for alignment and instruction-following ability.
+- **Efficiency** (in terms of data, compute, or parameter count) is increasingly reported, reflecting practical concerns.
+
+### Comparison of Evaluation Approaches
+
+- *LLaMoCo* evaluates on both **synthetic and realistic optimization problems**, focusing on optimization performance, zero-shot generalization, efficiency, and robustness—metrics that are less common in general code generation but crucial for optimization.
+- Code generation models (CodeGen, Code Llama, CodeGeeX) emphasize pass rates on standard benchmarks, while optimization-focused works (OPRO, EvoLLM, LEO) use task-specific objective values and robustness.
+- Instruction tuning and alignment works (What Makes Good Data for Alignment, LESS) use leaderboard-style aggregate metrics (MT-Bench, AlpacaEval) and data efficiency.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: **Instruction Tuning for Domain Specialization**
+- *LLaMoCo*, OpenMathInstruct-1, MAmmoTH, LlaSMol, Instruction Tuning with GPT-4, Scaling Instruction-Finetuned LMs, What Makes Good Data for Alignment, LESS, Otter
+  - **Characteristics**: Focus on building or curating high-quality, often large-scale, instruction datasets for specific domains (math, chemistry, code, multi-modal). Emphasis on data efficiency, automatic selection, and hybrid rationales.
+  - **Relationships**: These works often build on each other’s datasets and methods (e.g., hybrid rationales, data selection strategies) and are complementary in their focus on different domains.
+
+### Cluster 2: **LLMs for Code Generation and Synthesis**
+- *LLaMoCo*, CodeGen, Code Llama, CodeGeeX, Evaluating LLMs Trained on Code, AlphaCode, Program Synthesis with LLMs, OptiMUS
+  - **Characteristics**: Development and evaluation of LLMs for code generation, including multi-turn, multilingual, and competitive programming. Some (OptiMUS, LLaMoCo) focus on code for optimization.
+  - **Relationships**: Share benchmarks (HumanEval, MBPP), and often compare model architectures and training strategies. LLaMoCo and OptiMUS bridge this cluster with optimization.
+
+### Cluster 3: **LLMs as Optimizers**
+- *LLaMoCo*, OPRO, EvoLLM, LEO, Using LLMs for Hyperparameter Optimization, OptiMUS
+  - **Characteristics**: Treat LLMs as direct optimizers (via prompting, evolutionary strategies, or code generation). Focus on black-box, derivative-free, or hyperparameter optimization.
+  - **Relationships**: LLaMoCo and OptiMUS generate code for optimization, while OPRO, EvoLLM, and LEO use LLMs to directly search for solutions. There is cross-pollination in prompt design and evaluation.
+
+### Cluster 4: **Data Selection and Parameter-Efficient Adaptation**
+- What Makes Good Data for Alignment, LESS, LoRA, OptiMUS (data augmentation)
+  - **Characteristics**: Methods for efficient data selection, influence estimation, and parameter-efficient fine-tuning (LoRA).
+  - **Relationships**: These methods are often used to improve instruction tuning or code generation models, and are increasingly integrated (e.g., LESS uses LoRA).
+
+### Cluster 5: **Multi-Modal and Specialized Applications**
+- Otter (multi-modal), LlaSMol (chemistry), MAmmoTH (math)
+  - **Characteristics**: Extending instruction tuning and LLM capabilities to new modalities or highly specialized domains.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Prompt Engineering to Instruction Tuning**: Early works focused on prompt design and few-shot learning; the field has shifted to large-scale instruction tuning, often with automatically generated or selected data.
+- **From General to Domain-Specific**: There is a clear trend toward domain specialization—math (MAmmoTH, OpenMathInstruct-1), chemistry (LlaSMol), code (Code Llama, CodeGeeX), optimization (LLaMoCo, OptiMUS).
+- **From Code Generation to Optimization**: Code generation models are now being adapted to generate not just general code, but *optimization code* (LLaMoCo, OptiMUS), and LLMs are being used as optimizers themselves (OPRO, EvoLLM, LEO).
+- **From Manual to Automated Data Selection**: Data selection for instruction tuning is moving from manual curation to automated, optimizer-aware, and influence-based methods (LESS, EVOL).
+- **From Full Fine-Tuning to Parameter-Efficient Adaptation**: LoRA and similar methods enable efficient adaptation, making large-scale instruction tuning more accessible.
+
+### Building Blocks and Extensions
+
+- **Instruction Tuning**: Extended from general tasks to domain-specific, with hybrid rationales (CoT/PoT), multi-modal data, and data-efficient selection.
+- **Code Generation**: Evolved from single-turn, monolingual models to multi-turn, multilingual, and instruction-following models with infilling and long-context support.
+- **Optimization**: LLMs are now both *tools* for generating optimizers and *agents* performing optimization via prompting or evolutionary strategies.
+- **Data Selection**: From random or manual selection to gradient-based, optimizer-aware, and transferable selection methods.
+
+### Competing and Complementary Approaches
+
+- **Competing**: 
+  - Prompt-based optimization (OPRO, EvoLLM, LEO) vs. code generation for optimization (LLaMoCo, OptiMUS).
+  - Manual vs. automated data selection (LESS, EVOL).
+  - Full fine-tuning vs. parameter-efficient adaptation (LoRA).
+
+- **Complementary**:
+  - Data selection/augmentation methods (LESS, EVOL) can be combined with instruction tuning for any domain.
+  - Parameter-efficient adaptation (LoRA) enables broader application of instruction tuning and data selection.
+  - Multi-modal and domain-specific instruction tuning approaches can leverage advances in data selection and parameter efficiency.
+
+---
+
+# Summary Table: Positioning the Submission Paper (LLaMoCo)
+
+| Aspect                | LLaMoCo's Position                                                                                 | Related Works/Clusters                |
+|-----------------------|---------------------------------------------------------------------------------------------------|---------------------------------------|
+| **Method**            | Instruction tuning for code-to-code optimization, two-phase learning (contrastive + seq2seq)      | Instruction tuning, code generation, optimization clusters |
+| **Problem**           | Domain-specific, robust, efficient optimization code generation                                   | OptiMUS, OPRO, EvoLLM, LEO            |
+| **Dataset**           | Custom code-to-code instruction set, synthetic/realistic optimization problems                    | OpenMathInstruct-1, MAmmoTH, LlaSMol  |
+| **Metrics**           | Optimization performance, zero-shot generalization, efficiency, robustness                        | OPRO, EvoLLM, OptiMUS, LEO            |
+| **Novelty**           | First instruction-tuning framework for optimization code generation, two-phase learning, small model outperforms larger ones | OptiMUS (code generation for optimization), OPRO/EvoLLM/LEO (LLMs as optimizers) |
+| **Technical Evolution** | Bridges instruction tuning and code generation for optimization, leverages data/parameter efficiency trends | Builds on and extends prior clusters  |
+
+---
+
+# Conclusion
+
+The research landscape represented by these papers is rapidly evolving toward **domain-specialized, instruction-tuned, and data-efficient large language models**. The submission paper, *LLaMoCo*, exemplifies this trend by uniting instruction tuning, code generation, and optimization, and by introducing a novel two-phase learning strategy. It stands at the confluence of several active research clusters, pushing the boundary of what small, well-tuned LLMs can achieve in specialized, high-impact domains like optimization code generation.

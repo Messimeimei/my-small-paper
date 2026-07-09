@@ -1,0 +1,164 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+- The submission, RLSF, is positioned within the cluster of methods that use *reinforcement learning (RL) with symbolic/tool-based feedback* for fine-tuning large language models (LLMs), especially for tasks requiring formal reasoning, code synthesis, and domain-specific constraints.
+- The most closely related prior works are:  
+  - **CoTran** (RL for code translation using compiler and symbolic execution feedback)
+  - **StepCoder** (RL for code generation with compiler feedback and curriculum learning)
+  - **Execution-based Code Generation** (RL with non-differentiable feedback from code execution)
+  - **CodeRL** (actor-critic RL with functional correctness feedback)
+- RLSF extends the RL + symbolic feedback paradigm beyond code to chemistry and games, and claims to provide *token-level* (fine-grained) feedback via symbolic certificates, rather than only sequence-level or scalar feedback.
+
+**Methodological Clusters:**
+- RLSF is squarely in the "RL + Symbolic/Tool Feedback" cluster, but claims to generalize the approach to any symbolic reasoning tool, not just compilers or test suites.
+- It is distinct from "Tool-Augmented Reasoning Agents" (e.g., ToRA, Chameleon) that focus on dynamic tool use for reasoning, and from "Self-Improvement/Verbal Feedback" (e.g., Reflexion) that use self-generated natural language feedback.
+
+**Problem Space:**
+- RLSF addresses the limitations of RLHF (unsound reward models, sparse rewards, expensive human data) by using symbolic tools for feedback, aiming to improve LLMs on tasks with formal constraints (code, chemistry, math games).
+- The evaluation approach is consistent with the field: automated, tool-based metrics (functional correctness, compilation, exact match, validity, success rate).
+
+**Independent Assessment:**
+- The submission is methodologically closest to CoTran, StepCoder, and CodeRL, but claims a broader scope (beyond code) and finer feedback granularity.
+- The use of token-level feedback and poly-sized certificates is a technical differentiator, but the degree of novelty depends on how prior works handle feedback granularity and generality.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**CoTran:**  
+- Authors claim prior works (including CoTran) "relied on binary or scalar signals" for symbolic feedback, while RLSF uses "richer token-level (dense) symbolic feedback."
+- Citation context: "enables more detailed and fine-grained correction, pinpointing specific areas in the output that need improvement."
+- **Independent check:** CoTran does use compiler and symbolic execution feedback, but primarily as sequence-level or scalar rewards. There is no evidence in CoTran of token-level feedback or certificate-based correction. The characterization is accurate, though the distinction is somewhat overstated (CoTran does use some error localization, but not as a dense RL signal).
+
+**Execution-based Code Generation, StepCoder, CodeRL:**  
+- Authors group these as using "Boolean feedback" (e.g., code compiles or not, passes all tests or not).
+- Citation context: "common approach in various recent code generation techniques."
+- **Independent check:** These works indeed use binary or scalar rewards from compilers or test suites. StepCoder introduces curriculum learning and some step-level optimization, but not token-level feedback. The characterization is accurate.
+
+**Language Models can Solve Computer Tasks, Reflexion:**  
+- Authors describe these as using "corrective feedback loop" with "in-context (not RL)" feedback, assuming LLMs are better at verification than generation.
+- **Independent check:** These works use prompt-based self-critique or self-reflection, not RL fine-tuning. The distinction is accurate.
+
+**Patterns:**
+- Authors consistently position RLSF as providing *finer-grained* and *more general* symbolic feedback than prior RL + tool feedback works.
+- There is a tendency to emphasize the "token-level" aspect as the main differentiator, and to group prior works as using only scalar or sequence-level feedback.
+
+**Discrepancies:**
+- The characterization of CoTran and StepCoder as only using scalar feedback is mostly accurate, but some prior works (e.g., StepCoder) do attempt more granular feedback (e.g., error localization), though not as a dense RL signal.
+- No evidence of major mischaracterization, but the distinction may be somewhat overstated for rhetorical emphasis.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Main Claimed Contributions:**
+
+### (a) RLSF: RL Fine-Tuning of LLMs Using Symbolic Reasoning Tools as RL Environments with Token-Level Feedback
+
+- **Most similar prior work:** CoTran, StepCoder, CodeRL.
+- **Claimed difference:** Prior works use scalar/binary feedback; RLSF uses token-level, certificate-based feedback.
+- **Independent assessment:**  
+  - CoTran and CodeRL use sequence-level rewards (compile success, test pass/fail).
+  - StepCoder introduces curriculum and some error localization, but not dense token-level feedback.
+  - RLSF's use of poly-sized certificates for token-level correction appears to be a substantive technical difference, enabling more targeted updates.
+  - However, the degree to which this is a conceptual advance versus an implementation detail (e.g., how certificates are generated and mapped to tokens) is not fully clear from the summary.
+
+### (b) Generalization Beyond Code to Chemistry and Games
+
+- **Most similar prior work:** No direct analog in cited works; most prior RL + tool feedback methods focus on code.
+- **Claimed difference:** RLSF applies the paradigm to chemistry (molecule generation, synthesis) and math games.
+- **Independent assessment:**  
+  - This is a genuine extension of the RL + symbolic feedback paradigm to new domains.
+  - However, the core methodology (RL with tool feedback) is not new; the novelty is in the application and adaptation to new domains.
+  - The technical challenge is in designing symbolic tools/certificates for these domains.
+
+### (c) Outperforming Larger Closed-Source Models
+
+- **Most similar prior work:** Many recent works (e.g., WizardMath, ToRA) claim open-source models can outperform closed-source ones with the right training.
+- **Claimed difference:** RLSF enables small models to beat GPT-4/GPT-3.5 on complex tasks.
+- **Independent assessment:**  
+  - This is an empirical result, not a methodological novelty.
+  - The improvement may be due to the feedback granularity, domain adaptation, or other factors (e.g., data, hyperparameters).
+
+### (d) Eliminating Human Preference Data via Symbolic Tools
+
+- **Most similar prior work:** All RL + tool feedback methods (CoTran, StepCoder, CodeRL) share this property.
+- **Claimed difference:** RLSF "eliminates the need for manual human preference data."
+- **Independent assessment:**  
+  - This is not unique to RLSF; prior works also avoid human feedback by using automated tools.
+  - The claim is accurate but not novel.
+
+**Substantive vs. Superficial Differences:**
+- The main substantive difference is the *token-level, certificate-based feedback*.
+- Generalization to new domains is an extension, but not a conceptual advance.
+- Claims about outperforming larger models and eliminating human feedback are not unique to RLSF.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  - The area of RL fine-tuning for LLMs with tool-based feedback is *active and rapidly evolving*, but not yet mature. Many works have appeared in the last 1-2 years.
+- **Recent Surveys:**  
+  - No comprehensive survey yet, but several recent reviews (e.g., "Neuro-Symbolic LLMs: A Survey", arXiv 2024) cover RL + symbolic feedback and tool-augmented LLMs.
+- **Trends:**  
+  - Shift from RLHF to automated, tool-based feedback.
+  - Increasing granularity of feedback (from sequence to token/step-level).
+  - Expansion from code to math, science, and multi-modal reasoning.
+- **Incremental Advances:**  
+  - Many recent papers introduce new feedback types, domains, or granularity, often as incremental extensions of the RL + tool feedback paradigm.
+  - Novelty is often in the *combination* of feedback type, granularity, and domain.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:**  
+  - The claim that RLSF "eliminates the need for human preference data" is not unique; prior RL + tool feedback works do the same.
+  - The distinction between token-level and sequence-level feedback is substantive, but some prior works (e.g., StepCoder) have explored finer feedback, though not as a dense RL signal.
+- **Empirical Improvements:**  
+  - Gains over larger models may be due to better feedback, domain adaptation, or implementation details, not just the core RLSF innovation.
+- **Terminology Differences:**  
+  - "Token-level feedback" vs. "error localization" or "step-level feedback" in prior works may mask conceptual similarities.
+- **Routine Extensions:**  
+  - Applying RL + tool feedback to new domains (chemistry, games) is a natural extension, not a conceptual leap.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:**  
+  - **ToRA, Chameleon, WizardMath**: These works extend RL or tool-augmented reasoning to math and multi-modal tasks, and should be discussed for completeness.
+  - **Reflexion, RCI, Self-Debugging:** Prompt-based self-improvement methods are relevant as alternative approaches to automated feedback.
+- **Additional Comparisons Needed:**  
+  - A direct comparison to StepCoder's curriculum and error localization would clarify the granularity distinction.
+  - Discussion of how RLSF's certificates differ from process supervision in WizardMath or tool-use in ToRA would strengthen the positioning.
+- **Potentially Misleading Characterizations:**  
+  - The grouping of all prior RL + tool feedback works as using only scalar feedback may understate the diversity of feedback granularity in the literature.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**  
+  - RLSF introduces *token-level, certificate-based feedback* for RL fine-tuning of LLMs, which is a substantive technical advance over prior sequence-level or scalar feedback methods.
+  - RLSF generalizes the RL + symbolic feedback paradigm to new domains (chemistry, games), though this is an extension rather than a conceptual novelty.
+
+- **Main Relationships to Existing Research:**  
+  - RLSF is most closely related to CoTran, StepCoder, and CodeRL, sharing the RL + tool feedback paradigm but differing in feedback granularity and domain scope.
+  - The field is rapidly evolving, with many works exploring similar directions (feedback granularity, domain generalization, automated feedback).
+
+- **Strongest and Weakest Differentiation:**  
+  - *Strongest:* Token-level, certificate-based feedback for RL fine-tuning.
+  - *Weakest:* Elimination of human feedback (not unique), outperforming larger models (empirical, not methodological), and generalization to new domains (routine extension).
+
+- **Discrepancies Between Author Claims and Independent Assessment:**  
+  - The novelty of eliminating human feedback is overstated.
+  - The distinction between token-level and sequence-level feedback is accurate, but prior works have explored intermediate granularity (e.g., error localization).
+  - The characterization of prior work as only using scalar feedback is mostly accurate but could be more nuanced.
+
+---
+
+**These observations are intended to help reviewers calibrate the claimed novelty of RLSF, distinguishing between substantive technical advances (token-level feedback) and more routine extensions or empirical results.**

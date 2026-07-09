@@ -1,0 +1,187 @@
+---
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the submission and related papers, the dominant methodological focus is on **data-centric approaches for improving language model (LM) pre-training and fine-tuning**. The methods can be grouped into several clusters:
+
+#### **Cluster 1: Fine-Grained, Programmatic Data Refinement**
+- **Submission (ProX):** Treats data refinement as a programming task, using small LMs to generate and execute per-example operations (e.g., normalization, filtering) at scale.
+- **QuRating:** Uses LLMs to assign human-like quality ratings to data, enabling fine-grained, criterion-based data selection.
+- **What Makes Good Data for Alignment:** Proposes automatic, multi-dimensional data selection (complexity, quality, diversity) for instruction tuning.
+
+**Commonality:** All focus on *per-example* or *fine-grained* data assessment and transformation, moving beyond global heuristics.
+
+#### **Cluster 2: Model-Aware and Adaptive Data Selection**
+- **MATES:** Trains a small influence model to predict the impact of each data point, enabling adaptive, on-the-fly data selection during pre-training.
+- **RegMix:** Uses regression over proxy models to predict the best data mixture for pre-training.
+- **DataComp-LM:** Systematic benchmarking of data curation strategies, including model-based filtering (e.g., bigram classifier).
+
+**Commonality:** These methods leverage *model feedback* or *proxy models* to guide data selection, aiming for dynamic or optimized mixtures.
+
+#### **Cluster 3: Large-Scale Data Curation and Filtering**
+- **FineWeb:** Large-scale, principled filtering and deduplication to create high-quality web corpora.
+- **DeepSeekMath:** Custom classifiers and pipelines to extract domain-specific (math) data from web-scale sources.
+- **Textbooks Are All You Need:** Aggressive filtering and synthetic data generation to create "textbook-quality" corpora.
+
+**Commonality:** Emphasis on *systematic, scalable filtering* and *dataset construction* for high-quality pre-training.
+
+#### **Cluster 4: Instruction and Supervised Data Synthesis**
+- **Instruction Pre-Training:** Synthesizes instruction-response pairs for multitask pre-training.
+- **MAmmoTH2:** Mines naturally occurring instruction data from the web, then refines and tunes LLMs on this data.
+- **Platypus:** Curates and releases high-quality instruction datasets, with careful contamination checks.
+
+**Commonality:** Focus on *instructional data*—either synthetic or mined—and its impact on LLM capabilities.
+
+#### **Cluster 5: Efficient Model Training and Pruning**
+- **Sheared LLaMA:** Structured pruning and dynamic batch loading to accelerate pre-training.
+- **LlamaFactory:** Unified, modular framework for efficient fine-tuning (adapters, LoRA, SFT, RLHF, DPO).
+
+**Commonality:** Methods for *efficient model adaptation* and *resource reduction* during training/fine-tuning.
+
+#### **Cluster 6: Retrieval-Augmented and Contrastive Pre-Training**
+- **REALM:** Retrieval-augmented pre-training, integrating a knowledge retriever.
+- **coCondenser:** Adds corpus-level contrastive loss to improve dense retriever pre-training.
+
+**Commonality:** Augmenting LMs with *retrieval* or *contrastive objectives* for better knowledge access or representation.
+
+### Methodological Trends and Relationships
+
+- **Shift from Heuristics to Model-Driven Data Selection:** Early methods relied on static heuristics; recent work (ProX, MATES, RegMix, QuRating) uses models to assess or generate data selection/refinement strategies.
+- **Scaling Down with Quality:** Several works (ProX, Textbooks, Platypus) show that *smaller models* can match or exceed larger ones if trained on *higher-quality, better-refined data*.
+- **Instructional Data as a Lever:** Instruction synthesis/mining (Instruction Pre-Training, MAmmoTH2) is a major trend for boosting multitask and reasoning abilities.
+- **Efficiency and Resource Awareness:** Many methods (Sheared LLaMA, RegMix, Platypus) explicitly target *compute efficiency*—either via data, model, or training pipeline innovations.
+- **Per-Example Operations:** ProX and QuRating exemplify a move toward *per-example* data operations, enabled by small LMs or LLM-based scoring.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Data Quality and Selection for Pre-Training**
+   - How to select, filter, or refine massive web-scale corpora to maximize downstream LM performance (ProX, DataComp-LM, FineWeb, QuRating, RegMix, MATES).
+
+2. **Instruction Tuning and Alignment**
+   - How to efficiently generate/select high-quality instruction data for alignment and multitask learning (Instruction Pre-Training, MAmmoTH2, Platypus, What Makes Good Data for Alignment).
+
+3. **Compute and Resource Efficiency**
+   - How to reduce the compute cost of pre-training/fine-tuning without sacrificing performance (ProX, Sheared LLaMA, RegMix, Platypus).
+
+4. **Domain-Specific Data Curation**
+   - How to build high-quality, large-scale datasets for specific domains (math, code, education) (DeepSeekMath, Textbooks, FineWeb-Edu).
+
+5. **Retrieval and Knowledge Integration**
+   - How to augment LMs with retrieval or contrastive objectives for better knowledge access (REALM, coCondenser).
+
+### Approaches to Similar Problems
+
+- **Data Quality:** ProX introduces *programmatic, per-example refinement*; DataComp-LM and FineWeb focus on *systematic filtering and benchmarking*; QuRating and MATES use *model-based or LLM-based scoring*.
+- **Instruction Tuning:** Instruction Pre-Training and MAmmoTH2 differ in data source (synthetic vs. mined), but both scale up instruction data; Platypus and What Makes Good Data for Alignment focus on *selection* and *quality assessment*.
+- **Compute Efficiency:** ProX and RegMix reduce compute via *better data*; Sheared LLaMA uses *pruning*; Platypus and Textbooks show *small models + high-quality data* can outperform larger baselines.
+
+### Patterns in Problem Formulation
+
+- **From Global to Local:** Problems are increasingly formulated at the *per-example* or *per-domain* level, rather than as global dataset issues.
+- **From Static to Adaptive:** There is a shift from static, one-time data selection to *adaptive, model-aware* or *feedback-driven* selection/refinement.
+- **From Quantity to Quality:** The field is moving from maximizing data/model size to *maximizing data quality and relevance*.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Web-Scale Corpora:** Common Crawl (C4, RedPajama, FineWeb, DCLM-Pool), Wikipedia, Project Gutenberg, arXiv, GitHub.
+- **Instruction/Alignment:** Open-Platypus, WebInstruct, OpenHermes2.5, AlpacaEval, MT-Bench.
+- **Math/Reasoning:** OpenWebMath, DeepSeekMath Corpus, GSM8K, MATH, CMATH, MMLU-STEM, BBH, HumanEval, MBPP.
+- **General Benchmarks:** MMLU, ARC, AlpacaEval, Open LLM Leaderboard.
+
+### Evaluation Metrics
+
+- **Downstream Task Accuracy:** Most common, often averaged across multiple tasks or domains.
+- **Specialized Benchmarks:** MMLU (general knowledge), HumanEval/MBPP (code), GSM8K/MATH (math), MT-Bench/AlpacaEval (instruction/QA).
+- **Compute Efficiency:** Measured as FLOPs, tokens processed, or training time.
+- **Perplexity:** Used for language modeling and data selection (QuRating).
+- **Leaderboard Rankings:** Open LLM Leaderboard, AlpacaEval, Arena Hard.
+
+### Patterns and Comparisons
+
+- **Multi-Task and Multi-Domain:** Increasing use of *broad, multi-task* evaluation suites (MMLU, BBH, MT-Bench) to assess generalization.
+- **Compute-Aware Reporting:** Many papers report *performance per unit compute* or *efficiency gains* (ProX, RegMix, Sheared LLaMA).
+- **Fine-Grained Analysis:** Some works (QuRating, What Makes Good Data for Alignment) analyze *which data qualities* most impact performance.
+- **Domain-Specific Benchmarks:** Math and code models are evaluated on specialized, challenging datasets (DeepSeekMath, Textbooks).
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster A: **Fine-Grained Data Refinement and Selection**
+- **Papers:** Submission (ProX), QuRating, What Makes Good Data for Alignment, MATES, RegMix
+- **Characteristics:** Per-example or per-mixture data assessment, model-driven or LLM-driven selection/refinement, focus on maximizing data utility and interpretability.
+- **Relationships:** ProX and QuRating both use small models/LLMs for per-example operations; MATES and RegMix use proxy models for adaptive selection.
+
+### Cluster B: **Large-Scale Data Curation and Benchmarking**
+- **Papers:** DataComp-LM, FineWeb, DeepSeekMath, Textbooks Are All You Need
+- **Characteristics:** Systematic, scalable filtering and dataset construction; benchmarking of curation strategies; domain-specific data pipelines.
+- **Relationships:** DataComp-LM and FineWeb both provide large, public corpora and systematic ablations; DeepSeekMath and Textbooks focus on domain-specific (math, code) data.
+
+### Cluster C: **Instruction Data Synthesis and Tuning**
+- **Papers:** Instruction Pre-Training, MAmmoTH2, Platypus
+- **Characteristics:** Generation or mining of instruction-response data; focus on alignment, multitask learning, and reasoning; efficient scaling of instruction data.
+- **Relationships:** Instruction Pre-Training and MAmmoTH2 differ in data source (synthetic vs. mined), but both scale up instruction data; Platypus focuses on curation and contamination checks.
+
+### Cluster D: **Efficient Model Training and Adaptation**
+- **Papers:** Sheared LLaMA, LlamaFactory
+- **Characteristics:** Structured pruning, dynamic data loading, modular fine-tuning frameworks; focus on compute/resource efficiency.
+- **Relationships:** Both aim to make model adaptation more accessible and efficient, with LlamaFactory providing a unified interface.
+
+### Cluster E: **Retrieval and Contrastive Pre-Training**
+- **Papers:** REALM, coCondenser
+- **Characteristics:** Augmenting LMs with retrieval or contrastive objectives; focus on knowledge access and dense retrieval.
+- **Relationships:** Both improve LM capabilities by integrating external knowledge or better representation learning.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **From Heuristics to Model-Driven Data Curation:** Early work (FineWeb, DataComp-LM) focused on systematic filtering and ablation. Recent work (ProX, QuRating, MATES, RegMix) leverages small models or LLMs for *adaptive, per-example* data refinement and selection.
+- **From Static to Adaptive Pipelines:** MATES and RegMix introduce *feedback loops*—using model influence or regression to adapt data selection dynamically.
+- **From Synthetic to Mined Instruction Data:** Instruction Pre-Training uses synthetic data, while MAmmoTH2 demonstrates the value of *mined, naturally occurring* instruction data at scale.
+- **From Large to Small Models via Data Quality:** Textbooks, Platypus, and ProX show that *high-quality data* enables *smaller models* to match or exceed larger ones, challenging traditional scaling laws.
+- **From Global to Local Operations:** ProX and QuRating exemplify a shift to *per-example* operations, enabled by small LMs or LLM-based scoring, for both data refinement and selection.
+- **From Monolithic to Modular Training:** LlamaFactory and Sheared LLaMA provide *modular, efficient* frameworks for model adaptation, supporting a wide range of LLMs and fine-tuning methods.
+
+### Building Blocks and Extensions
+
+- **DataComp-LM and FineWeb** provide the *infrastructure* (datasets, benchmarks) upon which more *fine-grained* or *adaptive* methods (ProX, MATES, RegMix, QuRating) are built.
+- **Instruction Pre-Training** and **MAmmoTH2** extend the idea of *instructional data* from synthetic to mined, and from small to massive scale.
+- **Sheared LLaMA** and **LlamaFactory** build on the need for *efficient adaptation*, integrating pruning, dynamic data loading, and modular fine-tuning.
+
+### Competing and Complementary Approaches
+
+- **Competing:** ProX (programmatic, per-example refinement) vs. MATES/RegMix (model-aware selection) vs. QuRating (LLM-based quality scoring)—all aim to optimize data, but differ in granularity and mechanism.
+- **Complementary:** Data curation/selection methods (ProX, QuRating, MATES) can be combined with *efficient training* (Sheared LLaMA, LlamaFactory) and *instructional data* (Instruction Pre-Training, MAmmoTH2) for maximal gains.
+- **Domain-Specific vs. General:** DeepSeekMath and Textbooks focus on domain-specific data, while others (FineWeb, DataComp-LM, ProX) target general corpora.
+
+---
+
+# Summary Table
+
+| Cluster | Key Papers | Main Focus | Methodological Innovation |
+|---------|------------|------------|--------------------------|
+| Fine-Grained Data Refinement | ProX, QuRating, MATES, RegMix, What Makes Good Data | Per-example/model-aware data selection/refinement | Small LMs/LLMs for per-example ops, influence models, regression over mixtures |
+| Large-Scale Data Curation | DataComp-LM, FineWeb, DeepSeekMath, Textbooks | Systematic filtering, benchmarking, domain-specific pipelines | Large public corpora, ablation studies, domain classifiers |
+| Instruction Data Synthesis | Instruction Pre-Training, MAmmoTH2, Platypus | Instruction-response data generation/mining | Synthetic and mined data, scalable pipelines, contamination checks |
+| Efficient Model Training | Sheared LLaMA, LlamaFactory | Pruning, modular fine-tuning, resource efficiency | Structured pruning, dynamic batch loading, unified frameworks |
+| Retrieval/Contrastive Pre-Training | REALM, coCondenser | Knowledge retrieval, dense representation | Retrieval-augmented pre-training, contrastive objectives |
+
+---
+
+# Conclusion
+
+The research landscape represented by these papers is rapidly evolving from *static, heuristic-based data curation* toward *adaptive, model-driven, and fine-grained data refinement and selection*. The submission paper (ProX) exemplifies this trend by introducing a *programmatic, per-example* approach to data refinement, leveraging small LMs for scalable, interpretable, and efficient corpus improvement. This is complemented by advances in *instructional data synthesis/mining*, *efficient model adaptation*, and *retrieval-augmented training*. The field is increasingly focused on *data quality over quantity*, *compute efficiency*, and *modular, scalable frameworks*, with a strong emphasis on *open, reproducible research* and *public dataset releases*. The interplay between these clusters suggests a future where *data, model, and training pipeline innovations* are tightly integrated to push the boundaries of language model capabilities.

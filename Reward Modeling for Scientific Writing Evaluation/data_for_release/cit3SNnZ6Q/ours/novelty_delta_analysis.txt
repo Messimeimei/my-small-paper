@@ -1,0 +1,223 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating Q-Sparse in the Landscape:**  
+Q-Sparse is positioned within the "activation sparsity in LLMs" cluster, which includes methods such as Turbo Sparse, ProSparse, ReLU Strikes Back, and SparseInfer. These works focus on maximizing the number of zero activations in feed-forward layers, typically via activation function engineering (e.g., ReLU, dReLU, squared ReLU), regularization, or thresholding. Q-Sparse’s main technical distinction is the use of top-K activation sparsification (hard selection of the K largest activations per layer), combined with a straight-through estimator for training, and a block-wise implementation for efficient batch processing.
+
+**Most Closely Related Prior Works:**  
+- **ReLU Strikes Back**: Explores ReLU/shifted ReLU activations and fine-tuning for activation sparsity in LLMs.
+- **Turbo Sparse**: Uses dReLU and neuron sparsification, including in MoE settings.
+- **ProSparse**: Employs progressive L1 regularization and threshold shifting for activation sparsity.
+- **SparseInfer**: Focuses on inference-time prediction of activation sparsity, assuming ReLU-fied models.
+- **Deja Vu**: Predicts contextual sparsity for efficient inference, including in MLP layers.
+
+**Relation to Methodological Clusters:**  
+Q-Sparse is most closely aligned with methods that enforce activation sparsity via activation function modification and explicit sparsification. Unlike MoE-based approaches (Switch Transformers, MoE-LLaVA), which sparsify at the expert/module level, Q-Sparse operates at the neuron level within standard transformer layers. Its block sparsity implementation is related to structured pruning (Sheared LLaMA) but is applied to activations rather than weights.
+
+**Problem Space and Evaluation:**  
+Q-Sparse addresses the high compute/memory cost of LLM inference, specifically targeting the inefficiency of prior activation sparsity methods that only achieve partial sparsity. It claims to enable "full" activation sparsity (i.e., all activations can be zeroed except for the top-K per layer), and evaluates performance at various sparsity ratios, comparing to dense baselines at matched compute budgets.
+
+**Independent Assessment:**  
+- Q-Sparse’s top-K selection is a more aggressive and explicit form of activation sparsity than prior threshold-based or regularized approaches.
+- The block-wise implementation is a practical adaptation for hardware efficiency, similar in spirit to structured pruning but applied to activations.
+- The claimed compatibility with quantized models (e.g., 1-bit LLMs) is a notable extension, as most prior activation sparsity work focuses on full-precision models.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Citation Patterns and Characterizations:**
+
+- **Deja Vu:**  
+  - Authors cite Deja Vu as an example of "predicting the position to be sparsed" for activation sparsity.
+  - Context: "Activation sparsity can be achieved by using the mixture-of-experts (MoE) mechanism (Lepikhin et al., 2021; Fedus et al., 2021), modifying the activation function (Mirzadeh et al., 2023; Song et al., 2024b), or predicting the position to be sparsed (Liu et al., 2023)."
+  - **Assessment:** This is a fair, if high-level, characterization. However, Deja Vu’s main novelty is contextual, input-dependent sparsity prediction for both attention and MLP layers, not just "predicting the position." The authors do not discuss Deja Vu’s focus on dynamic, per-input adaptivity, which is a distinct approach from Q-Sparse’s static, top-K selection.
+
+- **Switch Transformers:**  
+  - Cited as an MoE-based method for activation sparsity.
+  - **Assessment:** Accurate; Switch Transformers is foundational for MoE-based sparsity. However, the authors do not clarify that MoE sparsity operates at the expert/module level, whereas Q-Sparse operates at the neuron level.
+
+- **Sheared LLaMA:**  
+  - Cited as an example of structured pruning for LLM efficiency.
+  - **Assessment:** Correctly categorized. The authors do not claim direct novelty over Sheared LLaMA, as their method is orthogonal (activation vs. weight pruning).
+
+- **ReLU Strikes Back:**  
+  - Cited as an example of activation function modification for sparsity.
+  - **Assessment:** Accurate, but the authors do not discuss that ReLU Strikes Back also explores fine-tuning and additional ReLU layers, nor do they compare the degree of sparsity achieved or the practical efficiency gains.
+
+**Patterns:**  
+- The authors group prior work into broad categories (MoE, activation function modification, position prediction) and position Q-Sparse as a new approach enabling "full" activation sparsity.
+- They do not deeply engage with the technical details or empirical results of the most similar prior works (e.g., ProSparse, Turbo Sparse, ReLU Strikes Back), nor do they provide head-to-head comparisons.
+
+**Discrepancies:**  
+- The characterization of prior work is generally accurate at a high level but omits nuanced distinctions (e.g., static vs. dynamic sparsity, degree of sparsity, hardware efficiency).
+- The claim that prior methods only allow "partial" activation sparsity is not fully substantiated; some prior works (e.g., ProSparse, Turbo Sparse) achieve high sparsity ratios, though perhaps not via hard top-K selection.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Claimed Contribution 1: **Q-Sparse enables full sparsity of activations in LLMs, unlike prior methods which only allow partial sparsity.**
+
+- **Most Similar Prior Work:**  
+  - **ProSparse:** Achieves high activation sparsity via progressive L1 regularization and threshold shifting.
+  - **Turbo Sparse:** Uses dReLU and neuron sparsification, reporting high sparsity ratios.
+  - **ReLU Strikes Back:** Employs ReLU/shifted ReLU for activation sparsity.
+
+- **Critical Examination:**  
+  - Q-Sparse’s top-K selection enforces a fixed number of nonzero activations per layer, guaranteeing a specific sparsity ratio (e.g., 40%, 60%). Prior methods typically use thresholding or regularization, which can result in variable sparsity depending on input and training dynamics.
+  - The claim of "full" sparsity is relative: Q-Sparse can enforce any desired sparsity ratio, but so can threshold-based methods if thresholds are set aggressively. The main difference is the explicitness and determinism of top-K selection.
+  - Prior works (e.g., ProSparse) report sparsity ratios up to 80-90% with minimal performance loss, but may not guarantee exact per-layer sparsity.
+
+- **Substantive vs. Superficial Differences:**  
+  - The main substantive difference is the use of hard top-K selection (with straight-through estimator) rather than soft thresholding or regularization.
+  - The practical impact (e.g., on hardware efficiency, performance at extreme sparsity) is not fully explored in the submission or compared head-to-head with prior methods.
+
+- **Author Characterization vs. Independent Assessment:**  
+  - The claim that prior methods only allow "partial" sparsity is somewhat overstated; prior works can achieve high sparsity, though perhaps not with the same explicit control.
+
+---
+
+## Claimed Contribution 2: **Q-Sparse is compatible with both full-precision and quantized (1-bit) LLMs.**
+
+- **Most Similar Prior Work:**  
+  - **Turbo Sparse:** Explores activation sparsity in quantized models, including 2-bit and 4-bit.
+  - **Sheared LLaMA:** Focuses on quantization and pruning, but not specifically activation sparsity in 1-bit models.
+
+- **Critical Examination:**  
+  - Q-Sparse demonstrates compatibility with 1.58-bit models (BitNet), which is lower precision than most prior activation sparsity work.
+  - Turbo Sparse and others have explored quantized settings, but not at 1-bit precision.
+  - The combination of top-K activation sparsity and extreme quantization is a notable extension, though the conceptual novelty is incremental (applying an existing sparsity method to quantized models).
+
+- **Substantive vs. Superficial Differences:**  
+  - The main difference is empirical: Q-Sparse is shown to work at lower precisions than prior methods.
+  - The underlying method (top-K selection) is not fundamentally changed for quantized models.
+
+---
+
+## Claimed Contribution 3: **Block Q-Sparse allows for efficient batch training and inference with sparse activations.**
+
+- **Most Similar Prior Work:**  
+  - **Sheared LLaMA:** Uses structured pruning for hardware efficiency.
+  - **Turbo Sparse:** Discusses hardware-friendly sparsity patterns.
+  - **SparseInfer:** Focuses on efficient inference with activation sparsity.
+
+- **Critical Examination:**  
+  - Block-wise sparsity is a well-known technique for making sparsity patterns more hardware-friendly.
+  - The adaptation of Q-Sparse to block-wise selection is a practical engineering contribution, not a conceptual advance.
+  - Prior works (e.g., Sheared LLaMA) have applied block/structured sparsity to weights, but not explicitly to activations.
+
+- **Substantive vs. Superficial Differences:**  
+  - The block-wise adaptation is a routine extension for practical deployment.
+  - The novelty is in applying it to activation sparsity, but the idea itself is not new.
+
+---
+
+## Claimed Contribution 4: **Inference-optimal scaling law for sparsely-activated LLMs.**
+
+- **Most Similar Prior Work:**  
+  - **ProSparse:** Analyzes optimal sparsity ratios for performance.
+  - **Turbo Sparse:** Studies performance at various sparsity levels.
+
+- **Critical Examination:**  
+  - The submission presents empirical results on optimal sparsity ratios for different model precisions.
+  - Prior works have also studied the trade-off between sparsity and performance, though perhaps not formalized as a "scaling law."
+  - The scaling law appears to be an empirical observation rather than a theoretical result.
+
+- **Substantive vs. Superficial Differences:**  
+  - The scaling law is a useful empirical finding, but similar analyses exist in prior work.
+
+---
+
+## Claimed Contribution 5: **Q-Sparse is effective in training-from-scratch, continue-training, and finetuning settings.**
+
+- **Most Similar Prior Work:**  
+  - **ProSparse, Turbo Sparse, ReLU Strikes Back:** All evaluate activation sparsity in various training regimes.
+
+- **Critical Examination:**  
+  - Demonstrating effectiveness across training regimes is important for practical adoption, but is not a conceptual novelty.
+  - Prior works have also reported results in these settings.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  - The field of activation sparsity in LLMs is active and rapidly evolving, with several recent papers (2023-2024) proposing new methods and reporting high sparsity ratios with minimal performance loss.
+  - There is a trend toward combining activation sparsity with quantization, MoE, and structured pruning for maximal efficiency.
+
+- **Recent Surveys/Literature Reviews:**  
+  - No comprehensive survey is cited in the submission, but the research landscape includes several comparative studies (e.g., ProSparse, Turbo Sparse) that review and benchmark multiple sparsity methods.
+
+- **Trends:**  
+  - Increasing focus on hardware-friendly sparsity (block/structured patterns).
+  - Shift from weight pruning to activation sparsity.
+  - Growing interest in dynamic, input-dependent sparsity (Deja Vu, SparseInfer).
+  - Expansion to quantized and federated settings.
+
+- **Incremental Advances:**  
+  - Many recent papers report incremental improvements (e.g., new activation functions, regularization schemes, or sparsity patterns) rather than fundamentally new concepts.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:**  
+  - The claim that prior methods only allow "partial" activation sparsity is somewhat overstated; prior works achieve high sparsity, though perhaps not via hard top-K selection.
+  - Block-wise sparsity is a standard adaptation for hardware efficiency, not a conceptual advance.
+
+- **Empirical Improvements:**  
+  - Reported performance gains may be due to implementation details (e.g., training recipes, hyperparameters) rather than the core method.
+  - No head-to-head ablation with the most similar prior methods (e.g., ProSparse, Turbo Sparse) is provided.
+
+- **Terminology Differences:**  
+  - "Full" vs. "partial" sparsity may reflect differences in how sparsity is enforced (hard vs. soft), not in achievable sparsity ratios.
+
+- **Routine Extensions:**  
+  - Application to quantized models and different training regimes is an expected extension, not a conceptual leap.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:**  
+  - **ProSparse, Turbo Sparse:** Not cited, despite being highly relevant and recent.
+  - **SparseInfer:** Not cited, though it addresses efficient inference with activation sparsity.
+  - **MoE-LLaVA, Taming Sparsely Activated Transformer, Towards More Effective and Economic SAM:** Not cited; these works explore related sparsity mechanisms.
+  - **From Words to Watts:** Not cited; provides benchmarking context for efficiency claims.
+
+- **Additional Comparisons Needed:**  
+  - Direct empirical comparison with ProSparse, Turbo Sparse, and ReLU Strikes Back would clarify the practical benefits of Q-Sparse.
+  - Discussion of dynamic sparsity methods (Deja Vu, SparseInfer) would contextualize Q-Sparse’s static approach.
+
+- **Potentially Misleading Characterizations:**  
+  - The claim that prior methods only achieve "partial" sparsity may mislead readers about the capabilities of threshold-based or regularized methods.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**  
+  - Q-Sparse enforces a fixed, explicit top-K sparsity per layer, which is more deterministic than threshold-based methods.
+  - Demonstrated compatibility with 1-bit quantized LLMs is a practical extension not widely explored in prior work.
+
+- **Main Relationships to Existing Research:**  
+  - Q-Sparse is closely related to ProSparse, Turbo Sparse, and ReLU Strikes Back, differing mainly in the mechanism of enforcing sparsity (top-K vs. threshold/regularization).
+  - Block-wise sparsity is a standard adaptation for hardware efficiency, similar to structured pruning in Sheared LLaMA.
+
+- **Strongest Differentiation:**  
+  - Explicit, hard top-K selection for activation sparsity.
+  - Empirical demonstration in 1-bit quantized models.
+
+- **Weakest Differentiation:**  
+  - Block-wise sparsity and application to various training regimes are routine extensions.
+  - The "scaling law" is an empirical observation, not a theoretical breakthrough.
+
+- **Discrepancies Between Author Characterizations and Independent Assessment:**  
+  - The claim that prior methods only allow "partial" sparsity is not fully accurate; prior works achieve high sparsity, though with less explicit control.
+  - The lack of citation and comparison to the most similar recent works (ProSparse, Turbo Sparse) is a notable omission.
+
+---
+
+**These observations are intended to inform reviewers’ independent judgment regarding the novelty and significance of Q-Sparse relative to the current state of the art in activation sparsity for LLMs.**

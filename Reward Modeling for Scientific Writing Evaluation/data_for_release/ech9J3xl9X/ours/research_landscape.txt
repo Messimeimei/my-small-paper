@@ -1,0 +1,297 @@
+---
+# RESEARCH LANDSCAPE ANALYSIS
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, several methodological themes emerge:
+
+- **Specialized Code Language Models (SLMs):**  
+  - *Submission Paper (NT-Java-1.1B):* Fine-tuning and quantization of a base model (StarCoderBase-1.1B) for Java.
+  - *MonoCoder:* Training from scratch on domain-specific (HPC) code.
+  - *VeriGen:* Fine-tuning LLMs on Verilog code.
+  - *Code Llama, DeepSeek-Coder, WizardCoder, CodeGen2, phi-1, BLOOM:* Large-scale pretraining and/or fine-tuning on code, with some models specializing by language or domain.
+
+- **Model Compression and Efficiency:**
+  - *Submission Paper:* Quantization for desktop deployment.
+  - *Compressing Pre-trained Models of Code into 3 MB:* Genetic algorithm-guided model simplification and knowledge distillation.
+  - *MonoCoder:* Smaller model architectures for domain-specific tasks.
+  - *Parameter-Efficient Fine-Tuning:* Adapter, LoRA, and other efficient fine-tuning methods.
+
+- **Instruction and Prompt Engineering:**
+  - *WizardCoder, Code Llama - Instruct, DeepSeek-Coder-Instruct:* Instruction fine-tuning for better code generation and safety.
+  - *Automatic Semantic Augmentation of Prompts, Prompt-tuned Code Language Model for Type Inference:* Augmenting prompts with semantic information or using prompt learning for specific tasks.
+
+- **Long-Context and Structural Modeling:**
+  - *LongCoder, Code Llama (context extension), DeepSeek-Coder (16K context):* Techniques for handling long code contexts (sliding window, RoPE, memory tokens).
+  - *CodeKGC:* Schema-aware code prompts and rationale-enhanced generation for structured outputs.
+
+- **Multilingual and Cross-Language Approaches:**
+  - *MultiPL-E, BLOOM, DeepSeek-Coder, Code Llama, WizardCoder:* Training and evaluation across multiple programming languages.
+
+- **Evaluation and Benchmarking Frameworks:**
+  - *MultiPL-E, ClassEval, RobustAPI, HumanEval, LCC, Verilog test suite:* Creation of new benchmarks and evaluation methodologies.
+
+#### Method Clusters
+
+- **Cluster 1: Specialized SLMs for Specific Languages/Domains**
+  - Submission Paper, MonoCoder, VeriGen, Code Llama - Python, Prompt-tuned Type Inference
+
+- **Cluster 2: Large, General-Purpose Code LLMs**
+  - DeepSeek-Coder, Code Llama, BLOOM, CodeGen2, WizardCoder
+
+- **Cluster 3: Model Compression and Efficiency**
+  - Submission Paper, MonoCoder, Compressing Pre-trained Models, Parameter-Efficient Fine-Tuning
+
+- **Cluster 4: Instruction and Prompt Engineering**
+  - WizardCoder, Code Llama - Instruct, DeepSeek-Coder-Instruct, Automatic Semantic Augmentation, Prompt-tuned Type Inference
+
+- **Cluster 5: Long-Context and Structural Modeling**
+  - LongCoder, Code Llama (context extension), DeepSeek-Coder (16K context), CodeKGC
+
+- **Cluster 6: Multilingual and Cross-Language Evaluation**
+  - MultiPL-E, BLOOM, DeepSeek-Coder, Code Llama, WizardCoder
+
+#### Methodological Trends and Relationships
+
+- **Specialization vs. Generalization:**  
+  There is a clear trend toward both highly specialized SLMs (e.g., for Java, Verilog, HPC) and large, general-purpose multilingual models. The submission paper exemplifies the former, arguing for the value of small, language-specific models for practical deployment.
+
+- **Efficiency and Accessibility:**  
+  Many works focus on reducing model size and inference cost (quantization, compression, parameter-efficient fine-tuning), motivated by deployment constraints (e.g., desktop, IDEs).
+
+- **Instruction Tuning and Prompt Engineering:**  
+  Instruction tuning and prompt augmentation are increasingly used to improve model performance, safety, and task alignment, especially for code generation and comprehension.
+
+- **Handling Long Contexts:**  
+  As code tasks often require understanding large codebases, methods for efficient long-context modeling are prominent.
+
+- **Benchmarking and Evaluation:**  
+  The field is moving toward more comprehensive, multilingual, and realistic benchmarks (e.g., MultiPL-E, ClassEval, RobustAPI), reflecting the need for robust, real-world evaluation.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Language/Dialect Specialization:**  
+  - Lack of small, specialized code models for languages other than Python (Submission, MonoCoder, VeriGen).
+  - Need for models that capture nuanced, language-specific requirements (Submission, Prompt-tuned Type Inference).
+
+- **Resource Efficiency and Deployment:**  
+  - High hardware/inference costs of large models (Submission, MonoCoder, Compressing Pre-trained Models, Parameter-Efficient Fine-Tuning).
+  - Need for models suitable for desktop/IDE deployment.
+
+- **Code Generation and Completion:**  
+  - Improving code generation, completion, and infilling (DeepSeek-Coder, Code Llama, LongCoder, WizardCoder, CodeGen2).
+  - Handling long code contexts and repository-level reasoning (LongCoder, Code Llama, DeepSeek-Coder).
+
+- **Evaluation and Benchmarking:**  
+  - Lack of multilingual and realistic benchmarks (MultiPL-E, ClassEval, RobustAPI).
+  - Need for evaluation on real-world, class-level, or API-usage tasks (ClassEval, RobustAPI).
+
+- **Instruction Following and Safety:**  
+  - Enhancing instruction-following, safety, and helpfulness in code LLMs (Code Llama - Instruct, WizardCoder, DeepSeek-Coder-Instruct).
+
+- **Robustness and Reliability:**  
+  - Ensuring reliability and robustness of LLM-generated code, especially in real-world scenarios (RobustAPI, Adversarial Attacks).
+
+- **Code Understanding and Comprehension:**  
+  - Improving code summarization, type inference, and comprehension (Automatic Semantic Augmentation, Prompt-tuned Type Inference, Evaluating Instruction-Tuned LLMs).
+
+### Approaches to Similar Problems
+
+- **Specialization:**  
+  - Submission, MonoCoder, and VeriGen all address the need for specialized models, but differ in language/domain (Java, HPC, Verilog) and in whether they fine-tune or train from scratch.
+
+- **Efficiency:**  
+  - Submission and MonoCoder use model size reduction and quantization; Compressing Pre-trained Models uses genetic algorithms and distillation; Parameter-Efficient Fine-Tuning uses adapters/LoRA.
+
+- **Multilingual Evaluation:**  
+  - MultiPL-E translates benchmarks; BLOOM and DeepSeek-Coder train on multilingual corpora; Code Llama and WizardCoder evaluate on multiple languages.
+
+- **Long-Context Modeling:**  
+  - LongCoder uses sparse attention and memory tokens; Code Llama and DeepSeek-Coder extend context windows via positional embedding modifications.
+
+- **Instruction Tuning:**  
+  - WizardCoder and Code Llama - Instruct use evolved or proprietary instruction data; DeepSeek-Coder-Instruct uses instructional fine-tuning.
+
+### Patterns in Problem Formulation
+
+- **From General to Specific:**  
+  The field is moving from general-purpose, monolithic models to more specialized, efficient, and context-aware models.
+
+- **From Synthetic to Realistic Evaluation:**  
+  There is a shift from synthetic, function-level benchmarks to more realistic, class-level, and real-world tasks (ClassEval, RobustAPI).
+
+- **From Single-Language to Multilingual:**  
+  Increasing emphasis on multilingual support and evaluation, reflecting real-world software diversity.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **HumanEval & MBPP:**  
+  Widely used for Python code generation; often translated for multilingual evaluation (MultiPL-E).
+
+- **MultiPL-E:**  
+  Provides parallel benchmarks in 18+ languages, including Java (used in Submission Paper).
+
+- **Domain-Specific Datasets:**  
+  - HPCORPUS (MonoCoder)
+  - Verilog corpus and custom test suite (VeriGen)
+  - RobustAPI (Java API misuse, Robustness)
+  - ClassEval (class-level Python, realism)
+  - LCC (Long code context, LongCoder)
+  - CodeSearchNet (summarization, Automatic Semantic Augmentation)
+
+- **Other Benchmarks:**  
+  - APPS, DS-1000, DS100, Clone detection, Defect detection, Assertion generation, etc.
+
+### Evaluation Metrics
+
+- **Code Generation Accuracy:**  
+  - pass@1, pass@k, correctness (unit tests), BLEU, CodeBLEU
+
+- **Model Efficiency:**  
+  - Model size (MB), inference latency, memory and time cost
+
+- **Task-Specific Metrics:**  
+  - Type inference accuracy, API misuse rate, error classification
+
+- **Robustness and Reliability:**  
+  - Attack success rate (adversarial), API misuse rate (RobustAPI)
+
+### Patterns in Performance Measurement
+
+- **Unit Test-Based Correctness:**  
+  The dominant metric for code generation is passing unit tests (HumanEval, MBPP, MultiPL-E, Verilog test suite).
+
+- **BLEU/CodeBLEU:**  
+  Used for code summarization and generation, especially in non-Python languages.
+
+- **Efficiency Metrics:**  
+  Increasingly important for deployment-focused research (model size, inference speed).
+
+- **Robustness Metrics:**  
+  Emerging focus on reliability (API misuse, adversarial robustness).
+
+### Comparison of Evaluation Approaches
+
+- **Multilingual and Cross-Language:**  
+  MultiPL-E and similar frameworks enable direct comparison across languages, highlighting language-specific strengths and weaknesses.
+
+- **Realism and Complexity:**  
+  Newer benchmarks (ClassEval, RobustAPI) introduce more realistic and complex tasks, revealing limitations of models that perform well on synthetic/function-level tasks.
+
+- **Domain-Specific Evaluation:**  
+  Specialized datasets (HPCORPUS, Verilog suite) are used to demonstrate the value of domain-specific models.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Specialized, Small, and Efficient Code Models
+
+- **Papers:** Submission Paper (NT-Java-1.1B), MonoCoder, VeriGen, Compressing Pre-trained Models, Parameter-Efficient Fine-Tuning
+- **Characteristics:**  
+  - Focus on small, efficient models for specific languages or domains.
+  - Emphasis on deployment (desktop, IDEs), low resource usage, and practical applicability.
+  - Use of quantization, model compression, or parameter-efficient fine-tuning.
+- **Relationships:**  
+  - These works often build on or compare to large, general-purpose models, but argue for the value of specialization and efficiency.
+
+### Cluster 2: Large, General-Purpose and Multilingual Code LLMs
+
+- **Papers:** DeepSeek-Coder, Code Llama, BLOOM, CodeGen2, WizardCoder
+- **Characteristics:**  
+  - Large-scale pretraining on diverse, multilingual code corpora.
+  - Focus on state-of-the-art performance across many languages and tasks.
+  - Incorporate instruction tuning, long-context modeling, and multitask objectives.
+- **Relationships:**  
+  - Serve as baselines or pretraining sources for specialized models.
+  - Drive the development of new benchmarks and evaluation frameworks.
+
+### Cluster 3: Instruction and Prompt Engineering
+
+- **Papers:** WizardCoder, Code Llama - Instruct, DeepSeek-Coder-Instruct, Automatic Semantic Augmentation, Prompt-tuned Type Inference
+- **Characteristics:**  
+  - Use of instruction fine-tuning, prompt augmentation, and semantic enrichment to improve model alignment and performance.
+  - Address both code generation and comprehension tasks.
+- **Relationships:**  
+  - Often layered on top of large, general-purpose models.
+  - Complementary to both specialized and general models.
+
+### Cluster 4: Evaluation, Benchmarking, and Robustness
+
+- **Papers:** MultiPL-E, ClassEval, RobustAPI, HumanEval, LCC, Verilog test suite, Adversarial Attacks
+- **Characteristics:**  
+  - Development of new benchmarks, datasets, and evaluation methodologies.
+  - Focus on realism, multilingualism, robustness, and reliability.
+- **Relationships:**  
+  - Provide the foundation for fair and comprehensive model comparison.
+  - Drive the identification of model weaknesses and research gaps.
+
+### Cluster 5: Long-Context and Structural Modeling
+
+- **Papers:** LongCoder, Code Llama (context extension), DeepSeek-Coder (16K context), CodeKGC
+- **Characteristics:**  
+  - Methods for handling long code contexts, structural dependencies, and repository-level reasoning.
+- **Relationships:**  
+  - Address limitations of standard Transformer architectures in code tasks.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Monolithic to Specialized:**  
+  The field began with large, general-purpose models (Codex, GPT-3, CodeBERT), but is now seeing a proliferation of specialized, efficient SLMs for specific languages and domains (Submission, MonoCoder, VeriGen).
+
+- **From Size to Quality and Efficiency:**  
+  Early work focused on scaling up model and dataset size. Recent work (phi-1, Submission, MonoCoder) demonstrates that high-quality, domain-specific data and efficient architectures can yield strong performance with smaller models.
+
+- **From Function-Level to Realistic Evaluation:**  
+  Benchmarks have evolved from function-level (HumanEval, MBPP) to class-level (ClassEval), real-world (RobustAPI), and multilingual (MultiPL-E) tasks, revealing new challenges and model limitations.
+
+- **From Raw Code to Instruction and Prompt Engineering:**  
+  Instruction tuning (WizardCoder, Code Llama - Instruct) and prompt augmentation (Automatic Semantic Augmentation, Prompt-tuned Type Inference) are now standard for improving alignment and performance.
+
+- **From Short to Long Contexts:**  
+  As code tasks require more context, models are being adapted to handle longer sequences (LongCoder, Code Llama, DeepSeek-Coder).
+
+- **From Black-Box to Robustness and Reliability:**  
+  There is growing attention to the robustness, reliability, and safety of LLM-generated code (RobustAPI, Adversarial Attacks).
+
+### Building Blocks and Extensions
+
+- **Base Models:**  
+  Many specialized models (Submission, MonoCoder, VeriGen) are built by fine-tuning or adapting large, open-source base models (StarCoder, Llama 2, CodeGen, etc.).
+
+- **Instruction Tuning as an Extension:**  
+  Instruction-tuned variants (WizardCoder, Code Llama - Instruct, DeepSeek-Coder-Instruct) extend base models for better task alignment.
+
+- **Compression and Efficiency Techniques:**  
+  Quantization, knowledge distillation, and parameter-efficient fine-tuning are layered on top of existing models to enable practical deployment.
+
+### Competing and Complementary Approaches
+
+- **Competing:**  
+  - Large, general-purpose models vs. small, specialized models (e.g., Code Llama vs. NT-Java-1.1B).
+  - Full fine-tuning vs. parameter-efficient fine-tuning.
+
+- **Complementary:**  
+  - Instruction tuning and prompt engineering can be applied to both large and small models.
+  - Multilingual benchmarks (MultiPL-E) enable fair comparison across both specialized and general models.
+  - Compression and efficiency methods can be used to adapt large models for resource-constrained environments.
+
+---
+
+# SUMMARY
+
+The research landscape in code language modeling is rapidly evolving along several axes: specialization vs. generalization, efficiency vs. scale, and synthetic vs. realistic evaluation. The submission paper exemplifies a growing trend toward small, specialized, and efficient models tailored for specific languages (Java), motivated by practical deployment needs. This is complemented by advances in instruction tuning, prompt engineering, long-context modeling, and robust evaluation frameworks. The field is moving toward a more nuanced, realistic, and application-driven understanding of what makes code LLMs effective, reliable, and accessible for diverse programming tasks and environments.

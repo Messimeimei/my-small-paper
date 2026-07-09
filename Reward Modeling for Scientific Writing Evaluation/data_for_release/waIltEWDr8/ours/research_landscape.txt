@@ -1,0 +1,196 @@
+Certainly! Here is a comprehensive research landscape analysis based on the provided papers, focusing on the submission paper (WASUP) and its context.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the following methodological themes emerge:
+
+- **Weight-Input Alignment & Linear Decomposition**: Methods that enforce or exploit alignment between model weights and input features to enable faithful, interpretable explanations (e.g., WASUP, B-cos, CoDA-Nets, WeightAlign, WFA).
+- **Prototype/Case-Based Reasoning**: Models that classify by comparing input features to learned prototypes or support vectors, often providing explanations in terms of similarity to these cases (e.g., WASUP, ProtoPNet, Deformable ProtoPNet, XProtoNet, PANIC, IAIA-BL, PIP-Net).
+- **Dynamic/Adaptive Alignment**: Approaches that dynamically align model parameters or representations with input patterns for improved interpretability (e.g., CoDA-Nets, DAUs, Deformable ProtoPNet).
+- **Nonparametric & Support-Based Heads**: Use of nonparametric prediction heads (e.g., Nadaraya-Watson) or explicit support sets for classification and explanation (e.g., WASUP, NW Head).
+- **Concept Bottlenecking**: Models with explicit intermediate concept layers, supporting human intervention and concept-level explanations (e.g., Concept Bottleneck Models).
+- **Black-box Explanation Methods**: Post-hoc methods that generate explanations for any model, regardless of internal structure (e.g., RISE).
+- **Bag-of-Features/Local Feature Models**: Architectures that base decisions on local features, facilitating part-based explanations (e.g., BagNet).
+
+### Method Clusters
+
+- **Cluster 1: Weight-Input Alignment for Interpretability**
+  - **Papers**: WASUP, B-cos (both papers), CoDA-Nets (both papers), WeightAlign, WFA
+  - **Description**: These methods enforce or leverage alignment between weights and input features, enabling faithful, model-inherent explanations. B-cos and CoDA-Nets introduce new layers or units (B-cos transform, DAUs) to achieve this, while WASUP combines alignment with support vector reasoning.
+  - **Trends**: Increasing focus on making explanations both faithful (reflecting true model computation) and human-interpretable, often with minimal accuracy loss.
+
+- **Cluster 2: Prototype/Case-Based Reasoning**
+  - **Papers**: WASUP, ProtoPNet/ProtoPFaith, Deformable ProtoPNet, XProtoNet, PANIC, IAIA-BL, PIP-Net
+  - **Description**: These models learn class-representative prototypes or support vectors and classify by comparing input features to these. Explanations are provided in terms of similarity to prototypes, often visualized as image patches or parts.
+  - **Trends**: Movement from rigid, fixed-size prototypes (ProtoPNet) to more flexible, context-aware, and semantically meaningful prototypes (Deformable ProtoPNet, XProtoNet, PIP-Net).
+
+- **Cluster 3: Nonparametric/Support-Based Heads**
+  - **Papers**: WASUP, NW Head, SVM-based methods (animal sound, anomaly detection)
+  - **Description**: Use of nonparametric or support-based classification heads (e.g., Nadaraya-Watson, SVM) to provide interpretable, support-based explanations and improved calibration.
+
+- **Cluster 4: Concept Bottlenecking**
+  - **Papers**: Concept Bottleneck Models
+  - **Description**: Models with explicit concept layers, supporting direct human intervention and concept-level explanations.
+
+- **Cluster 5: Black-box/Post-hoc Explanation**
+  - **Papers**: RISE
+  - **Description**: Methods that generate explanations for any model, without requiring access to model internals.
+
+- **Cluster 6: Bag-of-Features/Local Feature Models**
+  - **Papers**: BagNet
+  - **Description**: Models that base decisions on local features, facilitating part-based and spatially localized explanations.
+
+### Methodological Trends & Relationships
+
+- **Faithfulness as a Core Goal**: There is a clear trend toward explanations that are not just visually plausible but are provably faithful to the model’s actual computations (WASUP, B-cos, ProtoPFaith, CoDA-Nets).
+- **From Post-hoc to Inherent Interpretability**: The field is moving from post-hoc explanation methods (e.g., RISE) to models that are interpretable by design (WASUP, B-cos, CoDA-Nets, prototype-based models).
+- **Hybridization**: Some models combine multiple approaches, e.g., WASUP integrates weight-input alignment (from B-cos) with support vector/prototype reasoning.
+- **Flexibility and Generality**: Newer methods (WASUP, B-cos) are designed to be architecture-agnostic, compatible with CNNs, Transformers, and other backbones.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Faithful, Inherently Interpretable Explanations for Image Classification**
+  - **Papers**: WASUP, B-cos, CoDA-Nets, ProtoPFaith, Deformable ProtoPNet, PIP-Net, XProtoNet, PANIC, IAIA-BL
+  - **Approaches**: Weight-input alignment, prototype-based reasoning, dynamic alignment, concept bottlenecking.
+
+- **Limitations of Post-hoc Explanations**
+  - **Papers**: WASUP, ProtoPFaith, B-cos, CoDA-Nets, RISE
+  - **Approaches**: Critique of post-hoc methods for lack of faithfulness; development of inherently interpretable models.
+
+- **Complexity and Faithfulness of Prototype-Based Explanations**
+  - **Papers**: WASUP, ProtoPFaith, Deformable ProtoPNet, PIP-Net, XProtoNet
+  - **Approaches**: Reducing explanation complexity, improving semantic alignment, handling spatial misalignment, and providing richer, more context-aware explanations.
+
+- **Interpretability in High-Stakes Domains (Medical, Fine-Grained)**
+  - **Papers**: WASUP, XProtoNet, PANIC, IAIA-BL, ProtoPFaith
+  - **Approaches**: Ensuring explanations are clinically meaningful, faithful, and actionable.
+
+- **Calibration and Debuggability**
+  - **Papers**: NW Head, WASUP
+  - **Approaches**: Nonparametric heads, support influence functions, and support-based explanations for better calibration and debugging.
+
+- **Handling Data Limitations and Out-of-Distribution (OOD) Data**
+  - **Papers**: PIP-Net, NW Head
+  - **Approaches**: Abstention mechanisms, support set distillation, and improved calibration.
+
+### Patterns in Problem Formulation
+
+- **From Visual Plausibility to Faithfulness**: Early works focused on visually plausible explanations; recent works emphasize faithfulness to model computation and theoretical guarantees.
+- **From Local to Global Explanations**: There is a push to provide both local (instance-level) and global (class-level or model-level) explanations (WASUP, XProtoNet, PANIC, PIP-Net).
+- **From Rigid to Flexible Prototypes**: Prototype-based models are evolving from fixed, spatially rigid prototypes to flexible, context-aware, and semantically meaningful representations.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Image Classification (General/Fine-Grained)**
+  - ImageNet, CIFAR-10, CIFAR-100, Stanford Dogs, CUB-200-2011, Pascal VOC, TinyImagenet
+- **Medical Imaging**
+  - RSNA, NIH Chest X-ray, ADNI, Mammographic images
+- **Specialized Domains**
+  - Animal sound database, Clipart dataset, Point clouds
+
+### Evaluation Metrics
+
+- **Classification Accuracy**: Ubiquitous across all papers.
+- **Interpretability/Faithfulness Metrics**:
+  - **Axiom-based Faithfulness**: Used in WASUP, ProtoPFaith.
+  - **Quantitative Interpretability Metrics**: Used in B-cos, CoDA-Nets, PIP-Net (semantic alignment), RISE (deletion/insertion metrics).
+  - **Attribution Quality**: Used in CoDA-Nets, RISE.
+  - **Explanation Misalignment**: Used in the interpretability benchmark for prototypical parts.
+  - **Sparsity Ratio**: Used in PIP-Net.
+- **Calibration Metrics**: Expected calibration error (NW Head).
+- **Task-Specific Metrics**: mIoU for segmentation (WeightAlign), domain adaptation accuracy.
+
+### Patterns in Evaluation
+
+- **Faithfulness and Causality**: Increasing use of metrics that assess the causal impact of explanations (e.g., deletion/insertion, axiom-based faithfulness).
+- **Semantic Alignment**: Some models (PIP-Net) explicitly measure how well explanations align with human-understandable concepts.
+- **Comprehensive Evaluation**: Newer works combine accuracy, interpretability, faithfulness, and calibration in their evaluation.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Weight-Input Alignment & Inherent Interpretability
+- **Papers**: WASUP, B-cos (both), CoDA-Nets (both), WeightAlign, WFA
+- **Characteristics**: Focus on model-inherent, faithful explanations via weight-input alignment; compatible with various architectures; high accuracy and interpretability.
+
+### Cluster 2: Prototype/Case-Based Reasoning
+- **Papers**: WASUP, ProtoPNet/ProtoPFaith, Deformable ProtoPNet, XProtoNet, PANIC, IAIA-BL, PIP-Net
+- **Characteristics**: Explanations via similarity to learned prototypes; evolution from rigid to flexible, context-aware, and semantically meaningful prototypes; applications in medical and general image classification.
+
+### Cluster 3: Nonparametric/Support-Based Heads
+- **Papers**: WASUP, NW Head, SVM-based methods
+- **Characteristics**: Use of support sets or nonparametric heads for interpretable, calibrated predictions; explicit influence quantification.
+
+### Cluster 4: Concept Bottlenecking
+- **Papers**: Concept Bottleneck Models
+- **Characteristics**: Intermediate concept layers for interpretability and intervention.
+
+### Cluster 5: Post-hoc/Black-box Explanation
+- **Papers**: RISE
+- **Characteristics**: Model-agnostic, post-hoc explanation methods; focus on causal evaluation.
+
+### Cluster 6: Bag-of-Features/Local Feature Models
+- **Papers**: BagNet
+- **Characteristics**: Local feature-based decisions for interpretability.
+
+### Relationships Between Clusters
+
+- **WASUP as a Bridge**: WASUP sits at the intersection of Clusters 1, 2, and 3, combining weight-input alignment (Cluster 1), prototype-based reasoning (Cluster 2), and support-based classification (Cluster 3).
+- **Prototype Models Evolving Toward Alignment**: Prototype-based models are increasingly incorporating alignment and faithfulness principles from Cluster 1.
+- **Post-hoc Methods as Baselines**: Black-box methods like RISE serve as baselines or points of comparison for inherently interpretable models.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **From Post-hoc to Inherent Interpretability**: Early reliance on post-hoc explanations (e.g., RISE) is giving way to models that are interpretable by design (B-cos, CoDA-Nets, WASUP).
+- **From Rigid to Flexible Prototypes**: Prototype-based models have evolved from fixed, spatially rigid prototypes (ProtoPNet) to deformable (Deformable ProtoPNet), context-aware (XProtoNet), and semantically aligned (PIP-Net) prototypes.
+- **From Visual Plausibility to Faithfulness**: There is a shift from visually plausible explanations to those that are provably faithful to the model’s computation (WASUP, B-cos, ProtoPFaith, CoDA-Nets).
+- **Integration of Alignment and Prototype Reasoning**: WASUP represents a synthesis, combining weight-input alignment (from B-cos) with support vector/prototype-based classification, and providing both local and global, faithful explanations.
+
+### Building Blocks and Extensions
+
+- **B-cos as a Foundation**: B-cos transformation is used as a building block in WASUP, enabling weight-input alignment and faithful explanations.
+- **Dynamic Alignment Units (DAUs)**: CoDA-Nets introduce DAUs, which are conceptually related to B-cos and further the idea of dynamic, input-dependent alignment.
+- **Prototype Models**: ProtoPNet and its variants (ProtoPFaith, Deformable ProtoPNet, XProtoNet, PIP-Net) build upon the idea of case-based reasoning, each addressing limitations of the previous.
+- **Support-Based Reasoning**: WASUP and NW Head both leverage support-based classification for interpretability and calibration.
+
+### Competing and Complementary Approaches
+
+- **Competing**: Post-hoc methods (RISE) vs. inherently interpretable models (WASUP, B-cos, CoDA-Nets, prototype-based models).
+- **Complementary**: Concept bottlenecking (CBMs) can be combined with alignment or prototype-based methods for richer explanations.
+- **Calibration and Debuggability**: Nonparametric heads (NW Head) complement alignment/prototype-based models by improving calibration and providing explicit influence measures.
+
+---
+
+# **Summary Table: Positioning WASUP**
+
+| Aspect                | WASUP’s Contribution/Positioning                                                                                 |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------|
+| **Methodology**       | Inherently interpretable neural network combining weight-input alignment (B-cos) with class-discriminative support vectors (prototype reasoning) |
+| **Problem Addressed** | Simultaneous provision of faithful, local, and global explanations for image classification; reduction of explanation complexity |
+| **Datasets**          | Fine-grained (Stanford Dogs), medical (RSNA), multi-label (Pascal VOC)                                          |
+| **Metrics**           | Classification accuracy, axiom-based faithfulness                                                               |
+| **Novelty**           | First to fulfill all three explanation desiderata (local, global, faithful) in a single, architecture-agnostic model; theoretical faithfulness guarantees; reduced explanation complexity |
+| **Relation to Field** | Synthesizes and extends trends in weight-input alignment and prototype-based reasoning; bridges gaps in faithfulness, explanation complexity, and generality |
+
+---
+
+## **Conclusion**
+
+The research landscape is converging on models that are interpretable by design, with a strong emphasis on faithfulness, flexibility, and applicability across domains. WASUP stands at the forefront of this evolution, integrating the most promising methodological advances—weight-input alignment and prototype-based reasoning—while addressing key limitations of prior work. The field is moving toward models that not only perform well but also provide explanations that are theoretically sound, actionable, and accessible to human users.

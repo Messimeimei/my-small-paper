@@ -1,0 +1,150 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+The submission introduces a *recurrent diffusion* approach for large-scale neural network parameter generation (RPG), focusing on scaling to very large models (e.g., ConvNeXt-L, LLaMA-7B LoRA) under memory constraints, and explicitly modeling correlations among parameter parts via a recurrent model. The method divides parameters into "tokens," models their relationships recurrently, and conditions a diffusion model on these outputs.
+
+**Most Closely Related Prior Works:**
+- **Diffusion-based parameter generation:** Peebles et al. (2022), Wang et al. (2024, "p-diff"), Soro et al. (2024, "D2NWG"), Jin et al. (2024, "COND P-DIFF"), Schürholt et al. (2022a, "S KDE30"), Schürholt et al. (2024, "SANE").
+- **Conditional parameter generation:** Jin et al. (2024), Li et al. (2024b, "Tina").
+- **Parameter-efficient adaptation:** LoRA (Hu et al., 2022), DoRA (Liu et al., 2024).
+
+**Methodological Cluster Placement:**
+- The submission is squarely in the "Diffusion-based Parameter Generation" cluster, with a specific focus on *scalability* and *explicit modeling of parameter correlations*.
+- It is most closely related to p-diff (Wang et al., 2024), D2NWG (Soro et al., 2024), and SANE (Schürholt et al., 2024), which also address parameter generation for large models, but differ in how they partition and process parameters.
+
+**Problem Space and Evaluation:**
+- The submission addresses the challenge of generating parameters for large models under memory constraints, a problem also tackled by p-diff and D2NWG.
+- Evaluation is based on the performance of generated parameters on standard tasks, compared to original models—consistent with prior work.
+
+**Independent Assessment:**
+- The main technical distinction is the use of a *recurrent model* to capture dependencies among parameter "tokens," as opposed to prior works that either flatten parameters (p-diff), partition by channel/layer (SANE), or use autoencoders (S KDE30).
+- The focus on *single-GPU feasibility* for very large models is a practical advance, though similar scaling claims are made in D2NWG and SANE.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Positioning:**
+- Authors consistently position prior diffusion-based parameter generation methods as *limited in scalability* and *neglecting correlations among parameter parts*.
+- They claim their method is the *first* to enable large-scale parameter generation (hundreds of millions of parameters) on a single GPU, and to *explicitly model correlations* via a recurrent approach.
+
+**Accuracy and Balance:**
+- The authors accurately describe p-diff (Wang et al., 2024) as flattening parameters and not modeling inter-part relationships.
+- SANE (Schürholt et al., 2024) is described as dividing parameters by channel within each layer, but the authors do not discuss whether SANE’s sequential autoencoder captures inter-part correlations, which may understate SANE’s capabilities.
+- D2NWG (Soro et al., 2024) and COND P-DIFF (Jin et al., 2024) are cited as addressing memory constraints and conditional generation, but the submission does not deeply engage with their specific mechanisms for scaling or conditioning.
+
+**Discrepancies:**
+- The claim that prior works "struggled to scale up effectively" is generally accurate for early works (e.g., Peebles et al., 2022), but D2NWG and SANE both specifically address scalability, and SANE uses a sequential model (autoencoder) that may capture some correlations.
+- The assertion that the submission is the "first" to enable large-scale parameter generation on a single GPU may be overstated, as D2NWG and SANE also report scaling advances, though perhaps not to the same model sizes or with the same memory profile.
+
+**Rhetorical Patterns:**
+- The authors tend to emphasize the limitations of prior work in scalability and correlation modeling, sometimes without fully acknowledging incremental advances in those works (e.g., SANE’s sequential modeling, D2NWG’s memory scaling).
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Claimed Contribution 1: *First method to enable large-scale parameter generation (e.g., ConvNeXt-L, LLaMA-7B LoRA) on a single GPU.*
+
+- **Most Similar Prior Work:** D2NWG (Soro et al., 2024), SANE (Schürholt et al., 2024), p-diff (Wang et al., 2024).
+- **Claimed Difference:** Prior works could not scale to these model sizes or required more memory.
+- **Independent Assessment:** 
+  - D2NWG and SANE both address scaling, with SANE using a sequential autoencoder to process large models, and D2NWG focusing on memory-efficient generation. However, the submission appears to demonstrate scaling to even larger models (e.g., LLaMA-7B LoRA) on a single GPU, which is a practical advance.
+  - The technical novelty is in the *combination* of recurrent modeling and diffusion for this scale, but the underlying scaling challenge has been addressed incrementally in prior work.
+  - The "first" claim is somewhat overstated; the main delta is the *demonstrated scale* and *practicality* rather than a fundamentally new scaling principle.
+
+## Claimed Contribution 2: *Explicitly models and leverages correlations among parameter parts via a recurrent model, which previous methods overlooked.*
+
+- **Most Similar Prior Work:** SANE (Schürholt et al., 2024), S KDE30 (Schürholt et al., 2022a), p-diff (Wang et al., 2024).
+- **Claimed Difference:** Prior works either flatten parameters (p-diff) or partition by channel/layer (SANE), but do not model inter-part correlations.
+- **Independent Assessment:** 
+  - p-diff does not model correlations; SANE uses a sequential autoencoder, which may capture some dependencies, but not in a recurrent, token-wise fashion as in the submission.
+  - The use of a *recurrent model* to explicitly model dependencies among parameter tokens is a substantive technical difference, though the degree to which SANE’s autoencoder captures similar information is not fully explored in the submission.
+  - The delta is more than superficial, but the authors may understate the sequential modeling in SANE.
+
+## Claimed Contribution 3: *Demonstrates potential for generating models for unseen tasks (improved generalization and practicality).*
+
+- **Most Similar Prior Work:** COND P-DIFF (Jin et al., 2024), Tina (Li et al., 2024b), D2NWG (Soro et al., 2024).
+- **Claimed Difference:** Prior works did not generalize as well or did not condition on task in the same way.
+- **Independent Assessment:** 
+  - COND P-DIFF and Tina both introduce conditional (task/text) parameter generation, explicitly targeting generalization to unseen tasks.
+  - The submission’s approach to generalization is not described in detail, and it is unclear if the improvement is due to the recurrent modeling, the conditioning mechanism, or other factors.
+  - The delta here may be incremental, and the claim of improved generalization is not strongly substantiated relative to these prior works.
+
+## Claimed Contribution 4: *Treats parameter parts as tokens and models their relationships, inspired by vision/language modeling.*
+
+- **Most Similar Prior Work:** SANE (Schürholt et al., 2024), D2NWG (Soro et al., 2024).
+- **Claimed Difference:** Prior works did not use a token-based, recurrent approach.
+- **Independent Assessment:** 
+  - SANE divides parameters into subsets and uses a sequential autoencoder, which is conceptually similar to tokenization and sequential modeling, though not explicitly recurrent.
+  - The submission’s explicit analogy to token-based modeling and use of a recurrent network is a technical distinction, but the conceptual similarity to SANE is closer than the authors acknowledge.
+  - The difference is substantive in implementation, but the conceptual novelty may be less than claimed.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The area of diffusion-based parameter generation is *rapidly evolving* but still relatively new (major works since 2022). Parameter-efficient adaptation (LoRA, DoRA) is more mature and widely adopted.
+- **Recent Surveys:** No comprehensive survey yet exists for diffusion-based parameter generation, but several recent reviews cover PEFT and diffusion models in general.
+- **Trends:** 
+  - Rapid scaling to larger models and datasets.
+  - Increasing use of conditional and task-adaptive generation.
+  - Emphasis on practical deployment (memory, compute constraints).
+- **Incremental Advances:** Many recent papers report incremental improvements (e.g., new partitioning schemes, conditioning mechanisms, architectural tweaks) rather than radical conceptual shifts.
+- **Reviewer Calibration:** Novelty claims should be weighed against the field’s fast pace and the prevalence of incremental, implementation-driven advances.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The "first" claim regarding large-scale, single-GPU parameter generation may be overstated, as D2NWG and SANE also address scaling, though perhaps not to the same degree.
+- **Alignment of Claims and Evidence:** The explicit modeling of correlations via a recurrent model is a substantive technical advance, but the degree of novelty over SANE’s sequential autoencoder is less than the authors suggest.
+- **Empirical Improvements:** It is possible that observed performance gains are due to implementation details (e.g., better memory management, more efficient batching) rather than conceptual advances.
+- **Terminology Differences:** The use of "tokens" and "recurrent modeling" may mask similarities to SANE’s sequential autoencoder approach.
+- **Routine Extensions:** Treating parameter parts as tokens and modeling their relationships is a natural extension of trends in vision/language modeling, and may be seen as an incremental adaptation rather than a conceptual leap.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:** 
+  - *Mobius* (fine-tuning large models on commodity GPUs) is not cited, though it is relevant to the scaling/memory constraint theme.
+  - *BLIP-2* and *LAION-5B* are not directly about parameter generation, but are relevant for large-scale, resource-constrained modeling.
+- **Additional Comparisons Needed:** 
+  - More detailed comparison with SANE (Schürholt et al., 2024) regarding sequential modeling of parameter subsets.
+  - Deeper engagement with D2NWG’s memory scaling mechanisms.
+  - Consideration of recent PEFT advances (e.g., delta-tuning, DoRA) for context.
+- **Potentially Misleading Characterizations:** 
+  - The limitations of prior works (e.g., inability to scale, lack of correlation modeling) may be exaggerated, especially for SANE and D2NWG.
+- **Citation vs. Actual Relationship:** 
+  - Authors cite SANE and D2NWG as less scalable or less capable, but these works do address similar challenges, albeit with different technical approaches.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - The use of a *recurrent model* to explicitly model correlations among parameter parts is a substantive technical advance over p-diff and D2NWG, and a meaningful implementation distinction from SANE’s sequential autoencoder.
+  - Demonstrated scaling to very large models (e.g., LLaMA-7B LoRA) on a single GPU is a practical advance, though not conceptually unique.
+
+- **Main Relationships to Existing Research:**
+  - The submission is most closely related to p-diff, D2NWG, and SANE, all of which address parameter generation for large models under memory constraints.
+  - The method is an incremental extension of prior work, combining ideas from sequential modeling (SANE), memory-efficient generation (D2NWG), and diffusion-based parameter synthesis (p-diff).
+
+- **Strongest Differentiation:**
+  - Explicit recurrent modeling of parameter correlations.
+  - Demonstrated practical scaling to very large models on limited hardware.
+
+- **Weakest Differentiation:**
+  - Generalization to unseen tasks (conditional generation) is already addressed in COND P-DIFF and Tina.
+  - The "tokenization" of parameter parts is conceptually similar to SANE’s partitioning and sequential modeling.
+
+- **Discrepancies Between Author Characterizations and Independent Assessment:**
+  - The novelty and "first" claims are somewhat overstated; prior works have addressed similar challenges, though perhaps not with the same combination of techniques or at the same scale.
+  - The distinction between recurrent and sequential autoencoder modeling is less stark than implied.
+
+---
+
+**Overall, the submission represents a meaningful but incremental advance in diffusion-based parameter generation, with its main technical novelty being the explicit use of a recurrent model to capture parameter correlations and a practical demonstration of scaling to very large models on a single GPU. The authors’ characterizations of prior work are generally accurate but tend to understate the sophistication and scalability of recent methods like SANE and D2NWG. Reviewers should consider the rapid, incremental nature of advances in this field when assessing the strength of the claimed contributions.**

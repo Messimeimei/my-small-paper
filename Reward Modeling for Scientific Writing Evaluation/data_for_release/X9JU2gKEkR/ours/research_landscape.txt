@@ -1,0 +1,258 @@
+---
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, several methodological themes emerge in the development and evaluation of code-focused large language models (LLMs):
+
+- **Data Curation and Quality Control:**  
+  - *Submission (Arctic-SnowCoder):* Progressive pretraining with explicit high-quality data selection using a BERT-based annotator, deduplication, and synthetic data generation.
+  - *StarCoder2, DeepSeek-Coder, Code Llama, Textbooks Are All You Need:* Large-scale data curation, deduplication, and filtering for quality, with some focusing on repository-level or "textbook-quality" data.
+  - *Magicoder, OSS-Instruct, EvoEval, EvalPlus:* Synthetic data and benchmark augmentation for diversity and rigor.
+
+- **Synthetic Data Generation:**  
+  - *Arctic-SnowCoder, Magicoder, Textbooks Are All You Need, Clinical Text Mining:* Use of LLMs (e.g., Llama-3.1-70B, GPT-3.5, ChatGPT) to generate synthetic code or instruction data, often seeded from high-quality or human-labeled examples.
+
+- **Model Architecture and Training Paradigms:**  
+  - *DeepSeek-Coder-V2:* Mixture-of-Experts (MoE) architecture, extended context length, and reinforcement learning with compiler/test feedback.
+  - *Code Llama, DeepSeek-Coder, StarCoder2, Stable Code:* Transformer-based models, with innovations in context length, fill-in-middle (FIM) training, and multitask objectives (e.g., code infilling).
+  - *Instruction Tuning and Fine-tuning:* Widespread use of instruction tuning (Magicoder, DeepSeek-Coder-Instruct, Stable Code Instruct) and fine-tuning on small, high-quality datasets (Textbooks Are All You Need, Program Synthesis with LLMs).
+
+- **Evaluation and Benchmarking Innovations:**  
+  - *EvalPlus, EvoEval:* Augmentation and evolution of benchmarks to address test inadequacy, overfitting, and data leakage.
+  - *Program Synthesis with LLMs, CodeGen:* Introduction of new benchmarks (MBPP, MTPB) and multi-turn synthesis paradigms.
+
+### Method Clusters
+
+- **Cluster 1: Data Quality and Synthetic Data Focus**
+  - *Arctic-SnowCoder, Magicoder, Textbooks Are All You Need, Clinical Text Mining, To Code or Not To Code?*
+  - Emphasize the impact of high-quality and/or synthetic data, with explicit selection, annotation, or generation mechanisms.
+
+- **Cluster 2: Large-Scale Model and Dataset Engineering**
+  - *StarCoder2, DeepSeek-Coder, Code Llama, DeepSeek-Coder-V2, Stable Code, CodeGen*
+  - Focus on scaling model size, dataset diversity, and context length, with advanced architectures (MoE, FIM, multitask).
+
+- **Cluster 3: Benchmark and Evaluation Innovation**
+  - *EvalPlus, EvoEval, Program Synthesis with LLMs*
+  - Develop new or improved benchmarks, test-case augmentation, and evaluation frameworks to more rigorously assess model capabilities.
+
+### Methodological Trends and Relationships
+
+- **Progressive Data Quality Emphasis:**  
+  There is a clear trend from brute-force scaling (more data, bigger models) toward *data quality*, with several works (Arctic-SnowCoder, Textbooks Are All You Need, Magicoder) showing that careful curation and synthetic augmentation can outperform sheer scale.
+
+- **Synthetic Data as a Key Lever:**  
+  Synthetic data generation, both for pretraining and evaluation, is increasingly central—used for instruction tuning, benchmark augmentation, and even as a substitute for scarce labeled data (e.g., clinical text mining).
+
+- **Model Specialization and Instruction Tuning:**  
+  Instruction tuning and fine-tuning on task-specific or synthetic data is now standard, with models like Magicoder, DeepSeek-Coder-Instruct, and Stable Code Instruct demonstrating strong gains.
+
+- **Evaluation Rigor and Benchmark Evolution:**  
+  Recognition of benchmark limitations (test inadequacy, overfitting, data leakage) has led to new frameworks (EvalPlus, EvoEval) and more robust evaluation practices.
+
+- **Architectural Innovation:**  
+  While most models are Transformer-based, innovations such as Mixture-of-Experts (DeepSeek-Coder-V2), fill-in-middle (FIM), and extended context windows (Code Llama, DeepSeek-Coder-V2) are pushing the boundaries of what code LLMs can do.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Data Quality and Efficiency in Code Pretraining**
+  - *Arctic-SnowCoder, Textbooks Are All You Need, To Code or Not To Code?* focus on defining, selecting, and leveraging high-quality data for efficient model training.
+
+- **Synthetic Data Generation and Utilization**
+  - *Magicoder, Clinical Text Mining, Textbooks Are All You Need* address how to generate and use synthetic data to overcome data scarcity, bias, or privacy issues.
+
+- **Scaling and Specialization of Code LLMs**
+  - *StarCoder2, DeepSeek-Coder, Code Llama, DeepSeek-Coder-V2, Stable Code, CodeGen* tackle the challenge of building larger, more capable, and more specialized code models.
+
+- **Benchmark and Evaluation Limitations**
+  - *EvalPlus, EvoEval, Program Synthesis with LLMs* identify and address the inadequacy, overfitting, and lack of diversity in existing code benchmarks.
+
+- **Generalization and Cross-Domain Impact**
+  - *To Code or Not To Code?* explores the impact of code data on non-code tasks, suggesting broader benefits of code pretraining.
+
+### Approaches to Similar Problems
+
+- **Data Quality:**  
+  - *Arctic-SnowCoder* uses a BERT-based annotator and synthetic data; *Textbooks Are All You Need* uses strict filtering and synthetic "textbook" data; *Magicoder* uses OSS-Instruct for diverse synthetic instructions.
+  - *To Code or Not To Code?* systematically ablates code data to measure its impact.
+
+- **Synthetic Data:**  
+  - *Magicoder* and *Arctic-SnowCoder* both use LLMs to generate synthetic code/instructions, but Magicoder focuses on instruction diversity, while Arctic-SnowCoder uses synthetic data for pretraining.
+  - *Clinical Text Mining* applies similar synthetic data generation for privacy-sensitive domains.
+
+- **Benchmarking:**  
+  - *EvalPlus* and *EvoEval* both augment or evolve benchmarks to address overfitting and test inadequacy, but EvalPlus focuses on test-case expansion, while EvoEval creates new, more challenging problems.
+
+### Patterns in Problem Formulation
+
+- **From Scale to Quality:**  
+  The field is shifting from "more data, bigger models" to "better data, smarter models," with a focus on efficiency, generalization, and robustness.
+
+- **From Static to Evolving Benchmarks:**  
+  There is growing recognition that static benchmarks are insufficient, leading to dynamic, LLM-augmented evaluation suites.
+
+- **From Code-Only to Cross-Domain Impact:**  
+  Some works (e.g., To Code or Not To Code?) are broadening the scope, examining how code data affects general LLM capabilities.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **HumanEval and HumanEval+:**  
+  The most widely used code generation benchmark, with HumanEval+ (EvalPlus) providing a more rigorous, test-augmented version.
+
+- **MBPP (Mostly Basic Python Problems):**  
+  Another standard for code synthesis, used in both few-shot and fine-tuned settings.
+
+- **BigCodeBench, MultiPL-E, DS-1000, APPS, CodeContests, SWEBench, LiveCodeBench:**  
+  Used for broader or more specialized evaluation (e.g., multilingual, code reasoning, software engineering tasks).
+
+- **Synthetic and Evolved Benchmarks:**  
+  - *OSS-Instruct, Evol-Instruct, EvoEval* provide synthetic or evolved problem sets for instruction tuning and robustness testing.
+
+### Evaluation Metrics
+
+- **pass@k (e.g., pass@1):**  
+  The dominant metric for code generation accuracy.
+
+- **Functional Correctness (test-case based):**  
+  Used in MBPP, HumanEval, and their variants.
+
+- **Other Metrics:**  
+  - *BigCodeBench score, MMLU, F1-score (for NER/RE), accuracy on math/logic tasks, throughput (for edge deployment), win-rate (LLM-as-a-judge).*
+
+### Patterns in Performance Measurement
+
+- **Increasing Rigor:**  
+  - *EvalPlus* and *EvoEval* highlight that traditional benchmarks overestimate model performance; new benchmarks are more challenging and reduce pass rates, revealing overfitting and brittleness.
+
+- **Synthetic and Augmented Test Suites:**  
+  - Synthetic test cases and evolved problems are now standard for robust evaluation.
+
+- **Cross-Task and Cross-Domain Evaluation:**  
+  - Models are increasingly evaluated on a wide range of tasks (code, math, reasoning, multilingual, software engineering).
+
+### Comparison of Evaluation Approaches
+
+- **Traditional vs. Augmented Benchmarks:**  
+  - Early works relied on HumanEval/MBPP; newer works (EvalPlus, EvoEval, Arctic-SnowCoder) use augmented or evolved benchmarks for more realistic assessment.
+
+- **Instruction and Multi-Turn Evaluation:**  
+  - Some models (Magicoder, CodeGen) are evaluated on instruction-following and multi-turn synthesis, reflecting real-world usage.
+
+- **Edge and Efficiency Metrics:**  
+  - *Stable Code* introduces throughput and quantization metrics for deployment scenarios.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Data Quality and Synthetic Data
+
+- **Papers:** Arctic-SnowCoder, Magicoder, Textbooks Are All You Need, Clinical Text Mining, To Code or Not To Code?
+- **Characteristics:**  
+  - Emphasis on high-quality data selection, annotation, and synthetic data generation.
+  - Demonstrate that small models trained on high-quality or synthetic data can match or outperform larger models trained on massive, less curated datasets.
+  - Explore the impact of data quality on both code and non-code tasks.
+
+### Cluster 2: Large-Scale Model and Dataset Engineering
+
+- **Papers:** StarCoder2, DeepSeek-Coder, Code Llama, DeepSeek-Coder-V2, Stable Code, CodeGen
+- **Characteristics:**  
+  - Focus on scaling model size, dataset diversity, and context length.
+  - Innovations in architecture (MoE, FIM, multitask objectives), context window extension, and multilingual support.
+  - Open-sourcing of large models and datasets for community use.
+
+### Cluster 3: Benchmark and Evaluation Innovation
+
+- **Papers:** EvalPlus, EvoEval, Program Synthesis with LLMs
+- **Characteristics:**  
+  - Development of new or improved benchmarks, test-case augmentation, and evaluation frameworks.
+  - Address overfitting, data leakage, and test inadequacy in existing benchmarks.
+  - Reveal that leaderboard rankings may not reflect true model proficiency.
+
+### Cluster 4: Instruction Tuning and Fine-Tuning
+
+- **Papers:** Magicoder, DeepSeek-Coder-Instruct, Stable Code Instruct, Program Synthesis with LLMs
+- **Characteristics:**  
+  - Use of instruction tuning and fine-tuning on synthetic or curated data to improve instruction-following and conversational capabilities.
+  - Demonstrate strong gains in code generation and multi-turn dialogue tasks.
+
+### Relationships Between Clusters
+
+- **Data Quality and Synthetic Data (Cluster 1) underpin advances in Model Engineering (Cluster 2):**  
+  - High-quality and synthetic data are used to train and fine-tune large models, improving efficiency and performance.
+
+- **Benchmark Innovation (Cluster 3) is essential for fair evaluation of advances in Clusters 1 and 2:**  
+  - As models and data improve, benchmarks must evolve to accurately measure progress and avoid overfitting.
+
+- **Instruction Tuning (Cluster 4) is both a method and an evaluation target, intersecting with all other clusters:**  
+  - Instruction-tuned models are evaluated on both traditional and new benchmarks, often using synthetic data.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Scale to Quality:**  
+  - Early works (CodeGen, DeepSeek-Coder) focused on scaling model and dataset size.
+  - Recent works (Arctic-SnowCoder, Textbooks Are All You Need) show that data quality and synthetic augmentation can break scaling laws, enabling small models to achieve state-of-the-art results.
+
+- **Synthetic Data as a Game Changer:**  
+  - Synthetic data generation, initially used for instruction tuning (Magicoder, OSS-Instruct), is now central to both pretraining (Arctic-SnowCoder) and evaluation (EvalPlus, EvoEval).
+
+- **Benchmarking Rigor:**  
+  - Recognition of benchmark limitations has led to the development of more robust, dynamic, and challenging evaluation suites (EvalPlus, EvoEval), which in turn drive more realistic model development.
+
+- **Architectural and Training Innovations:**  
+  - Mixture-of-Experts (DeepSeek-Coder-V2), fill-in-middle (FIM), multitask objectives, and extended context windows (Code Llama, DeepSeek-Coder-V2) represent architectural advances to better handle code-specific challenges.
+
+- **Instruction Tuning and Human Feedback:**  
+  - Instruction tuning (Magicoder, DeepSeek-Coder-Instruct, Stable Code Instruct) and interactive human feedback (Program Synthesis with LLMs) are now standard for improving model alignment and usability.
+
+### Building Blocks and Extensions
+
+- **Data Curation and Synthetic Data:**  
+  - *Arctic-SnowCoder* builds on ideas from *Magicoder* (OSS-Instruct) and *Textbooks Are All You Need* (synthetic data), extending them with systematic quality annotation and ablation studies.
+
+- **Benchmark Augmentation:**  
+  - *EvalPlus* and *EvoEval* extend HumanEval and MBPP, providing more rigorous and diverse evaluation.
+
+- **Model Scaling and Specialization:**  
+  - *DeepSeek-Coder-V2* extends *DeepSeek-Coder* with MoE, more languages, and longer context, while *StarCoder2* builds on *The Stack* with improved curation and transparency.
+
+### Competing and Complementary Approaches
+
+- **Competing:**  
+  - *Scale vs. Quality:* Some works (StarCoder2, DeepSeek-Coder) still emphasize scale, while others (Arctic-SnowCoder, Textbooks Are All You Need) demonstrate the power of quality and synthetic data.
+  - *Benchmarking Approaches:* Traditional benchmarks vs. augmented/evolved ones (EvalPlus, EvoEval) can yield different model rankings.
+
+- **Complementary:**  
+  - *Synthetic Data and Instruction Tuning* are complementary, with synthetic data used for both pretraining and instruction tuning.
+  - *Benchmark Innovation* complements advances in model and data quality, ensuring fair and robust evaluation.
+
+---
+
+# Summary Table
+
+| Cluster | Key Papers | Focus | Notable Innovations |
+|---------|------------|-------|---------------------|
+| Data Quality & Synthetic Data | Arctic-SnowCoder, Magicoder, Textbooks Are All You Need, Clinical Text Mining, To Code or Not To Code? | High-quality data selection, synthetic data generation | BERT-based quality annotation, LLM-based synthetic data, ablation studies |
+| Large-Scale Model & Dataset Engineering | StarCoder2, DeepSeek-Coder, Code Llama, DeepSeek-Coder-V2, Stable Code, CodeGen | Model scaling, dataset curation, architecture | MoE, FIM, extended context, open-source large models |
+| Benchmark & Evaluation Innovation | EvalPlus, EvoEval, Program Synthesis with LLMs | Benchmark augmentation, evaluation rigor | LLM-based test-case generation, evolved benchmarks, multi-turn synthesis |
+| Instruction Tuning & Fine-Tuning | Magicoder, DeepSeek-Coder-Instruct, Stable Code Instruct, Program Synthesis with LLMs | Instruction-following, conversational code LLMs | Synthetic instruction data, human feedback, multi-turn dialogue |
+
+---
+
+# Conclusion
+
+The research landscape in code LLMs is rapidly evolving from brute-force scaling to a nuanced focus on data quality, synthetic data, and robust evaluation. The submission paper, Arctic-SnowCoder, exemplifies this shift by systematically demystifying data quality and demonstrating that small, efficiently trained models can achieve state-of-the-art results. This is enabled by innovations in data annotation, synthetic data generation, and ablation-driven insights, all evaluated on increasingly rigorous benchmarks. The field is now characterized by a dynamic interplay between data, model, and evaluation innovation, with each cluster building on and challenging the others to drive progress in code intelligence.

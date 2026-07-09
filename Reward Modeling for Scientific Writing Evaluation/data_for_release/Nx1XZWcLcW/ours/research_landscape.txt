@@ -1,0 +1,225 @@
+---
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, several methodological themes emerge, with a strong emphasis on **Mixture-of-Experts (MoE)** architectures, **modality-aware modeling**, and **efficient multimodal fusion**. The methods can be grouped as follows:
+
+#### **Cluster 1: Modality-Aware Mixture-of-Experts (MoE) for Multimodal Models**
+- **Submission (MoMa), EVE, VLMo, LIMoE, VL-MoE, Aria, MoE-LLaVA, OneLLM**
+  - These works extend MoE architectures to handle multiple modalities (text, image, video, etc.), often with **modality-specific experts** and **routing mechanisms** that adaptively select experts based on input modality.
+  - **MoMa** (submission) introduces a modality-aware MoE for early-fusion mixed-modal language models, dividing experts into text and image groups with learned routing.
+  - **EVE** and **VLMo** similarly use modality-aware or mixture-of-modality experts within unified transformer backbones.
+  - **LIMoE** and **VL-MoE** focus on sparse MoE for vision-language models, with specialized experts and routing for each modality.
+  - **Aria** and **OneLLM** push for open-source, unified, and scalable multimodal MoE models, with Aria emphasizing fine-grained expert specialization and OneLLM using a universal projection module.
+
+#### **Cluster 2: Sparse MoE and Routing Innovations**
+- **Switch Transformer, Outrageously Large Neural Networks, MegaBlocks, Expert Choice Routing, MoE-LLaVA**
+  - These works focus on **scaling model capacity** via sparsity, efficient routing, and hardware-aware implementations.
+  - **Switch Transformer** and **Outrageously Large Neural Networks** pioneer large-scale sparse MoE models with simplified or trainable gating.
+  - **MegaBlocks** and **Expert Choice Routing** address hardware efficiency and load balancing, with MegaBlocks introducing block-sparse computation and dropless MoEs, and Expert Choice Routing proposing expert-driven token selection for perfect load balancing.
+  - **MoE-LLaVA** adapts these ideas to vision-language models, with a three-stage MoE-tuning strategy to prevent performance degradation from sparsity.
+
+#### **Cluster 3: Early-Fusion and Unified Multimodal Architectures**
+- **Chameleon, BEiT-3, Perceiver IO, NÜWA, CM3Leon, M2Doc, VLM**
+  - These models aim for **early-fusion** or **unified architectures** that process all modalities in a single backbone, often using tokenization or shared transformer layers.
+  - **Chameleon** (the base for MoMa) and **BEiT-3** use token-based early-fusion, enabling arbitrary interleaving of modalities.
+  - **Perceiver IO** and **NÜWA** generalize to arbitrary input/output structures and visual synthesis, respectively.
+  - **CM3Leon** and **M2Doc** focus on fusion for specific tasks (multi-modal generation, document analysis).
+  - **VLM** uses a single encoder for video-language modeling with task-agnostic pre-training.
+
+#### **Cluster 4: Fusion and Attention Mechanisms for Multimodal Tasks**
+- **PFME, M2Doc, MAFED**
+  - These works develop **progressive fusion**, **attention-based fusion**, and **modality-aware distillation** for tasks like sentiment analysis, document layout, and continual learning.
+  - **PFME** combines progressive attention fusion with MoE for sentiment analysis.
+  - **M2Doc** uses early and late fusion modules for document layout analysis.
+  - **MAFED** introduces modality-aware feature distillation for continual learning in VQA.
+
+#### **Cluster 5: General-Purpose and Task-Agnostic Multimodal Models**
+- **Perceiver IO, OneLLM, BEiT-3, NÜWA**
+  - These models aim for **maximum generality**, handling arbitrary modalities and tasks with minimal architectural changes.
+
+### Methodological Trends and Relationships
+
+- **MoE as a Scaling Tool:** MoE architectures are the dominant approach for scaling model capacity efficiently, both in unimodal (language, vision) and multimodal settings.
+- **Modality Awareness:** There is a clear trend toward **modality-aware expert assignment** and routing, as seen in MoMa, EVE, VLMo, LIMoE, and others, to better exploit the structure of multimodal data.
+- **Early-Fusion vs. Late-Fusion:** Early-fusion (e.g., Chameleon, BEiT-3) is gaining traction for its flexibility and unified modeling, while some works (M2Doc, PFME) still leverage late or progressive fusion for specific tasks.
+- **Routing Innovations:** Efficient and balanced routing (e.g., expert choice, batch-prioritized, block-sparse) is a key area of innovation, addressing both computational efficiency and model quality.
+- **Unified Architectures:** There is a movement toward **single-backbone models** that can handle arbitrary modalities and tasks, reducing the need for modality-specific encoders/decoders.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Efficient Scaling of Large (Multimodal) Models**
+   - How to increase model capacity (parameters) without proportional increases in computation (FLOPs, runtime).
+   - Addressed by: MoMa (submission), Switch Transformer, Outrageously Large Neural Networks, MegaBlocks, MoE-LLaVA, VL-MoE, LIMoE, Aria, Efficient Large Scale Language Modeling with MoE.
+
+2. **Unified and Flexible Multimodal Modeling**
+   - Building models that can process and integrate multiple modalities (text, image, video, audio, etc.) in a unified way.
+   - Addressed by: Chameleon, BEiT-3, Perceiver IO, OneLLM, NÜWA, VLMo, EVE, Aria.
+
+3. **Modality-Aware Processing and Routing**
+   - Exploiting modality-specific structure for better expert assignment, representation, and fusion.
+   - Addressed by: MoMa, EVE, VLMo, LIMoE, OneLLM, MAFED, PFME.
+
+4. **Efficient and Effective Fusion of Multimodal Information**
+   - How to best combine information from different modalities for downstream tasks.
+   - Addressed by: Chameleon, M2Doc, PFME, VLM, BEiT-3.
+
+5. **Stability and Load Balancing in MoE Training**
+   - Preventing expert under/over-utilization, token dropping, and instability in sparse models.
+   - Addressed by: Expert Choice Routing, MegaBlocks, LIMoE, Switch Transformer, MoMa.
+
+6. **Task-Specific Multimodal Challenges**
+   - Document layout analysis, sentiment analysis, continual learning, video understanding, etc.
+   - Addressed by: M2Doc, PFME, MAFED, VLM.
+
+### Approaches to Similar Problems
+
+- **Scaling Efficiency:** Most works use MoE or sparse activation to scale efficiently, but differ in routing (token-to-expert vs. expert-to-token), expert specialization (modality-aware vs. generic), and hardware optimization (block-sparse, dropless).
+- **Unified Multimodal Modeling:** Some use early-fusion tokenization (Chameleon, BEiT-3), others use shared transformers with modality-specific experts (VLMo, EVE), and some use universal encoders (OneLLM, Perceiver IO).
+- **Fusion Strategies:** Early-fusion (Chameleon, BEiT-3), progressive/late-fusion (PFME, M2Doc), and attention-based fusion (PFME, M2Doc) are all explored, often tailored to the task.
+- **Routing and Load Balancing:** Expert choice routing (MoMa, Expert Choice Routing), entropy regularization (LIMoE), and block-sparse computation (MegaBlocks) are different solutions to the same problem of efficient, balanced expert utilization.
+
+### Patterns in Problem Formulation
+
+- **Efficiency and Scalability** are nearly universal concerns, often framed in terms of FLOPs, throughput, or parameter efficiency.
+- **Modality Integration** is increasingly framed as a unified modeling challenge, with less emphasis on separate encoders/decoders.
+- **Task Generality** is a growing focus, with models aiming to handle a wide range of tasks and modalities with minimal architectural changes.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Vision-Language Benchmarks:** VQA, NLVR2, MSCOCO, Flickr30K, ScienceQA, MMBench, POPE, MM-Vet, LLaVA^W.
+- **Image Classification:** ImageNet.
+- **Text-Only Benchmarks:** GLUE, SuperGLUE, MTBench, MMLU, HumanEval.
+- **Document Analysis:** DocLayNet, M6Doc, PubLayNet.
+- **Sentiment Analysis:** CMU-MOSI, CMU-MOSEI.
+- **Video Understanding:** LongVideoBench, VideoMME, Kinetics, AudioSet, StarCraft II.
+- **Multimodal Reasoning/Generation:** Custom human evaluation datasets (Chameleon), long-form mixed-modal generation.
+
+### Evaluation Metrics
+
+- **Accuracy:** For classification, VQA, reasoning, etc.
+- **Retrieval Metrics:** Recall@K, mAP (mean Average Precision).
+- **Generation Metrics:** CIDEr, BLEU, FID (for image/text generation).
+- **Efficiency Metrics:** FLOPs, throughput, training/inference speedup, parameters per token.
+- **Human Evaluation:** Preference rate for open-ended generation.
+- **Task-Specific Metrics:** Perplexity (language modeling), BLEU (machine translation), mIoU (segmentation), etc.
+
+### Patterns in Performance Measurement
+
+- **Efficiency vs. Quality Trade-off:** Many works report both model quality (accuracy, SOTA) and efficiency (FLOPs, speedup, parameter count).
+- **Zero-Shot/Few-Shot Evaluation:** Increasingly common, especially for large foundation models.
+- **Human Evaluation:** Used for open-ended or generative tasks where automatic metrics are insufficient.
+- **Ablation Studies:** Common in works focused on architectural innovations (e.g., MM1, EVE, MoE-LLaVA).
+
+### Comparison of Evaluation Approaches
+
+- **MoE and Sparse Models:** Emphasize FLOPs savings, throughput, and parameter efficiency alongside standard task metrics.
+- **Unified/General-Purpose Models:** Emphasize breadth of benchmarks and modalities, often reporting on a wide range of tasks.
+- **Task-Specific Models:** Focus on SOTA or improvement over baselines for their target task (e.g., M2Doc for document analysis, PFME for sentiment analysis).
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster A: **Modality-Aware MoE for Multimodal Foundation Models**
+- **Papers:** Submission (MoMa), EVE, VLMo, LIMoE, VL-MoE, Aria, OneLLM, MoE-LLaVA
+- **Characteristics:** 
+  - Use of MoE with modality-specific experts and routing.
+  - Focus on efficient scaling and unified multimodal modeling.
+  - Innovations in expert assignment, routing, and fusion.
+  - Strong emphasis on open-source, extensibility, and generalization to new modalities (Aria, OneLLM).
+
+### Cluster B: **Sparse MoE and Routing Efficiency**
+- **Papers:** Switch Transformer, Outrageously Large Neural Networks, MegaBlocks, Expert Choice Routing, MoE-LLaVA, OpenMoE
+- **Characteristics:**
+  - Focus on scaling model capacity with sparse activation.
+  - Innovations in routing (expert choice, batch-prioritized, block-sparse).
+  - Hardware-aware implementations and training stability.
+  - Application to both language and vision(-language) models.
+
+### Cluster C: **Unified/Early-Fusion Multimodal Architectures**
+- **Papers:** Chameleon, BEiT-3, Perceiver IO, NÜWA, CM3Leon, M2Doc, VLM
+- **Characteristics:**
+  - Early-fusion or unified transformer architectures for all modalities.
+  - Token-based modeling and arbitrary modality interleaving.
+  - Emphasis on generality, flexibility, and open-ended generation.
+  - Application to a wide range of tasks (generation, retrieval, classification).
+
+### Cluster D: **Fusion and Attention for Task-Specific Multimodal Learning**
+- **Papers:** PFME, M2Doc, MAFED
+- **Characteristics:**
+  - Progressive, early, or late fusion modules.
+  - Attention-based mechanisms for extracting and combining modality-specific and shared representations.
+  - Focus on specific tasks (sentiment analysis, document layout, continual learning).
+
+### Cluster E: **General-Purpose, Task-Agnostic Multimodal Models**
+- **Papers:** Perceiver IO, OneLLM, BEiT-3, NÜWA
+- **Characteristics:**
+  - Maximum flexibility in input/output structure and modality.
+  - Minimal task-specific engineering.
+  - Emphasis on scalability and extensibility.
+
+### Relationships Between Clusters
+
+- **Clusters A and B** are closely linked: Cluster A extends the sparse MoE innovations of Cluster B to the multimodal domain, often incorporating modality-awareness.
+- **Cluster C** provides the architectural backbone (e.g., Chameleon) for many Cluster A models (e.g., MoMa).
+- **Cluster D** often leverages ideas from Clusters A and C for task-specific fusion and representation learning.
+- **Cluster E** overlaps with Clusters A and C in the pursuit of generality and extensibility.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **Early MoE (Unimodal):** Outrageously Large Neural Networks, Switch Transformer, and Efficient Large Scale Language Modeling with MoE established the feasibility of scaling models with sparse MoE layers, focusing on language and vision tasks.
+- **Routing and Efficiency Innovations:** Expert Choice Routing, MegaBlocks, and batch-prioritized routing addressed load balancing, hardware efficiency, and training stability, enabling practical deployment of large MoE models.
+- **Extension to Multimodal and Modality-Aware MoE:** EVE, VLMo, LIMoE, VL-MoE, and the submission (MoMa) extended MoE to multimodal settings, introducing modality-specific experts and routing to better exploit multimodal data structure.
+- **Unified/Early-Fusion Architectures:** Chameleon, BEiT-3, and Perceiver IO moved toward unified, token-based, or early-fusion architectures, enabling arbitrary modality interleaving and flexible task handling.
+- **Open-Source and Generalization:** Aria and OneLLM emphasize open-source, extensibility, and the ability to handle a growing number of modalities and tasks.
+- **Task-Specific Fusion and Distillation:** PFME, M2Doc, and MAFED develop specialized fusion and distillation techniques for particular multimodal tasks, often building on the general principles established in earlier clusters.
+
+### Building Blocks and Extensions
+
+- **MoE as a Foundation:** The MoE layer (with various routing strategies) is the core building block, extended from language to vision, and then to multimodal and modality-aware settings.
+- **Routing Mechanisms:** Innovations in routing (expert choice, batch-prioritized, block-sparse) are repeatedly built upon to improve efficiency and stability.
+- **Unified Architectures:** Early-fusion and token-based models (Chameleon, BEiT-3) serve as the backbone for modality-aware MoE extensions (e.g., MoMa).
+- **Fusion Strategies:** Progressive and attention-based fusion modules are layered on top of these architectures for specific tasks.
+
+### Competing and Complementary Approaches
+
+- **Competing:** 
+  - **Early-fusion vs. Late/Progressive Fusion:** Some works argue for the flexibility and generality of early-fusion (Chameleon, BEiT-3), while others find value in progressive or late fusion for certain tasks (PFME, M2Doc).
+  - **Dense vs. Sparse Scaling:** Dense models (e.g., large transformers) compete with sparse MoE models, with the latter generally winning on efficiency at scale.
+- **Complementary:**
+  - **Routing and Hardware Efficiency:** Innovations in routing and hardware-aware computation (MegaBlocks, Expert Choice Routing) are complementary to both dense and sparse models.
+  - **Task-Specific Modules:** Fusion and distillation modules (PFME, M2Doc, MAFED) can be integrated into larger, unified architectures for improved task performance.
+
+---
+
+# Summary Table: Key Clusters and Their Characteristics
+
+| Cluster | Key Papers | Main Methods | Focus | Notable Innovations |
+|---------|------------|--------------|-------|---------------------|
+| **A: Modality-Aware MoE** | MoMa, EVE, VLMo, LIMoE, VL-MoE, Aria, OneLLM, MoE-LLaVA | Modality-specific experts, adaptive routing | Efficient, unified multimodal modeling | Modality-aware routing, open-source, extensibility |
+| **B: Sparse MoE & Routing** | Switch Transformer, Outrageously Large Neural Networks, MegaBlocks, Expert Choice Routing, MoE-LLaVA, OpenMoE | Sparse activation, routing algorithms | Scaling, efficiency, hardware optimization | Expert choice routing, block-sparse computation |
+| **C: Early-Fusion/Unified** | Chameleon, BEiT-3, Perceiver IO, NÜWA, CM3Leon, M2Doc, VLM | Token-based early-fusion, unified transformers | Generality, flexible multimodal modeling | Arbitrary modality interleaving, unified backbones |
+| **D: Fusion/Attention for Tasks** | PFME, M2Doc, MAFED | Progressive/attention fusion, modality-aware distillation | Task-specific multimodal learning | Multi-loss fusion, feature distillation |
+| **E: General-Purpose/Task-Agnostic** | Perceiver IO, OneLLM, BEiT-3, NÜWA | General-purpose architectures | Maximum flexibility, extensibility | Arbitrary input/output, minimal engineering |
+
+---
+
+# Conclusion
+
+The research landscape is rapidly converging on **modality-aware, sparse Mixture-of-Experts architectures** as the most promising path for scaling efficient, unified multimodal foundation models. The submission paper (MoMa) is at the forefront of this trend, innovating in **early-fusion, modality-aware expert assignment** and demonstrating substantial efficiency gains. The field is characterized by a dynamic interplay between **scaling efficiency**, **modality integration**, **routing innovations**, and **unified architectures**, with a growing emphasis on **open-source, extensibility, and generality**. Task-specific fusion and distillation methods remain important for specialized applications, but the dominant trajectory is toward **flexible, scalable, and general-purpose multimodal models**.

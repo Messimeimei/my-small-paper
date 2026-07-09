@@ -1,0 +1,125 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+ProtoLLM is positioned within the rapidly growing cluster of LLM-based tabular learning methods, specifically those targeting few-shot and zero-shot tabular classification. The most closely related prior works are FeatLLM (Han et al., 2024), TabLLM (Hegselmann et al., 2023), and TABLET (Slack & Singh, 2023), all of which use LLMs for tabular prediction via prompt engineering or in-context learning. ProtoLLM distinguishes itself by proposing an *example-free* approach, generating feature-level prototypes from task and feature descriptions rather than from in-context examples.
+
+**Relation to Methodological Clusters:**
+- **Cluster 1 (LLM Prompting/In-Context Learning):** ProtoLLM is a direct evolution, moving from example-based prompting (TabLLM, FeatLLM) to prototype-based, example-free prompting.
+- **Cluster 3 (Feature Engineering/Data Augmentation):** ProtoLLM’s feature-level value generation is conceptually related to FeatLLM’s use of LLMs for feature engineering, but differs in not using examples for generation.
+- **Cluster 5 (Example Selection):** While ProtoLLM avoids example selection by design, it is motivated by the observed pitfalls in this area (e.g., overfitting, knowledge disruption).
+- **Cluster 4 (Transfer/Meta-Learning):** ProtoLLM’s example-free approach is relevant for transfer, but it does not explicitly address cross-table transfer as in P2T or CARTE.
+
+**Problem Space and Evaluation:**
+ProtoLLM addresses the challenge of overfitting and knowledge disruption in LLMs when using few-shot examples for tabular data, aiming for robust generalization in low-data regimes. Its evaluation (as described) is in line with standard practice: classification accuracy on multiple tabular datasets, compared to recent LLM-based and traditional baselines.
+
+**Independent Assessment:**
+ProtoLLM’s main novelty is the *removal of in-context examples* from LLM prompts for tabular classification, replaced by LLM-generated feature-level prototypes. This is a logical extension of trends in the field, but the degree of conceptual novelty versus incremental adaptation requires careful scrutiny.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Positioning:**
+- Authors consistently position ProtoLLM as a response to the limitations of example-based LLM prompting (overfitting, knowledge disruption).
+- FeatLLM is cited as a key baseline, described as using LLMs as rule generators with few-shot examples, and as being less efficient or more prone to overfitting.
+- TabLLM and TABLET are grouped as example-based LLM methods, with ProtoLLM presented as a more robust, example-free alternative.
+- STUNT, MET, SubTab, and other self-supervised/meta-learning methods are cited as alternative approaches, but not as direct competitors in the LLM-based paradigm.
+
+**Accuracy and Balance:**
+- The characterization of FeatLLM as relying on few-shot examples and rule extraction is accurate, but the claim that ProtoLLM is the first to avoid examples in LLM tabular prompts is not fully substantiated—TabLLM and TABLET have explored zero-shot/instruction-based settings, though not with prototype construction.
+- The description of STUNT as meta-learning with self-generated tasks is accurate, but the distinction from ProtoLLM (which does not use meta-learning) is clear.
+- The omission of works like "Elephants Never Forget" (memorization in LLMs) and GistScore (example selection) may understate the broader context of overfitting and example selection challenges.
+
+**Discrepancies:**
+- The authors claim that FeatLLM and similar methods "struggle to optimize in such constrained settings," but FeatLLM’s own results show competitive performance in few-shot regimes, suggesting the difference may be less stark than implied.
+- The claim that ProtoLLM is "training-free" and "example-free" is accurate in the sense of not using learnable parameters or in-context examples, but the fusion strategy (combining LLM-generated and example-based prototypes) does reintroduce examples in some settings.
+
+**Potential Overstatements:**
+- The rhetoric around "disentangling prior knowledge from target examples" as a unique contribution may overstate the conceptual leap, as prior works have also explored leveraging LLM prior knowledge in zero-shot or instruction-based settings.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Contribution 1: Example-Free Framework for Tabular Classification**
+- **Most Similar Prior Work:** FeatLLM (Han et al., 2024), TabLLM (Hegselmann et al., 2023), TABLET (Slack & Singh, 2023).
+- **Claimed Difference:** ProtoLLM does not use any in-context examples in LLM prompts, instead generating feature-level prototypes from task/feature descriptions.
+- **Independent Assessment:** FeatLLM and TabLLM both use few-shot examples in prompts; TABLET explores instruction-based learning but does not construct prototypes. ProtoLLM’s approach of generating feature values for each class from descriptions, not examples, is a substantive technical difference, though the conceptual leap is incremental (moving from example-based to example-free prompting).
+- **Author Characterization vs. Reality:** The distinction is accurate, but the degree of novelty is somewhat overstated; the field has been trending toward example-free/instruction-based approaches, and ProtoLLM is a logical next step.
+
+**Contribution 2: Feature-Level Value Generation by LLMs**
+- **Most Similar Prior Work:** FeatLLM (feature engineering via LLMs), Curated LLM (LLM-based data augmentation).
+- **Claimed Difference:** ProtoLLM generates feature values solely from task/feature descriptions, not from data examples.
+- **Independent Assessment:** FeatLLM uses examples to prompt LLMs for rule/feature generation; Curated LLM uses LLMs for data augmentation but with in-context examples. ProtoLLM’s approach is distinct in being fully example-free at the feature level, but the technical mechanism (prompting LLMs with descriptions) is a straightforward adaptation.
+- **Substantive vs. Superficial:** The difference is substantive in terms of data used, but the underlying mechanism (prompting LLMs) is similar.
+
+**Contribution 3: Training-Free Pipeline**
+- **Most Similar Prior Work:** FeatLLM, TabLLM (no fine-tuning, but use in-context examples).
+- **Claimed Difference:** No learnable parameters, no training required.
+- **Independent Assessment:** FeatLLM and TabLLM also avoid fine-tuning, but use in-context examples. ProtoLLM’s pipeline is similarly training-free, but the novelty is in the example-free aspect, not the lack of training per se.
+
+**Contribution 4: Fusion Strategy for Prototypes**
+- **Most Similar Prior Work:** No direct analog; closest is FeatLLM’s combination of LLM-generated rules and data-driven features.
+- **Claimed Difference:** Combines LLM-generated prototypes with few-shot examples for improved generalizability.
+- **Independent Assessment:** The fusion strategy is a novel adaptation, but the idea of combining LLM-generated and data-driven information is present in prior work. The technical details of the fusion (not provided in the excerpt) would determine the degree of novelty.
+
+**Contribution 5: Disentangling Prior Knowledge from Target Examples**
+- **Most Similar Prior Work:** FeatLLM (uses LLM prior knowledge via examples), TABLET (instruction-based, zero-shot).
+- **Claimed Difference:** Mitigates misalignment by separating LLM prior knowledge from example-based learning.
+- **Independent Assessment:** The conceptual motivation is sound, but prior works have also recognized and attempted to address misalignment and overfitting. ProtoLLM’s explicit separation is a clear, if incremental, step.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The area of LLM-based tabular learning is highly active and rapidly evolving, with many new methods and benchmarks emerging in the past 1-2 years.
+- **Recent Surveys:** No comprehensive survey is cited in the submission, but recent reviews (e.g., "Tabular Deep Learning: A Survey," 2023) cover the shift toward LLM-based and data-efficient methods.
+- **Trends:** Movement from example-based to example-free/instruction-based prompting; increased focus on generalization, transfer, and robustness; growing attention to overfitting and memorization in LLMs.
+- **Incremental Advances:** Many recent papers propose new prompt designs, data representations, or fusion strategies, often as incremental improvements over prior LLM-based methods.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:** The move from example-based to example-free prompting is a logical progression, and while ProtoLLM is among the first to formalize prototype-based, example-free LLM tabular classification, the conceptual leap is incremental.
+- **Empirical Improvements:** Reported gains over FeatLLM may be due in part to implementation details (e.g., prompt engineering, dataset selection) rather than fundamental conceptual advances.
+- **Terminology Differences:** The use of "prototype" and "example-free" may obscure similarities to prior instruction-based or zero-shot LLM approaches.
+- **Routine Adaptations:** The fusion strategy, while novel in detail, is conceptually similar to prior work combining LLM-generated and data-driven information.
+- **Omitted Context:** The lack of discussion of memorization/overfitting studies (e.g., "Elephants Never Forget") and example selection methods (GistScore, Se2) may understate the broader context.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:**
+  - "Elephants Never Forget" (memorization in LLMs for tabular data) is directly relevant to the overfitting problem.
+  - GistScore and Se2 (example selection) are relevant to the motivation for avoiding examples.
+  - TabNet, AMFormer, and other deep tabular models are not discussed, though they are standard baselines.
+  - CARTE, TabuLa-8B, and P2T (transfer/meta-learning) are not directly compared, though they address related generalization problems.
+- **Additional Comparisons Needed:** A more thorough comparison to instruction-based and zero-shot LLM tabular methods (e.g., TABLET, OpenTab) would clarify the degree of novelty.
+- **Potentially Misleading Characterizations:** The limitations of FeatLLM and TabLLM may be somewhat exaggerated to emphasize ProtoLLM’s contribution.
+- **Citation vs. Actual Relationship:** Some cited works (e.g., TABLET) are grouped as example-based, but actually explore instruction-based/zero-shot settings.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - ProtoLLM is among the first to formalize an *example-free, prototype-based* LLM framework for tabular classification, generating feature-level prototypes from task/feature descriptions.
+  - The explicit avoidance of in-context examples in LLM prompts is a substantive technical difference from FeatLLM, TabLLM, and similar prior work.
+- **Main Relationships to Existing Research:**
+  - ProtoLLM is a direct evolution of LLM-based tabular learning, building on the limitations of example-based prompting and feature engineering.
+  - The fusion strategy and focus on disentangling prior knowledge are incremental adaptations of existing ideas.
+- **Strongest Differentiation:**
+  - The example-free, prototype-based approach is the clearest point of novelty.
+- **Weakest Differentiation:**
+  - The fusion strategy and training-free pipeline are similar to prior work; the conceptual leap is less pronounced.
+- **Discrepancies:**
+  - The degree of novelty is somewhat overstated; the field has been trending toward example-free/instruction-based approaches, and ProtoLLM is a logical next step rather than a radical departure.
+  - Some relevant work (memorization, example selection, transfer/meta-learning) is omitted or under-discussed, which may overstate the uniqueness of ProtoLLM’s contributions.
+
+---
+
+**Overall, ProtoLLM represents a meaningful but incremental advance in LLM-based tabular learning, formalizing an example-free, prototype-based approach that addresses known limitations of example-based prompting. The technical differences are substantive, but the conceptual novelty is in line with ongoing trends in the field. Reviewers should consider the degree to which the empirical gains are due to the core innovation versus implementation details, and whether omitted related work would affect the assessment of novelty.**

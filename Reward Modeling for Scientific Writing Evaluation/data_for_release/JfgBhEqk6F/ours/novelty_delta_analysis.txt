@@ -1,0 +1,123 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission (Honey) in the Landscape:**
+
+- **Cluster Placement:** Honey is best situated within the "Progressive/Block-wise Training for Memory Efficiency" cluster, with strong connections to the "Heterogeneity-Aware FL" cluster. Its focus is on enabling memory-constrained devices to participate in federated learning (FL) by dividing models into blocks and training them progressively, while introducing mechanisms for block collaboration and elastic resource allocation.
+- **Most Closely Related Prior Works:**
+  - **NeuLite** and **SmartFreeze**: Both address progressive/block-wise training and memory efficiency, with NeuLite introducing block collaboration and SmartFreeze focusing on heterogeneity-aware participant selection.
+  - **FedRolex** and **HeteroFL**: Address model heterogeneity and memory constraints via sub-model extraction and width/depth scaling.
+  - **ProgFed**: Progressive training for communication and computation efficiency.
+- **Methodological Clusters:** Honey extends the progressive/block-wise training paradigm by introducing "synergistic" block collaboration (holistic view + block-wise feedback) and an "elastic resource harmonization protocol" for dynamic layer selection based on device memory.
+- **Problem Space:** Honey addresses memory limitations, accuracy degradation from isolated block training, and inefficient resource utilization—problems also tackled by NeuLite, SmartFreeze, ProgFed, and FedRolex, but with different mechanisms.
+- **Evaluation Approaches:** Honey uses standard datasets (CIFAR10/100, SVHN, STL-10, Tiny-ImageNet) and metrics (accuracy, peak memory), consistent with prior work.
+
+**Independent Assessment:**
+- Honey’s main novelty is the explicit combination of holistic and block-wise feedback for block collaboration, and the elastic protocol for resource harmonization. These are incremental but meaningful extensions of the progressive training paradigm, which has been evolving toward more adaptive and collaborative mechanisms (see NeuLite, SmartFreeze).
+- The field is mature, with many recent works addressing similar problems via progressive training, model heterogeneity, and resource adaptation.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+- Authors consistently position Honey as more collaborative and adaptive than prior progressive/block-wise methods, and more memory-efficient than model-heterogeneous approaches.
+- They often describe prior works as limited by "isolated block training," "rigid block assignments," or "lack of collaboration," and claim Honey overcomes these with "synergistic" and "elastic" mechanisms.
+
+**Accuracy and Balance:**
+- **FedRolex, HeteroFL, InclusiveFL:** Authors accurately describe these as width/depth scaling or sub-model extraction methods for memory heterogeneity, but may understate their flexibility (e.g., FedRolex’s sliding window is more dynamic than implied).
+- **NeuLite, SmartFreeze:** Not directly cited, but these are the most methodologically similar to Honey. Their omission is notable, as both address block collaboration and heterogeneity-aware progressive training.
+- **Distillation/Ensemble Methods (FedMD, FedZKT, FedDF, Fed-ET):** Authors correctly note these use knowledge distillation for model heterogeneity, but do not discuss their potential for memory efficiency or block-wise training.
+- **ProgFed, DEF:** Not cited, though ProgFed is a direct predecessor in progressive training for memory/computation efficiency.
+
+**Discrepancies:**
+- The claim that prior progressive methods lack block collaboration is only partially accurate; NeuLite, for example, introduces block communication.
+- The characterization of model-heterogeneous methods as less memory-efficient is context-dependent; some (e.g., FedRolex) can be competitive in memory usage.
+
+**Rhetoric:**
+- Authors use terms like "synergistic," "holistic," and "elastic" to emphasize novelty, but the technical differences may be more incremental than the language suggests.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Contribution 1: Synergistic Progressive Training (Holistic + Block-wise Feedback)
+- **Most Similar Prior Work:** NeuLite, SmartFreeze, ProgFed.
+- **Claimed Difference:** Honey fuses holistic view and block-wise feedback to align block training with the global objective and enhance block collaboration.
+- **Independent Assessment:**
+  - **NeuLite** already introduces block communication to break isolation, using a "block collaboration" mechanism.
+  - **SmartFreeze** uses heterogeneity-aware participant selection and pace control, which also addresses block coordination.
+  - Honey’s "synergistic" approach appears to combine both global and local feedback, but the technical distinction from NeuLite’s block collaboration is subtle.
+- **Substantive vs. Superficial:** The difference is incremental—Honey’s fusion of holistic and block-wise feedback is a refinement, not a conceptual leap.
+- **Author Characterization vs. Reality:** Authors overstate the lack of block collaboration in prior work; NeuLite and SmartFreeze already address this.
+
+## Contribution 2: Elastic Resource Harmonization Protocol
+- **Most Similar Prior Work:** FedRolex, HeteroFL, InclusiveFL, NeuLite.
+- **Claimed Difference:** Devices dynamically choose the number of layers to train based on memory, optimizing resource use and breaking gradient isolation.
+- **Independent Assessment:**
+  - **FedRolex** and **HeteroFL** allow dynamic sub-model extraction (width/depth scaling), but may not support as fine-grained or adaptive layer selection as Honey.
+  - **NeuLite** also adapts block assignments based on device capacity.
+  - Honey’s protocol may offer more granularity or flexibility, but the core idea of adaptive resource allocation is not new.
+- **Substantive vs. Superficial:** The protocol is an incremental improvement in granularity/adaptivity, not a fundamentally new concept.
+- **Author Characterization vs. Reality:** Authors accurately describe the need for elastic adaptation, but overstate the novelty relative to NeuLite and FedRolex.
+
+## Contribution 3: Empirical Gains (Accuracy, Memory)
+- **Most Similar Prior Work:** NeuLite, FedRolex, HeteroFL, SmartFreeze.
+- **Claimed Difference:** Up to 43.9% accuracy improvement and 49% memory reduction over SOTA.
+- **Independent Assessment:**
+  - Such large improvements are unusual in a mature field; may be due to implementation, hyperparameter tuning, or experimental setup rather than conceptual advances.
+  - The absence of direct comparison to NeuLite and SmartFreeze (most similar methods) raises questions about the strength of the empirical delta.
+- **Substantive vs. Superficial:** Gains may be partially attributable to experimental choices rather than core algorithmic novelty.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The area of memory-efficient, heterogeneity-aware FL is active and mature, with many recent works (2021–2024) and several survey papers (e.g., "A Survey on Federated Learning Systems: Vision, Hype and Reality," "Federated Learning: A Survey on Enabling Technologies, Protocols, and Applications").
+- **Trends:** The field is moving toward composable, adaptive frameworks that combine progressive training, knowledge distillation, and client selection.
+- **Incremental Advances:** Most recent papers offer incremental improvements (e.g., more flexible block assignment, better block collaboration, more inclusive participation) rather than paradigm shifts.
+- **Reviewer Calibration:** Large empirical gains are rare; most advances are 2–10% over SOTA, so claims of 40%+ should be scrutinized for experimental fairness.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The "synergistic" and "elastic" mechanisms are refinements of existing ideas (block collaboration, adaptive resource allocation) rather than fundamentally new concepts.
+- **Empirical Improvements:** Large reported gains may result from implementation details, hyperparameter choices, or selective baselines rather than core innovations.
+- **Terminology Differences:** "Synergistic" and "holistic" may mask similarities to NeuLite’s "block collaboration" and SmartFreeze’s "pace control."
+- **Routine Extensions:** The elastic protocol is a routine adaptation of dynamic model assignment, already present in FedRolex and NeuLite.
+- **Omitted Comparisons:** Lack of direct comparison to NeuLite, SmartFreeze, and ProgFed (most similar works) is a significant omission.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:**
+  - **NeuLite, SmartFreeze, ProgFed:** All address progressive/block-wise training with block collaboration and/or heterogeneity-aware adaptation.
+  - **Breaking the Memory Wall for Heterogeneous FL via Progressive Training:** Directly relevant, not cited.
+  - **Detached Error Feedback for Distributed SGD with Random Sparsification:** Related to communication/memory efficiency.
+- **Additional Comparisons Needed:** Direct empirical and conceptual comparison to NeuLite, SmartFreeze, and ProgFed is necessary to substantiate novelty claims.
+- **Potentially Misleading Characterizations:** Authors may exaggerate the limitations of prior progressive methods by not acknowledging their block collaboration mechanisms.
+- **Limitations of Prior Work:** The claim that prior methods lack block collaboration is not fully accurate; NeuLite and SmartFreeze both address this.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - Honey offers a more explicit fusion of holistic and block-wise feedback for block collaboration, and a potentially more granular elastic resource harmonization protocol.
+- **Main Relationships to Existing Research:**
+  - Honey is an incremental extension of NeuLite, SmartFreeze, and FedRolex, building on progressive/block-wise training and adaptive resource allocation.
+- **Strongest Differentiation:**
+  - The combination of holistic and block-wise feedback in a single framework is a modest but real extension.
+- **Weakest Differentiation:**
+  - Elastic resource harmonization is conceptually similar to dynamic sub-model extraction in FedRolex and NeuLite.
+- **Discrepancies:**
+  - Authors overstate the lack of block collaboration in prior work and omit direct comparison to the most similar recent methods.
+  - Claimed empirical gains are unusually large for the field and may be due to factors other than core algorithmic novelty.
+
+---
+
+**In summary:**  
+Honey represents an incremental advance in progressive, memory-efficient federated learning, with its main novelty being the explicit combination of holistic and block-wise feedback for block collaboration and a more granular elastic resource harmonization protocol. However, similar mechanisms already exist in NeuLite, SmartFreeze, and FedRolex, and the differences are refinements rather than conceptual leaps. The omission of direct comparison to these works and the magnitude of claimed empirical gains warrant careful scrutiny. The field is mature, and most advances are incremental; reviewers should calibrate expectations accordingly.

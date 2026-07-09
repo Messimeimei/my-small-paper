@@ -1,0 +1,158 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+The submission addresses the *effectiveness of reward models (ORM, PRM) as RL rewards for LLM reasoning*, focusing on *training-time* (not just inference-time) use, and introduces two reward refinement techniques (Clip, Delta) to mitigate issues with process-supervised reward models (PRM). The work is situated within the dominant methodological cluster of *RL with reward models for LLM reasoning*, particularly in the context of mathematical reasoning (MATH, GSM8K).
+
+**Most Closely Related Prior Works:**
+- **Teaching Large Language Models to Reason with Reinforcement Learning** (Lightman et al., 2024): RL with learned reward models for LLM reasoning.
+- **Improve Mathematical Reasoning in Language Models by Automated Process Supervision** (Wang et al., 2024b): Automated process supervision and PRM for math reasoning.
+- **Advancing LLM Reasoning Generalists with Preference Trees** (Yang et al., 2024b): RL and preference-based methods for generalist reasoning.
+- **SimPO, WARM, DeepSeekMath**: Address reward model robustness, reward hacking, and large-scale math reasoning.
+
+**Relation to Methodological Clusters:**
+- The submission is most closely aligned with *Cluster 1* (RL with reward models for LLM reasoning), but also touches on *Cluster 2* (Automated process supervision) and *Cluster 3* (Reward model robustness).
+- The focus on *reward model effectiveness during RL training* and *reward refinement* (Clip, Delta) is a nuanced extension of prior work, which has primarily focused on reward model design, automated supervision, and evaluation, but less on *systematic analysis of reward model behavior during RL training* and *mechanisms to mitigate PRM-induced collapse*.
+
+**Problem Space and Evaluation:**
+- The submission addresses the *practical limitations and pitfalls* of using PRM as RL reward, a problem that has been noted but not systematically analyzed in prior work.
+- Evaluation is on standard math reasoning benchmarks (MATH, GSM8K), consistent with the field.
+
+**Independent Assessment:**
+- The submission is not the first to use PRM or ORM as RL rewards, nor the first to note issues with reward misspecification or reward hacking.
+- However, it appears to be among the first to *systematically analyze* the *training-time* effects of PRM in RL for LLM reasoning, and to propose *specific, simple reward refinement mechanisms* (Clip, Delta) with empirical validation.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+- The authors cite a broad swath of recent work, often as part of a "recent trend" to improve LLM reasoning with learned reward models (Lightman et al., Wang et al., Yu et al., Zhang et al., Lee et al., Yang et al., Luo et al., Chen et al., Havrilla et al., Shao et al., Uesato et al.).
+- They group prior work into categories: pre-training, prompting, search, fine-tuning, and reward hacking mitigation.
+
+**Accuracy and Balance:**
+- The citations are generally accurate in identifying the main thrust of each work (e.g., process supervision, reward hacking, preference learning).
+- However, the characterizations are *broad* and sometimes *generic*, e.g., "recent trend to improve reasoning ability of LLMs with learned reward models," without specifying the *exact mechanisms* or *limitations* of each cited work.
+
+**Discrepancies and Rhetoric:**
+- The submission claims to be the "first in-depth evaluation" of ORM/PRM as RL rewards during training, but prior works (e.g., Wang et al., 2024b; Lightman et al., 2024) have also evaluated PRM/ORM in RL settings, though perhaps not with the same focus on *training collapse* or *reward refinement*.
+- The authors do not explicitly acknowledge prior work on *reward model robustness* (e.g., WARM, RewardMATH) or *reward hacking* (SimPO, length normalization), which are highly relevant to their analysis of PRM issues.
+- The claim that prior works have not addressed "training collapse" with PRM is not directly substantiated; some prior works have noted instability or reward hacking, though perhaps not with the same terminology.
+
+**Substantiation of Claimed Improvements:**
+- The introduction of Clip and Delta mechanisms is presented as novel, but the authors do not compare these to other reward regularization or normalization techniques (e.g., length normalization, reward clipping, reward ensembling) that have been explored in the literature.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Contribution 1: *First in-depth evaluation of ORM/PRM as RL rewards for LLM reasoning during training*
+
+- **Most Similar Prior Work:** Wang et al. (2024b), Lightman et al. (2024), and related RL-with-PRM/ORM studies.
+- **Claimed Difference:** Prior works focus on inference-time or do not systematically analyze training-time effects; this work provides the first in-depth training-time evaluation.
+- **Independent Assessment:**  
+  - Prior works have used PRM/ORM as RL rewards and reported performance, but systematic analysis of *training collapse* and *reward misspecification* during RL training is less common.
+  - However, some prior works (e.g., SimPO, WARM, RewardMATH) have analyzed reward model robustness and overoptimization, which are closely related.
+  - The delta is *partially substantive*: the focus on *training-time dynamics* and *failure modes* is more detailed than most prior work, but not entirely unprecedented.
+
+## Contribution 2: *Identification of training collapse and sub-optimality when using PRM as reward shaping in RL*
+
+- **Most Similar Prior Work:** SimPO (reward hacking), WARM (reward model instability), RewardMATH (reward model robustness).
+- **Claimed Difference:** Prior works have not identified or analyzed training collapse with PRM in RL for LLM reasoning.
+- **Independent Assessment:**  
+  - Prior works have discussed reward hacking, overoptimization, and instability, but may not have explicitly framed it as "training collapse" due to PRM.
+  - The submission's empirical demonstration of this phenomenon in math reasoning RL is a *concrete and useful addition*, though the underlying issue (reward misspecification/instability) is known.
+  - The delta is *incremental but valuable* in its empirical focus.
+
+## Contribution 3: *Introduction of two novel reward refinement techniques (Clip, Delta) to address PRM bias/misspecification*
+
+- **Most Similar Prior Work:** Length normalization (Meng et al., 2024), reward clipping, reward ensembling (Eisenstein et al., 2024), SimPO (reference-free reward), WARM (weight averaging).
+- **Claimed Difference:** Clip and Delta are novel mechanisms for refining process rewards to mitigate PRM issues.
+- **Independent Assessment:**  
+  - Reward clipping and normalization are standard techniques in RL and have been applied in LLM RL (e.g., length normalization, reward scaling).
+  - The *Delta* mechanism (rewarding only improvement over previous steps) is less common and may be a more novel adaptation for process rewards.
+  - The *Clip* mechanism is likely a variant of standard reward clipping.
+  - The delta is *partially substantive*: Clip is a routine adaptation; Delta is a more specific, possibly novel, mechanism for process reward refinement.
+
+## Contribution 4: *Demonstration that refined reward functions enable pure RL training to improve SOTA LLMs on math reasoning*
+
+- **Most Similar Prior Work:** DeepSeekMath, Wang et al. (2024b), Lightman et al. (2024), Shao et al. (2024).
+- **Claimed Difference:** With refined rewards, pure RL (no extra supervised tuning) can further improve SOTA LLMs.
+- **Independent Assessment:**  
+  - Prior works have shown RL can improve LLMs on math reasoning, sometimes with or without additional supervised tuning.
+  - The specific claim that *reward refinement* enables further gains is plausible, but the improvement may be due to *implementation details* (e.g., better reward scaling, more stable RL) rather than fundamentally new concepts.
+  - The delta is *incremental* and may depend on experimental setup.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The area is *highly active and rapidly evolving*, with many papers in 2023-2024 introducing new RL objectives, reward models, and evaluation protocols.
+- **Recent Surveys/Literature Reviews:** No comprehensive survey is cited, but the research landscape analysis above reflects the current state.
+- **Trends:**  
+  - Shift from outcome to process/token-level rewards.
+  - Move from human to automated process supervision.
+  - Increasing focus on reward model robustness and reward hacking.
+  - Emphasis on rigorous, adversarial evaluation.
+- **Incremental Advances:** Many recent papers introduce *incremental improvements* (new reward models, RL objectives, data curation, evaluation metrics), often building on similar pipelines.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:**  
+  - The claim of being the "first in-depth evaluation" of ORM/PRM as RL rewards is *somewhat overstated*; prior works have evaluated these models, though perhaps not with the same focus on training collapse.
+  - The *Clip* mechanism is a standard RL technique; its application to PRM is a routine adaptation.
+  - The *Delta* mechanism is more specific and may be a novel adaptation, but is conceptually related to reward shaping and difference rewards in RL.
+- **Empirical Improvements:**  
+  - Gains from reward refinement may be due to *better reward scaling or normalization* rather than fundamentally new ideas.
+  - The improvements over SOTA may depend on *implementation details* (e.g., model size, training stability, data quality).
+- **Terminology Differences:**  
+  - "Training collapse" may be a new term for known issues (reward hacking, instability).
+  - "Reward refinement" (Clip, Delta) may overlap with existing reward normalization/clipping techniques.
+- **Routine Extensions:**  
+  - Applying reward clipping to PRM is a routine extension.
+  - The Delta mechanism, while more specific, is an adaptation of known RL reward shaping ideas.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Relevant Work Not Addressed:**  
+  - *Evaluating Robustness of Reward Models for Mathematical Reasoning* (RewardMATH): Directly relevant to reward model robustness.
+  - *RL on Incorrect Synthetic Data Scales the Efficiency of LLM Math Reasoning by Eight-Fold*: Addresses RL with synthetic data for math reasoning.
+  - *Process Supervision-Guided Policy Optimization for Code Generation*: Applies process supervision in RL for code, conceptually similar.
+  - *Improving Large Language Model Fine-tuning for Solving Math Problems*: RL and reward modeling for math reasoning.
+  - *Fill in the Blank*, *Scheherazade*: New benchmarks and evaluation protocols for math reasoning.
+- **Areas for Additional Comparison:**  
+  - Comparison with reward model robustness techniques (WARM, RewardMATH).
+  - Comparison with other reward normalization/clipping methods.
+  - Analysis of whether Delta is fundamentally different from difference rewards or reward shaping in RL.
+- **Incomplete Characterizations:**  
+  - The submission does not fully acknowledge prior work on reward model robustness and reward hacking.
+  - Limitations of prior work may be *exaggerated* to emphasize novelty (e.g., "first in-depth evaluation").
+- **Citation Practices:**  
+  - The authors cite many works as part of a "trend" but do not always specify the *exact* contributions or limitations of each.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - The submission provides a *systematic, empirical analysis* of PRM/ORM as RL rewards during training, with a focus on *training collapse* and *reward misspecification*.
+  - The *Delta* reward refinement mechanism is a more specific adaptation for process rewards and may be novel in this context.
+- **Main Relationships to Existing Research:**
+  - The work builds directly on RL with reward models for LLM reasoning, process supervision, and reward model robustness.
+  - It is an *incremental advance* in a rapidly evolving field, with some novel empirical findings and adaptations.
+- **Strongest Differentiation:**
+  - Empirical analysis of PRM-induced training collapse and the introduction of the Delta mechanism for process reward refinement.
+- **Weakest Differentiation:**
+  - The use of reward clipping (Clip) is a routine adaptation; the claim of "first in-depth evaluation" is somewhat overstated.
+- **Discrepancies Between Author Characterizations and Independent Assessment:**
+  - The novelty of the evaluation and reward refinement mechanisms is *partially overstated*; prior work has addressed related issues, though perhaps not with the same empirical focus or terminology.
+  - The submission does not fully acknowledge the breadth of prior work on reward model robustness, reward hacking, and normalization techniques.
+
+---
+
+**Overall, the submission offers a useful empirical analysis and a specific adaptation (Delta) for process reward refinement, but its claims of novelty should be interpreted in the context of a field where many similar issues and techniques have been explored. The main value lies in the systematic training-time analysis and the practical demonstration of reward refinement mechanisms, rather than in fundamentally new concepts.**

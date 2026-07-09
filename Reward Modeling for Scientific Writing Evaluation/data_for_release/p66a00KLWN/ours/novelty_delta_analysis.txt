@@ -1,0 +1,125 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating NExT-Mol in the Landscape:**
+- **NExT-Mol** is positioned at the intersection of three major methodological clusters: (1) large-scale 1D molecular language modeling (SELFIES-based), (2) 3D diffusion models for conformer generation, and (3) cross-modal/transfer learning between 1D and 3D molecular representations.
+- The most closely related prior works are:
+  - **Language Model-based Generation:** SELFormer, MolGPT, MOLGEN, nach0-pc, FusionDTI.
+  - **3D Diffusion Models:** MiDi, JODO, EQGAT-diff, GeoLDM, MDM, APMG.
+  - **Joint/Hybrid Models:** MiDi, JODO, nach0-pc, TextSMOG.
+- **Independent Assessment:**
+  - While several works have explored 1D language models (e.g., SELFormer, MolGPT) and 3D diffusion (e.g., MiDi, EQGAT-diff), NExT-Mol is among the first to explicitly transfer knowledge from a large-scale 1D language model (MoLlama) to a 3D diffusion model (DMT) via a cross-modal projector.
+  - Prior joint models (e.g., MiDi, JODO) focus on 2D/3D or graph/3D joint diffusion, but do not leverage large-scale 1D language modeling or explicit transfer learning from 1D to 3D.
+  - The use of SELFIES for 100% validity is a trend in recent works (SELFormer, FusionDTI), but NExT-Mol extends this to 3D generation.
+- **Problem Space:** NExT-Mol addresses 3D conformer generation with a focus on validity, leveraging 1D data, and bridging the modality gap—an area where prior work has been limited or has not fully exploited large-scale 1D pretraining.
+- **Evaluation:** The use of advanced 3D metrics (FCD, COV-R) and benchmarks (GEOM-DRUGS, QM9-2014) aligns with current standards in the field.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Positioning:**
+- Authors consistently position their work as overcoming limitations of prior models in validity, scalability, and cross-modal transfer.
+- They characterize prior 1D models (e.g., SELFormer, MolGPT) as limited by non-autoregressive pretraining, lack of 100% validity, or small model sizes.
+- 3D diffusion models (e.g., MiDi, EQGAT-diff, GeoLDM) are described as occasionally generating invalid molecules and not leveraging 1D data.
+
+**Accuracy and Balance:**
+- **SELFormer, MolGPT:** Authors claim these use non-autoregressive pretraining or lack 100% validity. This is accurate for some (e.g., MolGPT does not guarantee 100% validity), but SELFormer does use transformer-based language modeling and SELFIES, which can achieve high validity, though not always 100%.
+- **MiDi, JODO, EQGAT-diff, GeoLDM:** Authors state these do not leverage 1D data and may generate invalid molecules. This is generally accurate; these models focus on 2D/3D or graph/3D, not 1D-to-3D transfer.
+- **Overstatements:** The claim that prior works are "unsuitable for de novo generation" due to non-autoregressive pretraining may be overstated, as some non-autoregressive models can still be used for generation, albeit with limitations.
+
+**Discrepancies:**
+- The authors understate the scalability and flexibility of some prior models (e.g., SELFormer, MolGPT) by focusing on model size or architecture, without acknowledging recent scaling efforts.
+- The characterization of prior 3D diffusion models as not achieving 100% validity is accurate, but the degree of improvement in NExT-Mol may be incremental rather than transformative.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**A. Combination of 1D Language Modeling and 3D Diffusion**
+- **Most Similar Prior Work:** MiDi, JODO (joint 2D/3D or graph/3D diffusion); nach0-pc (multi-modal, but not 1D-to-3D transfer).
+- **Claimed Difference:** First to combine large-scale 1D language modeling (SELFIES) with 3D diffusion via transfer learning.
+- **Independent Assessment:** No prior work explicitly transfers knowledge from a large 1D language model to a 3D diffusion model for conformer generation. MiDi and JODO combine graph and 3D, but not 1D language models. nach0-pc is multi-modal but focuses on point clouds and language, not explicit 1D-to-3D transfer.
+- **Delta:** Substantive—this cross-modal transfer is a new direction, though the conceptual leap is incremental (combining two established paradigms).
+
+**B. MoLlama: Large-Scale Autoregressive Transformer LM on SELFIES**
+- **Most Similar Prior Work:** SELFormer, MolGPT, MOLGEN.
+- **Claimed Difference:** Larger scale (1.8B sequences), autoregressive, transformer-based, 100% validity.
+- **Independent Assessment:** Prior works use transformer LMs on SELFIES/SMILES, but MoLlama is larger and explicitly autoregressive. 100% validity is a property of SELFIES, not unique to MoLlama, but large-scale pretraining is a differentiator.
+- **Delta:** Moderate—scaling up is a trend, but the combination of scale, architecture, and pretraining corpus is a meaningful extension.
+
+**C. DMT: Diffusion Molecular Transformer with Relational Multi-Head Self-Attention**
+- **Most Similar Prior Work:** EQGAT-diff, GeoLDM, MDM, MiDi.
+- **Claimed Difference:** Novel scalable neural architecture with relational attention for 3D conformer prediction.
+- **Independent Assessment:** Prior works use equivariant GNNs or transformers, but relational multi-head self-attention as described may be a new architectural detail. However, the impact of this change versus prior equivariant attention mechanisms is not fully quantified.
+- **Delta:** Potentially substantive, but may be an architectural refinement rather than a conceptual leap.
+
+**D. Transfer Learning from 1D to 3D via Cross-Modal Projector**
+- **Most Similar Prior Work:** nach0-pc (multi-modal), MiDi (joint graph/3D), JODO.
+- **Claimed Difference:** Effective transfer from 1D molecular representations to 3D conformer prediction.
+- **Independent Assessment:** No prior work demonstrates explicit transfer from a large 1D LM to 3D diffusion for conformer generation. Cross-modal projectors are used in other domains, but this application is novel in molecular generation.
+- **Delta:** Substantive in application, though the mechanism (cross-modal projector) is a known technique.
+
+**E. State-of-the-Art Results**
+- **Most Similar Prior Work:** MiDi, EQGAT-diff, GeoLDM.
+- **Claimed Difference:** SOTA on 3D FCD and COV-R.
+- **Independent Assessment:** Reported improvements (e.g., 26% FCD, 1.1–1.3% COV-R) are incremental but real. The field is highly competitive, and such gains are typical of recent SOTA advances.
+- **Delta:** Incremental—improvements are within the range of recent SOTA progress.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The area of molecular generative modeling, especially 3D diffusion and multi-modal approaches, is highly active and rapidly evolving. Many works from 2022–2024.
+- **Recent Surveys:** See "A Survey on Deep Generative Models for Molecular Design" (2023), "Diffusion Models for Molecules: A Review" (2024).
+- **Trends:** Movement towards multi-modal, cross-modal, and property-controllable generation; increasing use of SELFIES; focus on 3D metrics and equivariant architectures.
+- **Incremental Advances:** SOTA improvements are often incremental (1–5% on key metrics), with conceptual advances coming from new combinations of modalities or architectures.
+- **Reviewer Calibration:** Novelty is often in integration and scale rather than entirely new paradigms; small metric gains are typical.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The claim of being "first" to combine 1D language modeling and 3D diffusion is accurate in the specific sense of transfer learning, but prior works have combined multiple modalities (e.g., MiDi, nach0-pc).
+- **Empirical Improvements:** Gains in FCD and COV-R may be due to scale, data, or implementation details (e.g., larger pretraining corpus, better hyperparameters) rather than solely conceptual advances.
+- **Terminology Differences:** "Cross-modal projector" and "relational attention" may be new terms for established techniques; similar mechanisms may exist under different names in prior work.
+- **Routine Extensions:** Scaling up language models and adding transfer learning are natural extensions in this field; the novelty is in the specific combination and application.
+- **Validity Claims:** 100% validity is a property of SELFIES, not unique to MoLlama or NExT-Mol.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:**
+  - **APMG:** 3D molecule generation with atomic chemical properties.
+  - **Domain-Agnostic Molecular Generation with Self/Chemical Feedback:** Feedback mechanisms for molecular generation.
+  - **nach0-pc:** Multi-task LM with molecular point cloud encoder (multi-modal, relevant to cross-modal transfer).
+  - **FusionDTI:** Token-level fusion for drug-target interaction (multi-modal).
+- **Additional Comparisons Needed:** The submission does not compare with nach0-pc or APMG, which are relevant for multi-modal and 3D generation.
+- **Potentially Misleading Characterizations:** The limitations of prior 1D models may be exaggerated; some recent works have scaled up or improved validity.
+- **Limitations of Prior Work:** The claim that prior 3D diffusion models do not leverage 1D data is accurate, but the impact of this on performance is not fully explored.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - NExT-Mol is the first to demonstrate explicit transfer learning from a large-scale 1D language model (SELFIES-based) to a 3D diffusion model for conformer generation.
+  - The use of a cross-modal projector for 1D-to-3D transfer is novel in this context.
+- **Main Relationships to Existing Research:**
+  - Builds on trends in SELFIES-based language modeling and 3D diffusion, integrating them via transfer learning.
+  - Extends prior joint/graph+3D models (MiDi, JODO) by leveraging 1D data.
+- **Strongest Differentiation:**
+  - Cross-modal transfer from 1D to 3D.
+  - Large-scale pretraining on SELFIES for 3D generation.
+- **Weakest Differentiation:**
+  - Architectural innovations (relational attention) may be incremental.
+  - SOTA improvements are within the range of recent incremental advances.
+- **Discrepancies:**
+  - Authors may overstate the limitations of prior 1D models and the novelty of 100% validity.
+  - Some relevant multi-modal works (nach0-pc, APMG) are not cited or compared.
+
+---
+
+**These observations are intended to inform reviewers' independent judgment regarding the novelty and significance of NExT-Mol's contributions, highlighting both the genuine advances and areas where claims may be overstated or require further contextualization.**

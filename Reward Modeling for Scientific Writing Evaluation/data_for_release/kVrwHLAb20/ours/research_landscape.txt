@@ -1,0 +1,173 @@
+Below is a comprehensive research landscape analysis based on the provided submission and related papers.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, several methodological themes emerge, centering on:
+- **Watermarking for LLMs and Generative Models**: Methods for embedding, detecting, and attacking watermarks in LLM-generated content (e.g., Unigram-Watermark, topic-based watermarks, semantic watermarks, distortion-free watermarks, black-box detection, and watermark stealing).
+- **Dataset Ownership and Usage Detection**: Approaches for detecting unauthorized dataset usage, including watermark-based detection (Ward, Domain Watermark, EnTruth) and membership inference attacks (MIAs).
+- **Security and Privacy Attacks on RAG**: Techniques for attacking RAG systems, including knowledge poisoning, backdoor attacks, and privacy leakage via prompt engineering.
+- **Evaluation and Benchmarking Frameworks**: Automated dataset and metric generation for RAG evaluation (RAGEval, Frad, Mimir).
+
+### Method Clusters
+
+**Cluster 1: Watermarking and Detection**
+- **Embedding Watermarks**: Unigram-Watermark, topic-based watermarks, semantic watermarks (SemStamp), distortion-free watermarks, and X-SIR for cross-lingual robustness.
+- **Detection and Analysis**: Black-box detection, statistical tests for spoofed watermarks, and parameter estimation.
+- **Attacks on Watermarks**: Watermark stealing, black-box scrubbing (B4), adaptive paraphrasing attacks, and cross-lingual removal (CWRA).
+
+**Cluster 2: Dataset Ownership and Usage Detection**
+- **Watermark-based Dataset Inference**: Ward (submission), Domain Watermark, EnTruth.
+- **Membership Inference Attacks**: MIAs on LLMs and RAG (including black-box and gray-box settings).
+
+**Cluster 3: Security and Privacy Attacks on RAG**
+- **Poisoning and Backdoor Attacks**: BadRAG, PoisonedRAG, and selective-fact/denial-of-service attacks.
+- **Privacy Leakage**: Prompt-based extraction of private data from RAG databases.
+
+**Cluster 4: Evaluation and Benchmarking**
+- **Dataset and Metric Generation**: RAGEval, Frad, Mimir (for MIAs).
+
+### Methodological Trends and Relationships
+
+- **Shift from Model to Dataset Provenance**: Early work focused on watermarking model outputs; recent work (Ward, Domain Watermark, EnTruth) targets dataset-level ownership and usage detection.
+- **Increasing Attack Sophistication**: Attacks have evolved from simple paraphrasing to adaptive, preference-based, and cross-lingual attacks, as well as black-box and spoofing strategies.
+- **Robustness and Stealth**: Both watermarking and attack methods increasingly emphasize robustness (to paraphrasing, translation, editing) and stealth (minimal data alteration, undetectability).
+- **Formal Guarantees and Statistical Rigor**: Newer methods (Ward, Unigram-Watermark, black-box detection) provide formal statistical guarantees for detection and robustness.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Unauthorized Dataset Usage in RAG and Generative Models**
+   - Detecting if a dataset was used in training or retrieval (Ward, Domain Watermark, EnTruth).
+   - Copyright protection and ownership verification.
+
+2. **Privacy and Security Vulnerabilities in RAG**
+   - Leakage of private or sensitive data from retrieval databases (Good and Bad, Is My Data in Your Retrieval Database?).
+   - Knowledge poisoning and backdoor attacks (BadRAG, PoisonedRAG).
+
+3. **Robustness and Detection of Watermarks**
+   - Ensuring watermarks survive paraphrasing, translation, and adversarial attacks (SemStamp, Robust Distortion-free Watermarks, X-SIR).
+   - Detecting and distinguishing genuine vs. spoofed watermarks (Discovering Clues of Spoofed LM Watermarks, Black-Box Detection).
+
+4. **Evaluation and Benchmarking**
+   - Lack of suitable datasets and metrics for RAG evaluation (RAGEval, Frad).
+   - Ambiguity and limitations in membership inference for LLMs (Do MIAs Work on LLMs?, Mimir).
+
+### Approaches to Similar Problems
+
+- **Dataset Usage Detection**: Ward introduces LLM watermarks for provable RAG dataset inference, while Domain Watermark and EnTruth use data modification and memorization, respectively, for ownership verification.
+- **Membership Inference**: MIAs are adapted for both LLMs and RAG, but their effectiveness is limited by high data overlap and fuzzy boundaries in LLMs; Ward addresses these limitations with formal guarantees.
+- **Watermark Robustness**: Approaches range from token-level to semantic and topic-based watermarks, with increasing focus on robustness to paraphrasing and translation.
+- **Security Attacks**: Poisoning and backdoor attacks are formulated as optimization problems, with methods evolving to handle open-ended queries and semantic triggers.
+
+### Patterns in Problem Formulation
+
+- **From Model to Data**: The field is moving from model-centric (who generated this text?) to data-centric (was my data used?).
+- **From Detection to Attribution**: There is a shift from merely detecting AI-generated content to attributing content to specific datasets or data owners.
+- **From Simple to Complex Threat Models**: Early work assumed non-adaptive attackers; recent work considers adaptive, black-box, and cross-lingual adversaries.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets and Evaluation Methods
+
+- **Custom and Benchmark Datasets**: Many works introduce new datasets (Frad, DragonBall, Mimir) or use standard ones (CIFAR, ImageNet, The Pile, medical Q&A).
+- **Metrics**:
+  - **Detection/Attack Success**: True positive/false positive rates, attack success rate, detection accuracy, AUC.
+  - **Robustness**: To paraphrasing, translation, editing, and adversarial attacks.
+  - **Quality**: Perplexity, semantic fidelity, generation quality.
+  - **Efficiency**: Query efficiency, computational cost, performance overhead.
+
+### Patterns in Performance Measurement
+
+- **Statistical Rigor**: Increasing use of hypothesis testing, p-values, and formal statistical guarantees (Ward, Unigram-Watermark, Black-Box Detection).
+- **Robustness as a Core Metric**: Robustness to various attacks is now a standard evaluation criterion.
+- **Human Consistency**: Some works (RAGEval) validate LLM-based metrics against human judgment.
+- **Efficiency and Stealth**: Query efficiency and minimal data alteration are valued, especially for practical deployment.
+
+### Comparison of Evaluation Approaches
+
+- **Watermarking**: Evaluated on detection accuracy, robustness, and text quality; newer methods emphasize distortion-free and agnostic detection.
+- **Dataset Usage Detection**: Evaluated on accuracy, false accusation rate, and robustness to adversarial providers.
+- **Security Attacks**: Measured by attack success rate, stealthiness, and impact on model behavior.
+- **Benchmarking Frameworks**: Focus on coverage, scenario diversity, and metric validity.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: Watermarking and Detection (LLM Output Attribution)
+- **Papers**: Provable Robust Watermarking, Topic-Based Watermarks, SemStamp, Robust Distortion-free Watermarks, Black-Box Detection, Watermark Stealing, Discovering Clues of Spoofed LM Watermarks, Can Watermarks Survive Translation?, B4, Optimizing Adaptive Attacks.
+- **Characteristics**: Focus on embedding, detecting, and attacking watermarks in LLM outputs; strong emphasis on robustness, stealth, and statistical rigor; includes both defensive and offensive perspectives.
+
+### Cluster 2: Dataset Ownership and Usage Detection
+- **Papers**: Ward (submission), Domain Watermark, EnTruth.
+- **Characteristics**: Methods for provable dataset inference, ownership verification, and copyright protection; leverage watermarks, memorization, or domain generation; focus on minimal data alteration and formal guarantees.
+
+### Cluster 3: Security and Privacy in RAG
+- **Papers**: The Good and The Bad, BadRAG, PoisonedRAG, Is My Data in Your Retrieval Database?
+- **Characteristics**: Study of privacy leakage, knowledge poisoning, and backdoor attacks in RAG systems; development of attack and defense strategies; focus on both direct and indirect vulnerabilities.
+
+### Cluster 4: Membership Inference and Benchmarking
+- **Papers**: Do MIAs Work on LLMs?, Is My Data in Your Retrieval Database?, Mimir.
+- **Characteristics**: Evaluation of MIAs on LLMs and RAG; analysis of limitations due to data overlap and fuzzy membership; development of unified benchmarks.
+
+### Cluster 5: Evaluation and Benchmarking Frameworks
+- **Papers**: RAGEval, Frad (submission).
+- **Characteristics**: Automated generation of evaluation datasets and metrics for RAG; focus on scenario specificity, factual accuracy, and alignment with human judgment.
+
+### Relationships Between Clusters
+
+- **Clusters 1 & 2**: Watermarking methods in Cluster 1 are foundational for dataset usage detection in Cluster 2.
+- **Clusters 2 & 3**: Both address data provenance and security, but Cluster 2 is defensive (ownership), while Cluster 3 is adversarial (attacks).
+- **Clusters 3 & 4**: Membership inference attacks in Cluster 4 are a subset of privacy attacks in Cluster 3.
+- **Cluster 5**: Provides the infrastructure for evaluating methods in all other clusters.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Output Attribution to Dataset Provenance**: Early watermarking focused on attributing text to LLMs; recent work (Ward, Domain Watermark, EnTruth) extends this to dataset-level inference and ownership.
+- **From Simple to Robust Watermarks**: Watermarking methods have evolved from token-level, easily-broken schemes to robust, semantic, topic-based, and distortion-free approaches, withstanding paraphrasing, translation, and adaptive attacks.
+- **From Naive to Adaptive Attacks**: Attackers have moved from simple paraphrasing to sophisticated, preference-based, and black-box attacks, prompting a corresponding evolution in defensive techniques.
+- **From Model-Centric to Data-Centric Security**: The field is shifting focus from model behavior to data usage, with formalization of new problems (RAG-DI) and the creation of purpose-built datasets (Frad, DragonBall).
+- **From Empirical to Formal Guarantees**: There is a clear trend toward providing statistical and theoretical guarantees for detection, robustness, and ownership verification.
+
+### Building Blocks and Extensions
+
+- **Watermarking as a Foundation**: Many dataset usage detection methods (Ward, Domain Watermark) build on advances in watermarking.
+- **Benchmarking and Evaluation**: Tools like Mimir and RAGEval enable systematic comparison and drive methodological improvements.
+- **Attack-Defense Arms Race**: Each new watermarking or detection method is quickly followed by new attacks, leading to a cycle of innovation.
+
+### Competing and Complementary Approaches
+
+- **Watermarking vs. Memorization**: Some methods (EnTruth) use memorization for traceability, while others (Ward, Domain Watermark) use watermarks or domain generation.
+- **Token-level vs. Semantic Watermarks**: Semantic and topic-based watermarks offer greater robustness than token-level schemes.
+- **Black-box vs. White-box Attacks**: The field is moving toward black-box threat models, reflecting real-world constraints.
+
+---
+
+# Summary Table
+
+| Cluster | Focus | Key Methods | Notable Papers |
+|---------|-------|-------------|---------------|
+| 1. Watermarking & Detection | Attribution of LLM outputs, robustness | Unigram-Watermark, topic-based, semantic, distortion-free, black-box detection, attacks | Provable Robust Watermarking, SemStamp, Black-Box Detection, Watermark Stealing, B4 |
+| 2. Dataset Ownership & Usage | Dataset inference, copyright, ownership | Ward, Domain Watermark, EnTruth | Ward (submission), Domain Watermark, EnTruth |
+| 3. Security & Privacy in RAG | Attacks on RAG, privacy leakage | Poisoning, backdoors, prompt attacks | BadRAG, PoisonedRAG, The Good and The Bad |
+| 4. Membership Inference & Benchmarking | MIAs, evaluation frameworks | MIAs, Mimir | Do MIAs Work on LLMs?, Is My Data in Your Retrieval Database? |
+| 5. Evaluation & Benchmarking | Dataset/metric generation | RAGEval, Frad | RAGEval, Frad (submission) |
+
+---
+
+# Conclusion
+
+The research landscape is rapidly evolving from model-centric watermarking and privacy attacks to data-centric ownership, robust watermarking, and formal dataset usage detection. The submission paper, **Ward**, exemplifies this trend by providing the first formalization and provable solution for RAG dataset inference, leveraging advances in LLM watermarking and robust evaluation. The field is characterized by an ongoing arms race between increasingly sophisticated watermarking/detection methods and adaptive, black-box attacks, with a growing emphasis on statistical rigor, robustness, and practical deployment.

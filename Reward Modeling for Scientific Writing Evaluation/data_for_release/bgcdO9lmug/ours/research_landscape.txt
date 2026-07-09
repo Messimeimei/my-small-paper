@@ -1,0 +1,266 @@
+---
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the dominant methodological theme is **automatic prompt engineering (APE)** for large language models (LLMs), with a focus on iterative, feedback-driven, and often self-reflective optimization. The methods can be grouped into several clusters:
+
+#### **Cluster 1: Iterative, Feedback-Driven Prompt Optimization**
+- **Gradient-Descent-Like and Analogy-Based Methods:**  
+  - *Submission Paper, Related Paper 1, Related Paper 6 (GPO)*: All propose prompt optimization methods inspired by gradient descent, using iterative updates based on feedback from intermediate outputs or optimization trajectories.
+  - *Related Paper 8 (Self-Refine), Related Paper 14 (Self-Debugging)*: Use iterative self-feedback and refinement, where the LLM critiques and improves its own outputs.
+- **Summarization and Reflection:**  
+  - *Submission Paper, Related Paper 1*: Use summarization of dialogue history and reflection to guide prompt updates.
+  - *Related Paper 2 (PromptAgent)*: Incorporates LLM self-reflection and error feedback in a strategic planning framework.
+
+#### **Cluster 2: Search and Planning-Based Prompt Optimization**
+- **Strategic Search Algorithms:**  
+  - *Related Paper 2 (PromptAgent)*: Formulates prompt optimization as a strategic planning problem, using Monte Carlo Tree Search (MCTS) to explore prompt space.
+  - *Related Paper 13 (Tree of Thoughts)*: Maintains a tree of intermediate "thoughts" and uses search algorithms (BFS, DFS) for deliberate problem solving.
+- **Heuristic and Human-in-the-Loop Sampling:**  
+  - *Related Paper 5 (PROMST)*: Integrates human-designed feedback rules and heuristic-based sampling for multi-step prompt optimization.
+
+#### **Cluster 3: Multi-Aspect and Multi-Metric Optimization**
+- *Related Paper 7 (CriSPO)*: Introduces multi-aspect critique-suggestion modules and automatic suffix tuning to optimize prompts for multiple metrics simultaneously.
+
+#### **Cluster 4: Domain-Specific and Task-Specific Prompt Engineering**
+- *Related Paper 3 (APEER)*: Focuses on passage relevance ranking in IR, using iterative feedback and preference optimization.
+- *Related Paper 4 (RePrompt for Generative Art)*: Applies explainable prompt editing to improve emotional expressiveness in text-to-image generation.
+- *Related Paper 15 (LLaMoCo)*: Uses instruction tuning and contrastive learning for optimization code generation.
+
+#### **Cluster 5: Reasoning and Acting Integration**
+- *Related Paper 12 (ReAct)*: Interleaves reasoning and acting in LLMs for more effective task-solving.
+- *Related Paper 9 (RCI)*: Uses recursive criticism and improvement, combining reasoning and action for computer task automation.
+
+#### **Cluster 6: World Model Construction and Planning**
+- *Related Paper 11*: Uses LLMs to construct explicit world models (PDDL) for planning, interfacing between natural language and formal representations.
+
+#### **Cluster 7: Robotics and Physical Control**
+- *Related Paper 10*: Uses prompt-based in-context learning for LLMs to control robot walking, extending prompt engineering to low-level control.
+
+### Methodological Trends and Relationships
+
+- **Iterative Feedback Loops:** Most methods employ some form of iterative feedback—either from the LLM itself (self-reflection, self-debugging), from intermediate outputs, or from external evaluators (human or heuristic).
+- **Search and Planning:** There is a trend toward formulating prompt optimization as a search or planning problem, leveraging classical AI techniques (MCTS, BFS/DFS) in combination with LLM reasoning.
+- **Multi-Aspect Optimization:** Recent methods (e.g., CriSPO) recognize the need to optimize for multiple, sometimes competing, metrics (e.g., factuality and fluency).
+- **Domain Adaptation:** Several works adapt prompt engineering to specific domains (IR, generative art, code generation, robotics), often requiring domain-specific feedback or evaluation.
+- **Reflection and Self-Improvement:** Many methods (RePrompt, PromptAgent, Self-Refine, Self-Debugging) leverage the LLM’s own reasoning or critique capabilities to drive improvement, reducing reliance on external checkers or human feedback.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Automatic Prompt Engineering (APE) for LLMs**
+   - *Submission Paper, Related Papers 1, 2, 3, 5, 6, 7, 8, 14*: Focus on automating the design and optimization of prompts to improve LLM performance across various tasks.
+
+2. **Prompt Optimization in the Absence of Final Solution Checkers**
+   - *Submission Paper, Related Paper 1*: Address scenarios where final solution checkers are unavailable, expensive, or unreliable, necessitating reliance on intermediate feedback.
+
+3. **Multi-Step and Complex Task Decomposition**
+   - *Related Paper 5 (PROMST), Related Paper 13 (Tree of Thoughts), Related Paper 12 (ReAct), Related Paper 9 (RCI)*: Tackle multi-step reasoning, planning, and acting, requiring prompts that guide LLMs through complex, sequential tasks.
+
+4. **Domain-Specific Prompt Engineering**
+   - *Related Paper 3 (APEER)*: Passage relevance ranking in IR.
+   - *Related Paper 4*: Emotional expressiveness in generative art.
+   - *Related Paper 15*: Optimization code generation.
+
+5. **Reducing Human Effort and Reliance on Manual Engineering**
+   - *Submission Paper, Related Papers 1, 3, 5, 6, 8, 14*: Aim to minimize manual prompt design and human-in-the-loop feedback.
+
+6. **Improving LLM Output Quality and Robustness**
+   - *Related Papers 8, 14*: Focus on iterative self-improvement and debugging to enhance output quality without retraining.
+
+7. **Bridging Natural Language and Formal Representations**
+   - *Related Paper 11*: Constructing and correcting PDDL world models from natural language.
+
+8. **Grounding LLMs in Physical or Interactive Environments**
+   - *Related Paper 10*: Using LLMs for robot control.
+   - *Related Paper 9*: Automating computer tasks via natural language.
+
+### Approaches to Similar Problems
+
+- **APE without Final Checkers:**  
+  - *Submission Paper, Related Paper 1*: Use reflection and intermediate feedback instead of final solution checkers.
+  - *Related Paper 6 (GPO)*: Uses analogy to gradient descent, updating prompts based on optimization trajectory.
+- **Multi-Step Task Optimization:**  
+  - *PROMST*: Integrates human feedback and heuristic sampling.
+  - *Tree of Thoughts*: Uses search over intermediate reasoning steps.
+  - *ReAct, RCI*: Combine reasoning and acting, with iterative feedback.
+- **Domain-Specific Optimization:**  
+  - *APEER*: Tailors prompt optimization for IR reranking.
+  - *RePrompt for Generative Art*: Focuses on emotional expressiveness in images.
+  - *LLaMoCo*: Instruction-tunes LLMs for optimization code.
+
+### Patterns in Problem Formulation
+
+- **From One-Shot to Iterative:** Shift from static, one-shot prompt design to iterative, feedback-driven optimization.
+- **From General to Domain-Specific:** Increasing attention to domain-specific challenges and metrics.
+- **From Output-Only to Process-Aware:** Emphasis on leveraging intermediate steps, dialogue history, and self-reflection, not just final outputs.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **General Reasoning and Planning:**  
+  - *PDDL generation, Travel Planning, Meeting Planning* (Submission, Related Paper 1)
+  - *BIG-Bench Hard (BBH), MMLU* (Related Papers 2, 6)
+  - *MiniWoB++* (Related Paper 9)
+  - *ALFWorld, WebShop* (Related Paper 12)
+  - *Game of 24, Creative Writing, Mini Crosswords* (Related Paper 13)
+- **Information Retrieval:**  
+  - *BEIR benchmark* (Related Paper 3)
+- **Text Generation and Summarization:**  
+  - *Summarization and QA datasets* (Related Paper 7)
+- **Code Generation:**  
+  - *Spider, TransCoder, MBPP* (Related Paper 14)
+  - *Custom optimization code datasets* (Related Paper 15)
+- **Robotics and Physical Control:**  
+  - *Simulated robot environments* (Related Paper 10)
+- **Generative Art:**  
+  - *Text-to-image prompt-image pairs* (Related Paper 4)
+
+### Evaluation Metrics
+
+- **Task Success Rate / First-Round Success Rate:**  
+  - Used in planning, agent, and reasoning tasks (Submission, Related Paper 1, 12, 13).
+- **Accuracy / Task Performance:**  
+  - Used in general NLP, code, and reasoning tasks (Related Papers 2, 6, 8, 14).
+- **NDCG@10:**  
+  - Used for IR reranking (Related Paper 3).
+- **ROUGE, AlignScore, Human Evaluation:**  
+  - Used for summarization, QA, and generative tasks (Related Paper 7).
+- **Optimization Performance, Zero-Shot Generalization:**  
+  - Used for code generation and optimization (Related Paper 15).
+- **Emotional Expressiveness (User Study):**  
+  - Used for generative art (Related Paper 4).
+- **Sample Efficiency:**  
+  - Used for code generation (Related Paper 14).
+- **Improvement per Dollar:**  
+  - Used for efficiency analysis (Related Paper 6).
+
+### Patterns in Evaluation
+
+- **Emphasis on Relative Improvement:** Most papers report improvements over strong baselines, often in terms of percentage gains or absolute increases in success/accuracy.
+- **Human Evaluation:** Used in tasks where automatic metrics are insufficient (e.g., generative art, summarization, code quality).
+- **Transferability and Robustness:** Some works (e.g., APEER) evaluate prompt transferability across tasks and LLMs.
+- **Efficiency and Cost:** A few papers (e.g., GPO, LLaMoCo) explicitly consider efficiency, cost, or sample efficiency.
+
+### Comparison of Evaluation Approaches
+
+- **Task-Specific Metrics:** Each domain uses its own established metrics (e.g., NDCG@10 for IR, ROUGE for summarization, success rate for planning).
+- **Intermediate vs. Final Evaluation:** Submission and Related Paper 1 focus on intermediate feedback, while others (e.g., PromptAgent, GPO) may use final task performance.
+- **Human-in-the-Loop vs. Fully Automatic:** Some methods rely on human feedback or evaluation (PROMST, generative art), while others are fully automatic.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster A: **Iterative, Feedback-Driven Prompt Optimization for LLM Agents**
+- **Papers:** Submission, Related Paper 1, Related Paper 6 (GPO), Related Paper 8 (Self-Refine), Related Paper 14 (Self-Debugging)
+- **Characteristics:**  
+  - Iterative prompt or output refinement using feedback (self-generated or from intermediate outputs)
+  - Inspired by gradient descent or analogical optimization
+  - Focus on agentic or multi-step tasks
+- **Relationships:**  
+  - Submission and Related Paper 1 are nearly identical in approach and problem framing.
+  - GPO provides a theoretical analogy and systematic analysis of update strategies.
+  - Self-Refine and Self-Debugging extend the iterative feedback idea to output refinement and code debugging.
+
+### Cluster B: **Search/Planning-Based Prompt Optimization**
+- **Papers:** Related Paper 2 (PromptAgent), Related Paper 13 (Tree of Thoughts), Related Paper 5 (PROMST)
+- **Characteristics:**  
+  - Formulate prompt optimization as a search or planning problem
+  - Use MCTS, BFS/DFS, or heuristic sampling to explore prompt or reasoning space
+  - Incorporate self-reflection or human feedback in the search process
+- **Relationships:**  
+  - PromptAgent and Tree of Thoughts both use search algorithms, but PromptAgent focuses on prompt space, while ToT focuses on reasoning paths.
+  - PROMST integrates human feedback and heuristic sampling, bridging search and human-in-the-loop approaches.
+
+### Cluster C: **Multi-Aspect, Multi-Metric, and Domain-Specific Optimization**
+- **Papers:** Related Paper 3 (APEER), Related Paper 7 (CriSPO), Related Paper 4 (RePrompt for Generative Art), Related Paper 15 (LLaMoCo)
+- **Characteristics:**  
+  - Address domain-specific challenges (IR, generative art, code optimization)
+  - Optimize for multiple metrics or aspects (e.g., factuality, emotional expressiveness, code robustness)
+  - Use specialized feedback or evaluation strategies
+- **Relationships:**  
+  - CriSPO and APEER both focus on multi-metric or multi-aspect optimization.
+  - RePrompt for Generative Art and LLaMoCo adapt prompt engineering to new domains (art, optimization code).
+
+### Cluster D: **Reasoning-Acting Integration and World Model Construction**
+- **Papers:** Related Paper 12 (ReAct), Related Paper 9 (RCI), Related Paper 11 (World Model Construction), Related Paper 10 (Robot Control)
+- **Characteristics:**  
+  - Integrate reasoning and acting in LLMs for interactive or embodied tasks
+  - Use LLMs to construct or interact with explicit world models (PDDL, robot environments)
+  - Focus on grounding LLMs in external environments (virtual or physical)
+- **Relationships:**  
+  - ReAct and RCI both combine reasoning and acting, with iterative feedback.
+  - World Model Construction and Robot Control extend LLMs to planning and physical control, respectively.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Manual to Automatic Prompt Engineering:**  
+  - Early works focused on manual prompt design; the current landscape is dominated by automatic, iterative, and feedback-driven methods.
+- **From Output-Only to Process-Aware Optimization:**  
+  - Shift from optimizing for final outputs to leveraging intermediate steps, dialogue history, and self-reflection.
+- **From Single-Metric to Multi-Metric Optimization:**  
+  - Recognition that real-world tasks require balancing multiple objectives (e.g., factuality, fluency, emotional expressiveness).
+- **From General to Domain-Specific and Embodied Tasks:**  
+  - Expansion of prompt engineering from general NLP to IR, code, generative art, planning, and robotics.
+- **From Static to Search/Planning-Based Approaches:**  
+  - Introduction of search and planning algorithms (MCTS, BFS/DFS) for more principled exploration of prompt and reasoning spaces.
+- **From LLM as Output Generator to LLM as Optimizer/Planner/Controller:**  
+  - LLMs are now used not just to generate outputs, but to optimize prompts, construct world models, and even control robots.
+
+### Building Blocks and Extensions
+
+- **Gradient-Descent-Like Optimization:**  
+  - Submission, Related Paper 1, and GPO build on the analogy to gradient descent, extending it with reflection, summarization, and systematic analysis.
+- **Self-Feedback and Self-Improvement:**  
+  - Self-Refine and Self-Debugging extend the idea of LLMs critiquing and improving their own outputs.
+- **Search and Planning:**  
+  - PromptAgent and Tree of Thoughts introduce search-based exploration, which is further extended by PROMST’s integration of human feedback.
+- **Multi-Aspect Feedback:**  
+  - CriSPO and APEER introduce multi-aspect and preference-based feedback, moving beyond single-metric optimization.
+
+### Competing and Complementary Approaches
+
+- **Competing:**  
+  - Search/planning-based methods (PromptAgent, ToT) vs. gradient-descent-like iterative methods (RePrompt, GPO): Both aim for efficient prompt optimization but differ in exploration strategy.
+  - Domain-specific frameworks (APEER, LLaMoCo) vs. general-purpose optimizers: Trade-off between specialization and generalizability.
+- **Complementary:**  
+  - Self-reflection and search/planning can be combined (e.g., PromptAgent uses both).
+  - Human-in-the-loop feedback (PROMST) can complement automatic optimization for alignment with human preferences.
+  - Multi-metric optimization (CriSPO) can be layered atop iterative or search-based frameworks.
+
+---
+
+# Summary Table
+
+| Cluster | Key Methods/Papers | Main Focus | Distinguishing Features |
+|---------|--------------------|------------|------------------------|
+| Iterative Feedback | Submission, RePrompt, GPO, Self-Refine, Self-Debugging | Iterative prompt/output refinement | Gradient-descent analogy, self-reflection, intermediate feedback |
+| Search/Planning | PromptAgent, Tree of Thoughts, PROMST | Search/planning in prompt/reasoning space | MCTS, BFS/DFS, heuristic/human feedback |
+| Multi-Aspect/Domain | APEER, CriSPO, RePrompt (Art), LLaMoCo | Multi-metric/domain-specific optimization | Preference optimization, emotional expressiveness, code generation |
+| Reasoning-Acting/World Models | ReAct, RCI, World Model Construction, Robot Control | Reasoning-acting integration, world/physical grounding | Interleaved reasoning/acting, PDDL/world models, robot control |
+
+---
+
+# Conclusion
+
+The research landscape is rapidly evolving from static, manual prompt engineering to sophisticated, automatic, and iterative optimization frameworks. The field is characterized by:
+- Increasing reliance on feedback (self, intermediate, human, or heuristic)
+- Adoption of search and planning algorithms for principled exploration
+- Expansion into multi-metric, domain-specific, and embodied tasks
+- Integration of reasoning, acting, and world modeling for more capable LLM agents
+
+The **submission paper** sits at the intersection of iterative, feedback-driven optimization and agentic LLM applications, contributing a novel approach that leverages reflection and dialogue history for prompt improvement in scenarios lacking final solution checkers. This positions it as a key building block in the ongoing evolution toward more autonomous, adaptable, and effective LLM agents.

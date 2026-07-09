@@ -1,0 +1,242 @@
+# Research Landscape Analysis
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the submission and related papers, several methodological themes emerge, particularly at the intersection of **reinforcement learning (RL)**, **symbolic/tool-based feedback**, and **large language model (LLM) fine-tuning**. The main approaches can be grouped as follows:
+
+#### **Cluster 1: RL with Symbolic/Tool-based Feedback for LLMs**
+- **Submission (RLSF):** RL fine-tuning of LLMs using symbolic reasoning tools as RL environments, providing token-level corrective feedback via certificates.
+- **CoTran:** RL fine-tuning of LLMs for code translation, using compiler and symbolic execution feedback.
+- **StepCoder:** RL for code generation, leveraging compiler feedback and curriculum learning.
+- **Execution-based Code Generation (PPOCoder):** RL with non-differentiable feedback from code execution and structure alignment.
+- **CodeRL:** Actor-critic RL with functional correctness feedback (unit tests) for code generation.
+
+**Commonalities:**  
+- All use RL to optimize LLMs for tasks where correctness can be checked by external tools (compilers, symbolic executors, unit tests, or formal verifiers).
+- Feedback is often non-differentiable and comes from program analysis or symbolic reasoning tools.
+- Emphasis on functional correctness, compilation, or logical validity.
+
+**Differences:**  
+- RLSF generalizes to any symbolic reasoning tool, not just code; CoTran and StepCoder focus on code translation/generation.
+- CoTran uniquely uses both compiler and symbolic execution feedback.
+- StepCoder introduces curriculum learning and fine-grained optimization.
+
+#### **Cluster 2: Tool-Augmented and Modular Reasoning Agents**
+- **ToRA:** Interleaves natural language reasoning with program-based tool use for math problem solving; uses imitation learning and output space shaping.
+- **Chameleon:** LLM-based planner dynamically assembles sequences of plug-and-play modules (vision, web search, Python functions, etc.) for compositional reasoning.
+- **WizardMath:** RL from AI-generated math instructions and process supervision, with step-by-step PPO.
+
+**Commonalities:**  
+- All augment LLMs with external tools or modules to enhance reasoning.
+- Focus on complex, multi-step reasoning tasks (math, science, multi-modal).
+
+**Differences:**  
+- ToRA and WizardMath focus on math; Chameleon is multi-modal and multi-domain.
+- Chameleon emphasizes dynamic tool composition; ToRA focuses on tool-use trajectories.
+
+#### **Cluster 3: Self-Improvement and Verbal Feedback**
+- **Teaching LLMs to Self-Debug:** LLMs debug their own code via few-shot prompting and code explanation, inspired by rubber duck debugging.
+- **Reflexion:** LLMs use self-reflective, verbal feedback (stored in episodic memory) for rapid, few-shot learning.
+- **Language Models can Solve Computer Tasks (RCI):** Recursive Criticism and Improvement prompting for LLMs to self-critique and improve outputs.
+
+**Commonalities:**  
+- All leverage LLMs' own reasoning or self-critique abilities to improve performance, often without explicit model fine-tuning.
+- Feedback is often in natural language, either self-generated or via prompting.
+
+**Differences:**  
+- Reflexion formalizes verbal RL with episodic memory; Self-Debugging focuses on code; RCI is broader, covering computer tasks and reasoning.
+
+### Methodological Trends and Relationships
+
+- **Shift from Human to Automated Feedback:** There is a clear trend toward replacing expensive human feedback (as in RLHF) with automated, tool-based, or self-generated feedback.
+- **Integration of Symbolic/Programmatic Tools:** Many methods integrate symbolic reasoning, compilers, or program analysis tools to provide precise, actionable feedback.
+- **Fine-Grained Feedback:** Methods are moving from sequence-level to token-level or step-level feedback (e.g., RLSF, StepCoder).
+- **Curriculum and Process Supervision:** Several works (StepCoder, WizardMath) introduce curriculum learning or process supervision to guide RL.
+- **Self-Reflection and Prompt Engineering:** Prompt-based self-improvement (RCI, Reflexion, Self-Debugging) is emerging as a lightweight alternative to RL fine-tuning.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **LLM Fine-Tuning for Complex Reasoning Tasks**
+   - Submission (RLSF): Fine-tuning LLMs for tasks requiring formal reasoning or domain constraints, overcoming RLHF limitations.
+   - ToRA, WizardMath, Chameleon: Improving LLMs' mathematical, scientific, or compositional reasoning.
+
+2. **Code Generation and Translation**
+   - CoTran, StepCoder, Execution-based Code Generation, CodeRL, Self-Debugging: Improving code generation, translation, and synthesis, focusing on functional correctness, compilation, and sample efficiency.
+
+3. **Reducing Reliance on Human Feedback**
+   - Submission (RLSF), Reflexion, Self-Debugging, RCI: Eliminating or minimizing the need for human preference data or demonstrations by leveraging automated or self-generated feedback.
+
+4. **Tool Use and Integration**
+   - ToRA, Chameleon: Enabling LLMs to use external tools (calculators, code interpreters, web search) for enhanced reasoning.
+
+5. **Efficient Learning and Generalization**
+   - Reflexion, RCI, StepCoder: Improving sample efficiency, generalization, and rapid adaptation to new tasks.
+
+### Approaches to Similar Problems
+
+- **Code Generation:**  
+  - RL with tool-based feedback (CoTran, StepCoder, PPOCoder, CodeRL) vs. self-debugging (Self-Debugging, Reflexion).
+  - Some focus on whole-program translation (CoTran), others on code completion or synthesis (StepCoder, PPOCoder).
+
+- **Mathematical Reasoning:**  
+  - RL with process supervision and instruction evolution (WizardMath), tool-use trajectories (ToRA), or modular tool composition (Chameleon).
+
+- **Reducing Human Feedback:**  
+  - RLSF and Reflexion use symbolic or self-generated feedback; RCI and Self-Debugging use prompt-based self-critique.
+
+### Patterns in Problem Formulation
+
+- **From General to Domain-Specific:**  
+  - Early works focus on general code or reasoning tasks; newer works (RLSF, ToRA, WizardMath) target domain-specific, complex tasks (chemistry, math, program synthesis).
+
+- **From Output-Level to Process-Level Supervision:**  
+  - Shift from evaluating only final outputs to supervising intermediate steps, tool use, or reasoning chains.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Code Generation/Translation:**  
+  - HumanEval, MBPP, APPS, APPS+, AVATAR-TC, Code2Code, TransCoder, Spider
+
+- **Mathematical Reasoning:**  
+  - GSM8k, MATH, ScienceQA, TabMWP
+
+- **Other Domains:**  
+  - AlfWorld, HotPotQA, LeetcodeHardGym, MiniWoB++
+
+### Evaluation Metrics
+
+- **Code Tasks:**  
+  - Functional correctness (pass@k, FEqAcc), compilation accuracy, BLEU/CodeBLEU, sample efficiency, syntactic/semantic matching (AST, DFG), error position.
+
+- **Math/Reasoning Tasks:**  
+  - Accuracy, pass@1, overall accuracy, success rate.
+
+- **General Tasks:**  
+  - Task success rate (e.g., MiniWoB++), absolute improvement in task performance.
+
+### Patterns in Performance Measurement
+
+- **Emphasis on Functional Correctness:**  
+  - Most code-related works prioritize functional correctness (unit tests, symbolic execution) over surface-level metrics (BLEU).
+
+- **Fine-Grained and Task-Specific Metrics:**  
+  - Compilation accuracy, error localization, and validity are used for more nuanced evaluation.
+
+- **Comparisons to SOTA and Closed-Source Models:**  
+  - Many works benchmark against both open-source and proprietary models (e.g., GPT-4, GPT-3.5).
+
+### Evaluation Approaches
+
+- **Automated, Tool-Based Evaluation:**  
+  - Heavy reliance on automated test cases, compilers, and symbolic tools for objective measurement.
+
+- **Human Evaluation is Rare:**  
+  - Most works avoid human evaluation, aligning with the trend of reducing human feedback.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster A: RL with Symbolic/Tool Feedback for Code and Reasoning
+- **Papers:** Submission (RLSF), CoTran, StepCoder, Execution-based Code Generation, CodeRL
+- **Characteristics:**  
+  - RL fine-tuning of LLMs using feedback from compilers, symbolic execution, or formal tools.
+  - Focus on code generation, translation, or synthesis.
+  - Emphasis on functional correctness and compilation.
+
+### Cluster B: Tool-Augmented Reasoning Agents
+- **Papers:** ToRA, Chameleon, WizardMath
+- **Characteristics:**  
+  - LLMs augmented with external tools or modules for complex reasoning (math, science, multi-modal).
+  - Use of imitation learning, process supervision, or dynamic tool composition.
+
+### Cluster C: Self-Improvement via Prompting and Verbal Feedback
+- **Papers:** Self-Debugging, Reflexion, RCI
+- **Characteristics:**  
+  - LLMs improve via self-critique, self-reflection, or recursive prompting.
+  - Feedback is in natural language, often without model weight updates.
+
+### Cluster D: Hybrid/Bridging Approaches
+- **Papers:** Some works (e.g., RLSF, Reflexion) bridge clusters by combining RL with symbolic feedback and self-reflection.
+
+### Relationships Between Clusters
+
+- **Cluster A and B:**  
+  - Both use external tools, but Cluster A focuses on code and formal feedback, while Cluster B is broader (math, science, multi-modal).
+
+- **Cluster C and A/B:**  
+  - Cluster C's self-improvement methods can complement RL/tool-based approaches, providing lightweight alternatives or additional feedback signals.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **From Supervised Fine-Tuning to RL:**  
+  - Early LLMs relied on supervised fine-tuning; recent works shift to RL for sequence-level optimization.
+
+- **From Human Feedback to Automated Feedback:**  
+  - RLHF is being replaced by feedback from symbolic tools, compilers, or self-generated critiques.
+
+- **From Output-Level to Token/Step-Level Feedback:**  
+  - RLSF and others provide fine-grained, token-level feedback, improving learning efficiency and alignment.
+
+- **From Monolithic to Modular/Compositional Systems:**  
+  - Chameleon and ToRA exemplify the move toward modular, tool-augmented LLMs capable of compositional reasoning.
+
+- **From Model Updates to Prompt-Based Adaptation:**  
+  - Reflexion, RCI, and Self-Debugging show that LLMs can improve via prompt engineering and self-reflection, sometimes without weight updates.
+
+### Building Blocks and Extensions
+
+- **RL with Non-Differentiable Feedback:**  
+  - Pioneered in code generation (PPOCoder, CodeRL), extended to broader reasoning tasks (RLSF).
+
+- **Symbolic Reasoning Integration:**  
+  - RLSF generalizes the use of symbolic tools as RL environments, extending beyond code to chemistry and games.
+
+- **Curriculum and Process Supervision:**  
+  - StepCoder and WizardMath introduce curriculum learning and process supervision for more effective RL.
+
+- **Self-Reflection and Episodic Memory:**  
+  - Reflexion formalizes self-reflective learning, storing feedback in memory for rapid adaptation.
+
+### Competing and Complementary Approaches
+
+- **RL vs. Prompt-Based Self-Improvement:**  
+  - RL with tool feedback (RLSF, CoTran) offers strong performance but requires fine-tuning; prompt-based methods (Reflexion, RCI) are more lightweight but may be less robust for complex tasks.
+
+- **Tool-Augmentation vs. Symbolic Feedback:**  
+  - Tool-augmented agents (Chameleon, ToRA) focus on dynamic tool use; symbolic feedback (RLSF, CoTran) focuses on using tools for feedback rather than direct action.
+
+- **Open-Source vs. Closed-Source Models:**  
+  - Many works demonstrate that with the right feedback and training, smaller open-source models can outperform much larger closed-source models on specialized tasks.
+
+---
+
+# Summary Table
+
+| Cluster | Key Methods | Domains | Feedback Type | Example Papers |
+|---------|-------------|---------|--------------|---------------|
+| RL + Symbolic/Tool Feedback | RL fine-tuning with compilers, symbolic tools, unit tests | Code, Chemistry, Games | Automated, non-differentiable, token/step-level | RLSF, CoTran, StepCoder, PPOCoder, CodeRL |
+| Tool-Augmented Reasoning | Modular tool use, imitation learning, process supervision | Math, Science, Multi-modal | Tool outputs, process supervision | ToRA, Chameleon, WizardMath |
+| Self-Improvement/Verbal Feedback | Prompt-based self-critique, self-reflection, episodic memory | Code, Reasoning, Computer Tasks | Natural language, self-generated | Self-Debugging, Reflexion, RCI |
+
+---
+
+# Conclusion
+
+The research landscape represented by these papers is rapidly evolving toward **automated, tool-augmented, and self-improving LLMs**. The submission paper (RLSF) exemplifies the cutting edge by unifying RL, symbolic feedback, and fine-grained supervision, enabling smaller open-source models to excel at complex, domain-specific reasoning tasks. The field is moving away from human-in-the-loop feedback and monolithic architectures, embracing modularity, automation, and self-reflection as key drivers of progress.

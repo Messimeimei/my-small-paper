@@ -1,0 +1,167 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating ALLoRA in the Landscape:**  
+ALLoRA is positioned within the highly active area of parameter-efficient fine-tuning (PEFT) for large language models (LLMs), specifically as a direct extension of the LoRA (Low-Rank Adaptation) family. The most closely related prior works are:
+
+- **LoRA** (Hu et al., 2021): The foundational PEFT method using low-rank adapters.
+- **DoRA**: A LoRA variant focusing on decomposing weights into magnitude and direction.
+- **LoRA+**: Assigns different learning rates to LoRA matrices.
+- **Riemannian Preconditioned LoRA**: Improves LoRA optimization via preconditioning.
+- **AdaLomo**: Proposes adaptive learning rates for low-memory optimization (not cited).
+- **MoS**: Introduces mixture-of-experts style parameter sharing for LoRA (not cited).
+
+**Methodological Cluster:**  
+ALLoRA is squarely in the "LoRA and direct variants" cluster, sharing the low-rank adaptation backbone but proposing changes to optimization (adaptive learning rates), initialization, and hyperparameter removal (Dropout, scaling factor).
+
+**Problem Space:**  
+ALLoRA addresses practical limitations of LoRA for LLM finetuning, especially in short training regimes:  
+- Dropout inefficacy  
+- Poor conditioning from zero-initialization  
+- Problematic scaling factor
+
+**Evaluation Approach:**  
+ALLoRA is evaluated on accuracy across various LLMs (including Llama3), compared to LoRA and DoRA. The focus is on empirical performance and hyperparameter simplification.
+
+**Independent Assessment:**  
+- ALLoRA’s main novelty is the combination of removing Dropout and scaling, and introducing per-parameter adaptive learning rates based on L2 norm.
+- Adaptive learning rates have been explored in LoRA+ (per-matrix) and AdaLomo (per-parameter, not cited).
+- The removal of Dropout and scaling is a practical simplification, but similar issues have been discussed in the literature.
+- The field is mature, with many LoRA variants addressing optimization and parameterization.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Cited Works and Author Characterizations:**
+
+- **Riemannian Preconditioned LoRA (Zhang & Pilanci, 2024):**  
+  - Authors: "A study of the potential ill-conditioned low-rank matrices."  
+  - Independent: This work addresses optimization stability in LoRA via Riemannian preconditioning, directly relevant to ALLoRA’s focus on conditioning. The submission’s characterization is accurate but omits that Riemannian LoRA also addresses training dynamics, not just ill-conditioning.
+
+- **LoRA (Hu et al., 2021):**  
+  - Authors: "Definition 1. (Low Rank Adapters (LoRA) from Hu et al. (2021))."  
+  - Independent: The submission uses LoRA as the baseline and accurately references its definition. However, the discussion of LoRA’s limitations (Dropout, scaling, initialization) is not unique to this paper; these issues have been noted in other LoRA variants.
+
+- **LoRA Training in the NTK Regime (Jang et al., 2024):**  
+  - Authors: "Provides rigorous theoretical study on the existence and convergence of LoRA solutions."  
+  - Independent: This is a fair characterization. The submission does not claim to address theoretical guarantees, so the citation is appropriate.
+
+- **GaLore (Zhao et al., 2024):**  
+  - Authors: "Applies the low-rank concept to compute low-rank gradients directly."  
+  - Independent: GaLore is more about memory-efficient full-parameter training than LoRA variants per se. The submission’s brief mention is accurate but does not engage with GaLore’s relevance to optimization efficiency.
+
+**Patterns:**  
+- The authors position their work as a practical fix to LoRA’s flaws, referencing optimization-focused LoRA variants but not engaging deeply with other adaptive learning rate or parameter sharing methods.
+- There is no evidence of mischaracterization, but the omission of AdaLomo and MoS (which are highly relevant) is notable.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claimed Contribution 1:**  
+*Identification and analysis of three core LoRA limitations (Dropout, zero-init, scaling factor)*
+
+- **Most Similar Prior Work:**  
+  - LoRA+ (per-matrix learning rates), Riemannian LoRA (conditioning), DoRA (parameterization), AdaLomo (adaptive learning rates, not cited).
+- **Independent Assessment:**  
+  - The issues of Dropout inefficacy and scaling factor have been discussed in LoRA+ and DoRA. Poor conditioning from zero-initialization is addressed in Riemannian LoRA.
+  - The submission’s analysis is a synthesis rather than a new identification.
+- **Delta:**  
+  - The combination of all three issues in one analysis is somewhat novel, but each issue has been previously discussed.
+
+**Claimed Contribution 2:**  
+*Proposal of ALLoRA: Dropout/scaling-free LoRA with per-parameter adaptive learning rate (L2 norm-based)*
+
+- **Most Similar Prior Work:**  
+  - LoRA+ (per-matrix learning rates), AdaLomo (per-parameter adaptive learning rates), Riemannian LoRA (conditioning), DoRA (removes scaling).
+- **Independent Assessment:**  
+  - Per-parameter adaptive learning rates are not unique (AdaLomo, not cited). Removal of Dropout and scaling is a practical simplification, but DoRA and others have also removed or modified these components.
+  - The specific use of L2 norm for scaling gradients is a technical detail; similar normalization strategies exist in AdaLomo.
+- **Delta:**  
+  - The main difference is the specific combination of these elements in a LoRA variant. The conceptual novelty is incremental, as each component has precedent.
+
+**Claimed Contribution 3:**  
+*ALLoRA removes two hyperparameters (Dropout, scaling), simplifying finetuning*
+
+- **Most Similar Prior Work:**  
+  - DoRA (removes scaling), LoRA+ (reduces hyperparameter sensitivity), AdaLomo (simplifies optimizer hyperparameters).
+- **Independent Assessment:**  
+  - Hyperparameter reduction is a common goal in recent LoRA variants. The removal of Dropout and scaling is a practical benefit, but not unique.
+- **Delta:**  
+  - The combination is useful, but the novelty is in integration rather than new concepts.
+
+**Claimed Contribution 4:**  
+*Empirical demonstration of superior accuracy and fewer hyperparameters vs. LoRA/DoRA*
+
+- **Most Similar Prior Work:**  
+  - LoRA+, DoRA, AdaLomo (all report empirical improvements).
+- **Independent Assessment:**  
+  - Empirical improvements may be due to implementation details, optimizer choice, or dataset/model selection. Without ablation, it is unclear if the gains are due to the adaptive learning rate or other factors.
+- **Delta:**  
+  - Empirical superiority is not a conceptual advance unless clearly tied to the proposed method.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  - The PEFT/LoRA variant space is highly active and mature, with many incremental advances and rapid publication cycles.
+- **Recent Surveys:**  
+  - Several recent surveys (e.g., "A Survey of Parameter-Efficient Fine-Tuning for LLMs," 2023) cover LoRA and its variants.
+- **Trends:**  
+  - The field is moving toward practical, robust, and hyperparameter-insensitive methods. Adaptive optimization and parameter sharing are common themes.
+- **Incremental Advances:**  
+  - Most new LoRA variants offer incremental improvements (e.g., new parameterizations, optimizer tweaks, sharing strategies) rather than radical conceptual shifts.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:**  
+  - The identification of LoRA’s flaws is not unique; prior works have discussed Dropout, scaling, and conditioning.
+  - Adaptive learning rates per parameter are not new (see AdaLomo, LoRA+).
+  - Removal of Dropout and scaling is a practical, not conceptual, advance.
+- **Empirical Improvements:**  
+  - Gains may be due to implementation, optimizer, or dataset/model choices rather than the core method.
+- **Terminology Differences:**  
+  - The use of "adaptive learning rate" and "scaling-free" may mask similarities to AdaLomo and LoRA+.
+- **Routine Extensions:**  
+  - The combination of existing ideas (adaptive learning, hyperparameter removal) is a routine extension in this field.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted Relevant Work:**  
+  - **AdaLomo**: Proposes per-parameter adaptive learning rates for low-memory optimization, highly relevant but not cited.
+  - **MoS**: Explores parameter sharing and adaptation, relevant for efficiency claims.
+- **Additional Comparisons Needed:**  
+  - Direct empirical and conceptual comparison with AdaLomo and MoS would strengthen the novelty claim.
+- **Incomplete Characterizations:**  
+  - The submission does not fully acknowledge that adaptive learning rates and hyperparameter simplification are active areas with multiple recent contributions.
+- **Potentially Exaggerated Limitations:**  
+  - The framing of LoRA’s flaws as "fatal" may overstate their practical impact, as many users successfully finetune LLMs with LoRA.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**  
+  - ALLoRA combines Dropout/scaling removal with per-parameter adaptive learning rates (L2 norm-based) in a LoRA variant.
+- **Main Relationships to Existing Research:**  
+  - ALLoRA is an incremental extension of LoRA, integrating ideas from LoRA+, DoRA, and AdaLomo (though the latter is not cited).
+- **Strongest Differentiation:**  
+  - The specific combination of all three modifications (Dropout/scaling removal, adaptive learning rate, zero-init conditioning) in one method.
+- **Weakest Differentiation:**  
+  - Adaptive learning rates and hyperparameter simplification are not unique; similar strategies exist in AdaLomo, LoRA+, and DoRA.
+- **Discrepancies:**  
+  - The submission overstates the novelty of identifying LoRA’s flaws and the uniqueness of adaptive learning rates.
+  - Omission of AdaLomo and MoS leaves the novelty claim incomplete.
+  - Empirical improvements are not clearly tied to the proposed method’s conceptual advances.
+
+---
+
+**In summary:**  
+ALLoRA is a practical, incremental improvement in the LoRA family, synthesizing known solutions to LoRA’s practical issues. Its main technical novelty is the specific combination of Dropout/scaling removal and per-parameter adaptive learning rates, but each component has precedent in the literature. The submission’s characterization of prior work is generally accurate but omits highly relevant recent methods (AdaLomo, MoS), and the novelty claims are somewhat overstated relative to the field’s current state. Reviewers should consider the degree to which the integration of these elements constitutes a substantive advance versus a routine extension.

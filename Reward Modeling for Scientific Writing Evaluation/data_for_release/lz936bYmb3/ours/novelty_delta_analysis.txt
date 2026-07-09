@@ -1,0 +1,136 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating DMQR-RAG in the Landscape:**
+
+- **Cluster Placement:** DMQR-RAG is most closely aligned with the "Query Rewriting and Refinement" cluster, sharing space with RQ-RAG, Query Rewriting for Retrieval-Augmented LLMs, Enhancing Conversational Search, CAR, and Agent4Ranking. It also incorporates elements from the "Dynamic/Active Retrieval" cluster (via adaptive strategy selection) and "Document Reranking" (via cross-attention reranker).
+- **Most Related Prior Works:** The most directly comparable works are RQ-RAG (Ma et al., 2023), Query Rewriting for Retrieval-Augmented LLMs (Chan et al., 2024), and Agent4Ranking. These all address multi-query rewriting, diversity, and/or adaptivity in RAG.
+- **Methodological Relationship:** DMQR-RAG extends the multi-query rewriting paradigm by introducing explicit information-level-based diversity in rewrites and an adaptive mechanism to minimize unnecessary rewrites. The use of a cross-attention reranker is also present in some prior works (e.g., RichRAG, Agent4Ranking).
+- **Problem Space:** The submission addresses noisy/intent-deviated queries, low recall due to lack of diversity, and inefficiency from excessive rewrites—problems also tackled by RQ-RAG, Query Rewriting for RAG LLMs, and Agent4Ranking, though with different emphases (e.g., demographic diversity, informativeness, robustness).
+- **Evaluation Approach:** The claim of a standardized evaluation setup is in line with recent trends (RGB Benchmark, RAG Survey), but the field already has several such efforts.
+
+**Independent Assessment:**  
+DMQR-RAG is an incremental but potentially meaningful extension within a highly active area. Its main novelty is the explicit use of information-level-based diversity in query rewriting and adaptive selection, but similar ideas (diversity, adaptivity, reranking) have been explored in various forms in recent literature.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**RQ-RAG (Ma et al., 2023):**
+- **Author Characterization:** Cited as evidence that direct retrieval with noisy/biased queries fails, motivating query rewriting.
+- **Citation Context:** "Due to noise and intent bias in the original queries, direct retrieval often fails to yield sufficiently relevant documents (Ma et al., 2023; Chan et al., 2024)."
+- **Independent Assessment:** RQ-RAG does more than just motivate query rewriting; it proposes a multi-query rewriting approach using LLMs and demonstrates improvements in retrieval and QA. The submission does not explicitly acknowledge RQ-RAG’s own multi-query and diversity mechanisms, which are conceptually similar to DMQR-RAG’s approach.
+
+**Query Rewriting for Retrieval-Augmented LLMs (Chan et al., 2024):**
+- **Author Characterization:** Same as above; grouped with RQ-RAG as prior work on query rewriting.
+- **Independent Assessment:** This work also explores multi-query rewriting and informativeness, and includes adaptive mechanisms. The submission does not discuss the specific techniques or how DMQR-RAG’s diversity/adaptivity differs.
+
+**DRAGIN:**
+- **Author Characterization:** Cited for LLMs’ general abilities, not for dynamic retrieval.
+- **Independent Assessment:** DRAGIN is a key work on dynamic, real-time retrieval in RAG. The submission does not engage with DRAGIN’s dynamic retrieval mechanisms, despite some conceptual overlap with DMQR-RAG’s adaptive strategy.
+
+**Benchmarking Large Language Models in RAG (Gao et al., 2023b; Chen et al., 2024):**
+- **Author Characterization:** Cited as background for RAG as a method to enhance LLMs.
+- **Independent Assessment:** No direct comparison or engagement with benchmarking or evaluation frameworks, despite the submission’s claim of a standardized evaluation setup.
+
+**Active Retrieval Augmented Generation:**
+- **Author Characterization:** Cited for LLMs’ abilities, not for active retrieval.
+- **Independent Assessment:** The active retrieval paradigm is relevant to DMQR-RAG’s adaptive strategy, but this connection is not discussed.
+
+**Patterns:**  
+Authors tend to cite related work as general motivation, without detailed technical comparison. There is a pattern of under-specifying the similarities between DMQR-RAG and prior multi-query, diverse, or adaptive rewriting methods.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claim 1: General-purpose multi-query rewriting framework with information-level-based diversity**
+- **Most Similar Prior Work:** RQ-RAG, Query Rewriting for Retrieval-Augmented LLMs, Agent4Ranking.
+- **Claimed Difference:** DMQR-RAG uses "information-level-based" diversity in rewrites.
+- **Independent Assessment:**  
+  - RQ-RAG and Query Rewriting for RAG LLMs both generate multiple rewrites per query, often using LLMs to increase diversity and informativeness. Agent4Ranking generates rewrites from multiple demographic perspectives.
+  - The explicit categorization of rewrites by "information level" (if well-defined and operationalized) may be a more systematic approach to diversity than prior work, which often relies on LLM prompting or demographic simulation.
+  - However, the distinction may be superficial if "information level" is not clearly differentiated from "informativeness" or "aspect coverage" in prior work.
+  - The submission does not provide direct empirical or technical comparison to these diversity mechanisms.
+
+**Claim 2: Adaptive strategy selection to minimize rewrites while optimizing performance**
+- **Most Similar Prior Work:** Query Rewriting for RAG LLMs (Chan et al., 2024), DRAGIN, FLARE.
+- **Claimed Difference:** Adaptive selection of rewriting strategies to reduce unnecessary rewrites.
+- **Independent Assessment:**  
+  - Query Rewriting for RAG LLMs and DRAGIN both include adaptive or dynamic mechanisms (e.g., deciding when to rewrite or retrieve based on model confidence or predicted need).
+  - The novelty of DMQR-RAG’s adaptive selection depends on the specific mechanism and whether it is more efficient or effective than prior adaptive approaches.
+  - Without detailed comparison, it is unclear if the adaptivity is a substantive advance or a routine extension.
+
+**Claim 3: Multi-query rewriting with information diversity outperforms single-query rewriting and vanilla RAG-Fusion**
+- **Most Similar Prior Work:** RQ-RAG, Query Rewriting for RAG LLMs, RAG-Fusion.
+- **Claimed Difference:** Information-diverse multi-query rewriting is superior.
+- **Independent Assessment:**  
+  - Prior work (RQ-RAG, Query Rewriting for RAG LLMs) has already shown that multi-query rewriting can outperform single-query and vanilla RAG.
+  - The incremental improvement may be due to the specific diversity mechanism or implementation details, rather than a conceptual leap.
+
+**Claim 4: Standardized evaluation setup for fair comparison**
+- **Most Similar Prior Work:** RGB Benchmark, RAG Survey, Benchmarking LLMs in RAG.
+- **Claimed Difference:** Provides a standardized setup for evaluating rewriting modules.
+- **Independent Assessment:**  
+  - The field already has several standardized benchmarks and evaluation frameworks.
+  - Unless the submission’s setup is widely adopted or addresses a previously unmet need, this is likely an incremental contribution.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The RAG field is highly active and rapidly evolving, with many recent papers on query rewriting, dynamic retrieval, and benchmarking.
+- **Recent Surveys:** The RAG Survey (2024), RGB Benchmark, and "Searching for Best Practices" provide comprehensive overviews and benchmarks.
+- **Trends:** There is a clear trend toward multi-query, diverse, and adaptive rewriting, as well as dynamic retrieval and robust evaluation.
+- **Incremental Advances:** Many recent papers propose new variants of query rewriting, adaptivity, or reranking, often with modest empirical gains. The bar for "novelty" is rising, and reviewers expect clear, substantive advances over prior work.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The distinction between "information-level-based" diversity and prior diversity mechanisms (e.g., informativeness, aspect coverage, demographic simulation) may be less substantive than claimed.
+  - Adaptive strategy selection is a common theme in recent work; the specific mechanism must be clearly differentiated.
+  - Empirical improvements may result from implementation details (e.g., better LLM prompts, more aggressive reranking) rather than conceptual advances.
+  - Terminology differences (e.g., "information level" vs. "informativeness") may mask underlying similarities.
+  - The "standardized evaluation setup" may be a routine adaptation unless it introduces a new, widely useful benchmark.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted Relevant Work:**  
+  - The submission does not cite several highly relevant recent works:  
+    - Enhancing Conversational Search: LLM-Aided Informative Query Rewriting  
+    - Context Aware Query Rewriting for Text Rankers using LLM  
+    - Agent4Ranking: Semantic Robust Ranking via Personalized Query Rewriting Using Multi-agent LLM  
+  - These works address similar problems (diversity, informativeness, robustness) and should be compared.
+- **Incomplete Characterization:**  
+  - The submission does not fully engage with the technical details of RQ-RAG, Query Rewriting for RAG LLMs, or Agent4Ranking, especially regarding their diversity and adaptivity mechanisms.
+  - The limitations of prior work may be exaggerated by not acknowledging their own multi-query, diverse, or adaptive features.
+- **Additional Comparisons Needed:**  
+  - Direct empirical and technical comparison with the above omitted works would clarify the true delta.
+  - More detailed discussion of how "information-level-based" diversity differs from "informativeness" or "aspect coverage" is needed.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**  
+  - DMQR-RAG’s explicit categorization of query rewrites by "information level" may be a more systematic approach to diversity than prior work, but the distinction is subtle and may overlap with existing notions of informativeness or aspect coverage.
+  - The adaptive strategy selection is in line with recent trends, but not clearly differentiated from prior adaptive/dynamic mechanisms.
+- **Main Relationships to Existing Research:**  
+  - DMQR-RAG is an incremental extension of the multi-query rewriting paradigm, situated within a highly active area with many similar recent contributions.
+- **Strongest Differentiation:**  
+  - If the "information-level-based" diversity is operationalized in a novel and effective way, this could be a modest but real advance.
+- **Weakest Differentiation:**  
+  - Adaptive strategy selection and standardized evaluation setup are already common in the field.
+- **Discrepancies Between Author Characterizations and Independent Assessment:**  
+  - The submission underplays the diversity and adaptivity mechanisms in prior work, and does not cite several highly relevant recent papers.
+  - Claimed limitations of prior work (e.g., lack of diversity, lack of adaptivity) are not fully substantiated.
+  - The novelty claims may be overstated, with differences being more about implementation or terminology than conceptual advances.
+
+---
+
+**Overall, DMQR-RAG is a well-positioned but incremental contribution in a rapidly evolving field. Its main technical delta—explicit information-level-based diversity in query rewriting—should be more clearly distinguished from prior diversity mechanisms, and the adaptivity and evaluation claims should be contextualized within the broader literature. Reviewers should consider the degree to which the claimed advances are substantive versus routine extensions, and whether omitted related work would affect the assessment of novelty.**

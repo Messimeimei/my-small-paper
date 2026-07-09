@@ -1,0 +1,208 @@
+---
+# Research Landscape Analysis
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the following methodological themes emerge:
+
+- **LLM-Driven Proof and Specification Generation:** Most papers leverage large language models (LLMs) for generating code, proofs, or formal specifications, often in combination with verification tools.
+- **Closed-Loop and Self-Evolving Frameworks:** Several works (e.g., the submission, Clover, SpecGen) employ iterative, feedback-driven cycles where LLM outputs are validated and refined using formal verifiers or user feedback.
+- **Agent-Oriented and Orchestrated LLM Systems:** Some approaches (e.g., AutoVerus) orchestrate multiple LLM agents or phases to mimic expert workflows.
+- **Hybrid and Augmented Approaches:** Methods combine LLMs with static analysis, symbolic execution, or traditional verification (e.g., Related Papers 4, 11, 10).
+- **Proof Repair and Debugging:** Techniques for repairing or debugging failed proofs using LLMs and verifier feedback (e.g., submission, Baldur, Sisyphus).
+- **Dataset Curation and Fine-Tuning:** Many works curate new datasets and fine-tune LLMs for domain-specific tasks (e.g., Dafny, F*, Rust, Isabelle/HOL).
+- **Interactive and User-in-the-Loop Methods:** Some approaches incorporate user feedback or interactive workflows (e.g., InteractiveTestDrivenCodeGen, SpecGen's conversation-driven phase).
+
+### Method Clusters
+
+- **Cluster 1: LLM + Formal Verification Loop**
+  - Submission, Clover, AutoVerus, SpecGen, Related Paper 1, Related Paper 4, Baldur, Selene
+  - Characterized by iterative cycles where LLMs generate candidate code/proofs/specifications, which are then checked by formal verifiers, with feedback used for refinement.
+- **Cluster 2: LLM + Static/Symbolic Analysis**
+  - Related Paper 4, Related Paper 11, Related Paper 10
+  - Combine LLMs with static analysis, symbolic execution, or separation logic to enhance proof synthesis or verification.
+- **Cluster 3: Proof Repair and Debugging**
+  - Submission, Baldur, Sisyphus (Related Paper 8), AutoVerus
+  - Focus on repairing or debugging failed proofs using LLMs and verifier feedback.
+- **Cluster 4: Dataset-Driven LLM Fine-Tuning**
+  - Related Paper 1, Related Paper 12, Baldur, Submission
+  - Emphasize dataset curation, LLM fine-tuning, and retrieval augmentation for improved synthesis.
+- **Cluster 5: Interactive/User-in-the-Loop**
+  - SpecGen (conversation-driven), InteractiveTestDrivenCodeGen, Related Paper 4 (iterative decomposition)
+  - Involve users or interactive systems in the generation and validation loop.
+- **Cluster 6: Hybrid Verification for Rust**
+  - Related Paper 9, Related Paper 10, Related Paper 13, Related Paper 14
+  - Focus on combining automated and semi-automated tools, type systems, and memory models for Rust verification, especially for unsafe code.
+
+### Methodological Trends and Relationships
+
+- **LLM + Verifier Feedback Loops** are now standard for automating proof and specification generation, with increasing sophistication in how feedback is used (e.g., self-debugging, mutation, repair).
+- **Hybridization** (LLMs + static/symbolic analysis) is emerging to address LLM limitations in context retention, complex reasoning, and memory manipulation.
+- **Proof Repair** is gaining traction as a practical necessity, with LLMs used to iteratively fix failed attempts.
+- **Dataset Curation and Fine-Tuning** are critical for domain adaptation, especially where human-written data is scarce (e.g., Rust/Verus).
+- **Agent-Oriented Orchestration** (AutoVerus) and **interactive workflows** (SpecGen, ITDCG) reflect a move toward mimicking expert processes and incorporating human or system feedback.
+- **Rust Verification** is a hotbed for methodological innovation, with multiple approaches tackling both safe and unsafe code, often requiring new memory models or type systems.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+- **Automated Proof Generation for Code (Rust, Dafny, F*, Isabelle/HOL, etc.):**
+  - Submission, AutoVerus, Related Paper 4, Baldur, Selene, Related Paper 12
+- **Automated Formal Specification Generation:**
+  - SpecGen, Clover, Related Paper 1
+- **Proof Repair and Maintenance:**
+  - Baldur, Sisyphus, Submission (self-debugging), AutoVerus (proof debugging)
+- **Verification of Unsafe Code and Memory Safety in Rust:**
+  - Related Paper 9, Related Paper 10, Related Paper 13, Related Paper 14
+- **Bridging Data Scarcity for Proof/Spec Generation:**
+  - Submission, Related Paper 1, Related Paper 12
+- **Improving LLM Effectiveness for Formal Verification:**
+  - All LLM-based papers, especially those focusing on prompt engineering, fine-tuning, and retrieval augmentation
+- **Interactive Disambiguation of User Intent:**
+  - InteractiveTestDrivenCodeGen, SpecGen (conversation-driven)
+- **Loop Invariant Generation:**
+  - Related Paper 11
+
+### Approaches to Similar Problems
+
+- **Automated Proof Generation:**
+  - Submission and AutoVerus both target Rust/Verus, but Submission emphasizes self-evolution and data synthesis, while AutoVerus uses agent orchestration and a three-phase process.
+  - Baldur and Selene focus on whole-proof generation and repair in theorem provers (Isabelle/HOL, seL4), using LLMs and context.
+- **Specification Generation:**
+  - SpecGen uses a two-phase LLM-driven process (conversation + mutation), while Clover uses consistency checking and LLMs for annotation generation.
+- **Proof Repair:**
+  - Sisyphus (OCaml/Coq) and Baldur (Isabelle/HOL) both automate repair, but Sisyphus uses invariant synthesis and proof-driven testing, while Baldur leverages LLMs with error context.
+- **Rust Verification:**
+  - Related Paper 9 and 10 develop new type systems and hybrid tools for safe/unsafe Rust, while Related Paper 13 and 14 focus on unsafe code pattern recognition and encapsulation best practices.
+
+### Patterns in Problem Formulation
+
+- **Data Scarcity as a Bottleneck:** Many works explicitly address the lack of human-written proofs/specs as a core challenge, motivating synthetic data generation and self-supervised learning.
+- **Bridging LLMs and Formal Verification:** The central problem is not just code/proof generation, but ensuring outputs are verifiable and correct, requiring tight integration with formal tools.
+- **Human Effort Reduction:** A recurring theme is reducing the manual burden in writing proofs, specifications, or maintaining verification as code evolves.
+- **Handling Unsafe/Complex Code:** For Rust, the focus is on extending verification to unsafe code and complex memory models, which are not well-served by existing tools.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **MBPP (Mostly Basic Python Problems):** Used in Submission, Related Paper 1, InteractiveTestDrivenCodeGen.
+- **CodeNet:** Used in Submission.
+- **VervusBench:** Human-curated Verus benchmark (Submission).
+- **AutoVerus Benchmark:** 150 Rust/Verus proof tasks.
+- **MBPP-DFY-153/50:** Dafny specification datasets (Related Paper 1, Clover).
+- **CloverBench:** Annotated Dafny programs (Clover).
+- **Selene Benchmark:** seL4 microkernel proofs (Selene).
+- **SpecGenBench:** Java programs with hand-written specs (SpecGen).
+- **FStarDataSet:** F* programs and proofs (Related Paper 12).
+- **PISA:** Isabelle/HOL theorems (Baldur).
+- **OCaml Library Programs:** For proof repair (Sisyphus).
+- **Rust Standard Library (LinkedList, Vec):** For Rust verification (Related Paper 10).
+- **GitHub Unsafe Rust Snippets:** For unsafe code analysis (Related Paper 13).
+
+### Evaluation Metrics
+
+- **Proof/Spec Generation Success Rate:** Percentage of problems for which a correct proof/specification is generated (most common).
+- **Accuracy:** Percentage of correctly verified proofs (Submission, Clover, etc.).
+- **Acceptance/Rejection Rate:** For filtering correct/incorrect code (Clover).
+- **Reduction in Human Effort:** Measured as reduction in lines of code, manual interventions, or user queries (Related Paper 4, Sisyphus, ITDCG).
+- **Performance/Scalability:** Speed, number of LLM calls, ability to handle real-world code (AutoVerus, Related Paper 10).
+- **Comparisons with Baselines:** Many works compare against state-of-the-art tools or LLM-only baselines.
+
+### Patterns in Evaluation
+
+- **Verifier-in-the-Loop:** Most evaluations rely on formal verifiers (Verus, Dafny, Coq, Isabelle/HOL, F*, etc.) as the ground truth for correctness.
+- **Synthetic vs. Human Benchmarks:** Both synthetic (LLM-generated) and human-curated benchmarks are used, with increasing emphasis on real-world or human-written datasets.
+- **Efficiency and Automation:** Newer works increasingly report on efficiency (speed, number of calls) and degree of automation, not just success rates.
+- **User Studies:** Some works (SpecGen) include user studies for semantic quality, though this is less common.
+
+### Comparison Across Papers
+
+- **Submission vs. AutoVerus:** Submission reports up to 79% accuracy with self-debugging (on VervusBench), while AutoVerus claims >90% proof success rate on its benchmark, but with different task definitions and benchmarks.
+- **LLM Baselines:** Submission and others consistently show that open-source or fine-tuned models can approach or surpass GPT-4(o) on domain-specific tasks.
+- **Proof Repair:** Baldur and Sisyphus demonstrate measurable improvements in proof success via repair, with Baldur showing a 1.5% increase in theorems proved.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: LLM-Driven Proof/Spec Generation for Verification Languages
+
+- **Papers:** Submission, AutoVerus, Related Paper 1, Clover, SpecGen, Related Paper 4, Baldur, Selene, Related Paper 12
+- **Characteristics:** Use of LLMs (often fine-tuned) to generate code, proofs, or specifications for formal verification languages (Rust/Verus, Dafny, F*, Isabelle/HOL, Java).
+- **Relationships:** These works share a focus on integrating LLMs with formal verifiers, often using feedback loops, and are differentiated by the target language and the sophistication of the feedback/refinement process.
+
+### Cluster 2: Hybrid and Augmented Verification for Rust
+
+- **Papers:** Related Paper 9, Related Paper 10, Related Paper 13, Related Paper 14
+- **Characteristics:** Focus on Rust, especially unsafe code, using hybrid approaches (type systems, symbolic memory models, dataflow analysis) and semi-automated tools.
+- **Relationships:** These works complement the LLM-driven cluster by addressing verification challenges that are difficult for LLMs alone, such as unsafe code and memory safety.
+
+### Cluster 3: Proof Repair and Maintenance
+
+- **Papers:** Baldur, Sisyphus, Submission (self-debugging), AutoVerus (proof debugging)
+- **Characteristics:** Emphasize automated repair or debugging of failed proofs, using LLMs, invariant synthesis, or verifier feedback.
+- **Relationships:** Overlaps with Cluster 1, but with a distinct focus on maintenance and robustness of verification as code evolves.
+
+### Cluster 4: Interactive/User-in-the-Loop Generation
+
+- **Papers:** SpecGen (conversation-driven), InteractiveTestDrivenCodeGen, Related Paper 4 (iterative decomposition)
+- **Characteristics:** Incorporate user or system feedback in the generation loop, aiming to disambiguate intent or improve quality.
+- **Relationships:** These methods are often layered atop LLM-driven generation, providing an additional axis of refinement.
+
+### Cluster 5: Dataset Curation and Benchmarking
+
+- **Papers:** Related Paper 1, Related Paper 12, Clover, Selene, SpecGen
+- **Characteristics:** Creation of new datasets and benchmarks for proof/specification generation and verification.
+- **Relationships:** These efforts underpin the progress in other clusters by enabling training, evaluation, and comparison.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **From LLM-Only to LLM+Verifier Loops:** Early works explored LLMs for code/proof generation, but quickly found that verifier feedback is essential for correctness. This led to closed-loop and self-evolving frameworks (Submission, Clover, SpecGen).
+- **From Stepwise to Whole-Proof Generation:** Baldur and others move from step-by-step or search-based proof synthesis to whole-proof generation, improving efficiency.
+- **From Human-in-the-Loop to Self-Evolving Systems:** While interactive methods remain important, there is a trend toward minimizing human input via self-evolving, self-debugging, and synthetic data generation (Submission, Related Paper 11).
+- **From Safe to Unsafe Code Verification:** Rust verification research has evolved from focusing on safe code to tackling unsafe code, requiring new type systems, memory models, and hybrid tools (Related Paper 9, 10, 13, 14).
+- **From Single-Model to Multi-Agent/Orchestrated Systems:** AutoVerus and similar works orchestrate multiple LLM agents or phases, mimicking expert workflows for higher success rates.
+- **From Static Datasets to Dynamic Data Synthesis:** Submission and Related Paper 11 synthesize new training data (proofs, invariants) to overcome data scarcity, enabling continual improvement.
+
+### Building Blocks and Extensions
+
+- **Verifier Feedback as a Core Building Block:** Used in almost all recent works, with increasing sophistication (e.g., self-debugging, mutation, repair).
+- **Dataset Curation:** New datasets (MBPP-DFY, VervusBench, SpecGenBench, FStarDataSet) enable fine-tuning and benchmarking, driving progress.
+- **Hybridization:** Combining LLMs with static/symbolic analysis, type systems, and memory models extends the reach of automation to more complex code.
+- **Proof Repair:** Evolving from manual repair to automated, LLM-driven repair with context and error messages.
+
+### Competing and Complementary Approaches
+
+- **LLM-Driven vs. Hybrid/Static Analysis:** LLMs excel at pattern recognition and synthesis, but hybrid approaches are needed for deep reasoning about memory, pointers, and unsafe code.
+- **Interactive vs. Fully Automated:** Some methods rely on user feedback for disambiguation, while others aim for full automation via self-evolving cycles.
+- **Agent-Oriented Orchestration vs. Monolithic Models:** Orchestrated multi-agent systems (AutoVerus) may outperform single-model approaches, especially for complex tasks.
+
+---
+
+# Summary Table
+
+| Cluster | Main Methods | Key Papers | Target Language/Domain | Notable Innovations |
+|---------|--------------|------------|-----------------------|---------------------|
+| LLM+Verifier Loop | LLMs + formal verification, feedback cycles | Submission, AutoVerus, Clover, SpecGen, Related Paper 1, 4, Baldur, Selene, 12 | Rust, Dafny, F*, Isabelle/HOL, Java | Self-evolving, closed-loop, agent orchestration, whole-proof generation |
+| Hybrid/Augmented Rust Verification | Type systems, symbolic memory, hybrid tools | 9, 10, 13, 14 | Rust (safe & unsafe) | Hybrid safe/unsafe verification, symbolic memory models, unsafe code pattern recognition |
+| Proof Repair | LLM-driven repair, invariant synthesis | Baldur, Sisyphus, Submission, AutoVerus | Isabelle/HOL, Coq, Rust | Proof repair with error context, proof-driven testing |
+| Interactive/User-in-the-Loop | User/system feedback, interactive prompting | SpecGen, ITDCG, 4 | Java, Python, Rust | Conversation-driven, test-driven disambiguation |
+| Dataset Curation | New datasets, fine-tuning | 1, 12, Clover, Selene, SpecGen | Dafny, F*, Dafny, seL4, Java | Large-scale datasets, retrieval augmentation |
+
+---
+
+# Conclusion
+
+The research landscape is rapidly evolving from LLM-only approaches to sophisticated, feedback-driven, and hybrid systems for automated proof and specification generation. The submission paper exemplifies the state-of-the-art by combining self-evolving data synthesis, self-debugging, and verifier feedback to overcome data scarcity and achieve high accuracy in Rust proof generation. Across the field, there is a clear trend toward integrating LLMs with formal verification, static analysis, and user/system feedback, supported by new datasets and benchmarks. Rust verification, especially for unsafe code, remains a challenging and fertile ground for innovation, with hybrid and type-system-based approaches complementing LLM-driven methods. Proof repair, dataset curation, and interactive workflows are emerging as key enablers for scaling formal verification to real-world software.

@@ -1,0 +1,157 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Independent Positioning within the Research Landscape:**
+
+The submission, "Active Test Time Prompt Learning in Vision-Language Models" (ATPL), is situated at the intersection of three major methodological clusters: (1) test-time prompt learning/adaptation for VLMs, (2) active learning for annotation efficiency, and (3) distribution alignment/calibration for robust adaptation. The most closely related prior works are:
+
+- **Test-Time Prompt Tuning (TPT, Shu et al., 2022):** Adapts prompts at test time, in a streaming, single-sample setting, for VLMs.
+- **PromptAlign (Abdul Samadh et al., 2024):** Adds distribution alignment to test-time prompt learning.
+- **Active Prompt Learning in VLMs (Bang et al., 2024):** Combines prompt learning and active learning, but not in a test-time setting.
+- **PCB (Class-Balanced Buffering, 2023):** Active learning with class balancing, not specifically for VLMs or test-time.
+- **SALAD (Wang et al., 2022):** Active learning in source-free domain adaptation, not in a streaming test-time VLM context.
+
+**Methodological Clusters:**
+- ATPL is most closely aligned with the "Test-Time Prompt Learning and Adaptation" cluster (TPT, PromptAlign, VPA, DPCore), but uniquely integrates "Active Learning and Annotation Efficiency" (PCB, SALAD) at test time for VLMs.
+- The submission also incorporates "Distribution Alignment and Calibration" (PromptAlign, C-TPT) via class-aware alignment.
+
+**Problem Space:**
+- The submission addresses test-time adaptation for VLMs under distribution shift, with a focus on streaming, single-sample settings and minimal annotation.
+- It extends the problem space by introducing active querying and class balancing at test time, which is not present in prior VLM test-time adaptation works.
+
+**Evaluation Approaches:**
+- The evaluation protocol (cross-dataset transfer, domain generalization, annotation budget, buffer capacity) is consistent with recent test-time adaptation and prompt learning works, though the explicit focus on annotation efficiency is more aligned with active learning literature.
+
+**Verification of Author Positioning:**
+- The claim of being the first to apply active learning at test time for VLMs is supported by the landscape: prior works combine prompt learning and active learning (Bang et al., 2024), but not in a streaming, test-time VLM context.
+- However, several recent works (e.g., C-TPT, DPCore, InCPL, VPTTA) address related test-time prompt adaptation problems, sometimes with memory/buffer mechanisms or continual adaptation, though not always with active querying.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Characterization:**
+
+- **Bang et al., 2024:** Authors state this work combines prompt learning and active learning, but "not in a test-time setting" and "did not try on adaptation tasks." They also note Bang et al. found class balancing important for VLMs.
+  - *Independent check:* Bang et al. indeed focuses on active prompt learning for VLMs, but in a training/finetuning context, not streaming test-time adaptation. The characterization is accurate, though the distinction is somewhat subtle (test-time vs. training-time active learning).
+
+- **Shu et al., 2022 (TPT):** Authors describe TPT as "updates the prompts so that the average entropy of the logits from a set of augmentations of a single test example is minimized," and as "essentially extends the MEMO philosophy to prompt tuning."
+  - *Independent check:* TPT does perform test-time prompt tuning using entropy minimization on augmentations of a single test sample, closely matching the description. The characterization is accurate.
+
+- **Abdul Samadh et al., 2024 (PromptAlign):** Authors state they "follow PromptAlign to introduce distribution alignment, except that we align active samples to source data statistics of the particular class they belong to instead of the overall source data."
+  - *Independent check:* PromptAlign aligns test-time features to source statistics, but does so at the overall (not class-specific) level. The submission's class-aware alignment is a technical extension. The distinction is accurate.
+
+- **MEMO (Zhang et al., 2022):** Authors note MEMO "uses the more general case of a single test input by taking multiple augmentations of a single image."
+  - *Independent check:* MEMO is a training-free test-time adaptation method using entropy minimization on augmentations. The description is accurate.
+
+- **SALAD (Wang et al., 2022):** Authors state SALAD "incorporated Active Learning into Source Free Domain Adaptation... not suited for continuous data streams, unlike our TTA setting."
+  - *Independent check:* SALAD is for source-free domain adaptation with active learning, but not in a streaming, single-sample test-time context. The characterization is accurate.
+
+**Discrepancies and Rhetoric:**
+- The authors generally provide accurate, if sometimes brief, characterizations of prior work.
+- The distinction between "test-time" and "training-time" active learning is emphasized to highlight novelty, but the difference is meaningful in this context.
+- There is no evidence of major overstatement or understatement, though the omission of some recent test-time prompt learning works (see Section 6) may underplay the maturity of the area.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claim 1: First to apply Active Learning in a Test Time setting for VLMs**
+- **Most similar prior work:** Bang et al., 2024 (active prompt learning for VLMs, but not at test time); SALAD (active learning in source-free adaptation, not for VLMs/test-time); PCB (class-balanced active learning, not for VLMs/test-time).
+- **Delta:** The submission is the first to combine active querying (uncertainty-based, class-balanced) with test-time prompt learning for VLMs in a streaming, single-sample setting. Prior works either do active learning at training/finetuning (Bang et al.), or do not address VLMs/test-time adaptation (SALAD, PCB).
+- **Substance:** The difference is substantive in terms of problem setting and technical integration.
+- **Author characterization:** Accurate, though the distinction is nuanced.
+
+**Claim 2: Dynamically adjusted threshold for querying uncertain test samples in a streaming, single-sample setting**
+- **Most similar prior work:** TPT (entropy-based prompt tuning at test time), PCB (dynamic class balancing in active learning), C-TPT (calibration/uncertainty in test-time prompt tuning).
+- **Delta:** TPT and C-TPT use entropy/uncertainty for adaptation, but do not actively query labels at test time. PCB uses dynamic thresholds for class balancing, but not in a test-time VLM context. The submission's dynamic threshold for label querying in a streaming, single-sample test-time setting is novel.
+- **Substance:** The technical novelty is moderate; dynamic thresholds are common in active learning, but their application in this specific setting is new.
+- **Author characterization:** Accurate.
+
+**Claim 3: Class balancing and non-informative sample replacement in the annotation buffer for test-time adaptation**
+- **Most similar prior work:** PCB (class-balanced buffer in active learning), DPCore (dynamic coreset for continual adaptation), VPTTA (buffer for continual test-time adaptation).
+- **Delta:** PCB uses class balancing in active learning, DPCore/VPTTA use buffers for continual adaptation, but none combine class balancing and non-informative sample replacement in a test-time VLM adaptation context.
+- **Substance:** The combination is a logical extension, but not a major conceptual leap; the novelty is in the integration and application to this setting.
+- **Author characterization:** Accurate, but the extension is incremental.
+
+**Claim 4: Class-aware distribution alignment using actively labeled samples for fine-grained adaptation**
+- **Most similar prior work:** PromptAlign (distribution alignment at test time, but not class-aware), C-TPT (calibration via feature dispersion).
+- **Delta:** PromptAlign aligns to overall source statistics; the submission aligns to class-specific statistics using actively labeled samples. This is a technical refinement.
+- **Substance:** The difference is specific and potentially impactful for fine-grained adaptation, but is an incremental extension of PromptAlign.
+- **Author characterization:** Accurate.
+
+**Claim 5: New, fair evaluation protocol for this novel problem setting**
+- **Most similar prior work:** TPT, PromptAlign, C-TPT, DPCore, VPTTA (all use various test-time adaptation protocols).
+- **Delta:** The submission emphasizes annotation budget and buffer capacity in addition to accuracy, reflecting the active learning aspect. This is a reasonable extension, but not a fundamentally new protocol.
+- **Substance:** The evaluation protocol is adapted to the new setting, but not a major innovation.
+- **Author characterization:** Slightly overstated; the protocol is a logical adaptation.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field maturity:** The area of test-time adaptation and prompt learning for VLMs is highly active, with rapid recent progress (2022–2024). Many works have appeared in the last 1–2 years, including TPT, PromptAlign, C-TPT, DPCore, VPTTA, and others.
+- **Recent surveys:** "A Comprehensive Survey on Test-Time Adaptation under Distribution Shifts" (Liang et al., 2024) provides an overview of the field.
+- **Trends:** There is a clear trend toward parameter-efficient, label-efficient, and robust adaptation under distribution shift, with increasing attention to streaming, continual, and source-free settings.
+- **Incremental advances:** Many recent papers propose incremental extensions (e.g., new buffer strategies, alignment losses, calibration metrics) rather than fundamentally new paradigms.
+- **Reviewer calibration:** Novelty claims should be evaluated in the context of a rapidly evolving field where many "firsts" are nuanced and extensions are often incremental.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential overstatement:** The claim of being the "first" to apply active learning at test time for VLMs is accurate in a narrow sense, but the conceptual leap from training-time to test-time active learning is incremental.
+- **Novelty alignment:** The main technical differences (dynamic thresholding, class-aware alignment, buffer management) are logical extensions of existing ideas (TPT, PromptAlign, PCB).
+- **Empirical improvements:** Gains may be due to careful integration and tuning of known techniques (uncertainty, class balancing, buffer replacement) rather than fundamentally new concepts.
+- **Terminology:** Differences in terminology (e.g., "test-time" vs. "training-time" active learning) may exaggerate novelty.
+- **Routine adaptations:** Buffer management and class balancing are standard in active learning; their application to test-time VLM adaptation is new but not conceptually deep.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted relevant works:** Several recent test-time prompt learning and adaptation papers are not cited, including:
+  - C-TPT: Calibrated Test-Time Prompt Tuning for VLMs
+  - InCPL: In-context Prompt Learning for Test-time Vision Recognition
+  - DiffTPT: Diverse Data Augmentation with Diffusions for Test-time Prompt Tuning
+  - DPCore: Dynamic Prompt Coreset for Continual Test-Time Adaptation
+  - VPTTA, TPGaze, VPA: Visual prompt adaptation at test time
+- **Additional comparisons:** The submission would benefit from direct comparison to these works, especially those using buffer/memory mechanisms (DPCore, VPTTA) and calibration/uncertainty (C-TPT).
+- **Potentially misleading characterizations:** The omission of these works may understate the maturity and breadth of the field.
+- **Exaggerated limitations:** The limitations of prior works (e.g., lack of class balancing, no active querying) are real, but the differences are often incremental.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most significant independently verified differences:**
+  - The integration of active querying (uncertainty-based, class-balanced) with test-time prompt learning for VLMs in a streaming, single-sample setting is new.
+  - Class-aware distribution alignment using actively labeled samples is a technical refinement over PromptAlign.
+- **Main relationships to existing research:**
+  - The submission builds directly on TPT (test-time prompt tuning), PromptAlign (distribution alignment), and PCB (class-balanced active learning), integrating their ideas in a new setting.
+- **Strongest differentiation:**
+  - The application of active learning principles (uncertainty, class balancing) at test time for VLMs.
+- **Weakest differentiation:**
+  - Buffer management and class balancing are standard in active learning; their adaptation to test-time VLMs is incremental.
+  - The evaluation protocol is a logical extension, not a major innovation.
+- **Discrepancies between author characterization and independent assessment:**
+  - The "first" claim is accurate in a narrow sense, but the conceptual novelty is incremental.
+  - Omission of several recent related works may understate the field's maturity.
+- **Reviewer guidance:**
+  - The submission is a well-motivated integration of existing techniques in a new setting, with some technical refinements.
+  - The main novelty is in the combination and adaptation of known methods, rather than fundamentally new concepts.
+
+---
+
+**References for Evidence:**
+- Bang et al., 2024: Active Prompt Learning for VLMs (training-time)
+- Shu et al., 2022: Test-Time Prompt Tuning (TPT)
+- Abdul Samadh et al., 2024: PromptAlign
+- Zhang et al., 2022: MEMO
+- Wang et al., 2022: SALAD
+- PCB, DPCore, C-TPT, VPTTA: Recent works on class balancing, buffer management, calibration, and continual adaptation (not cited in submission)
+
+---
+
+**End of Analysis**

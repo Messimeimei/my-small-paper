@@ -1,0 +1,163 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+- The submission, FISTAPruner, is positioned within the **optimization-based, post-training pruning** cluster for large language models (LLMs). This cluster is characterized by methods that formulate pruning as a convex or sparse regression problem, aiming for retraining-free, scalable, and accurate pruning of billion-parameter LLMs.
+- The most closely related prior works are **SparseGPT** (Frantar & Alistarh, 2023), which introduced one-shot, retraining-free pruning via approximate sparse regression, and **Pruning Foundation Models for High Accuracy without Retraining** (MRP), which also frames pruning as an optimization problem. The submission also shares similarities with **Fast and Effective Weight Update for Pruned LLMs** (Boža, 2024), which uses ADMM for weight updates.
+- The submission claims novelty in using a **LASSO-like convex optimization model** solved by **FISTA** for layer-wise pruning, with an intra-layer error correction mechanism and support for both unstructured and 2:4 semi-structured sparsity.
+
+**Methodological Clusters:**
+- FISTAPruner is most closely aligned with the **convex optimization/sparse regression** cluster, distinct from heuristic/activation-based methods (e.g., Wanda), learnable mask approaches (e.g., MaskLLM), and sensitivity/outlier-aware allocation (e.g., OWL).
+- The method is also related to works on **post-pruning recovery** (e.g., LLM-Pruner, DSnoT), but differs in aiming for minimal or no retraining.
+
+**Problem Space and Evaluation:**
+- The submission addresses the challenge of **efficient, scalable, retraining-free pruning** for very large LLMs, with a focus on **performance retention at high sparsity** and **hardware-friendly sparsity patterns**.
+- Evaluation is consistent with field norms: zero-shot task performance, parameter sparsity, and performance retention on standard LLMs (LLaMA, OPT).
+
+**Independent Assessment:**
+- The submission is a natural extension of the optimization-based pruning paradigm, with technical overlap with SparseGPT, MRP, and related convex/ADMM-based methods.
+- The use of FISTA and explicit intra-layer error correction are distinguishing features, but similar goals and high-level approaches are present in several recent works.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**SparseGPT (Frantar & Alistarh, 2023):**
+- **Author Characterization:** "Recent developments, including SparseGPT... employ post-training pruning techniques for LLMs without retraining."
+- **Pattern:** Authors group SparseGPT and Wanda as prior post-training, retraining-free methods, implying their method is a more principled or effective alternative.
+- **Independent Assessment:** SparseGPT is indeed a key prior for one-shot, retraining-free pruning, using approximate sparse regression. However, SparseGPT also formulates pruning as a (non-convex) optimization problem, and its approach is conceptually similar to the submission’s, though the submission claims a convex formulation and FISTA-based solution.
+- **Discrepancy:** The authors do not explicitly acknowledge the technical similarity in optimization framing, potentially understating the overlap.
+
+**Wanda (Sun et al., 2023):**
+- **Author Characterization:** Grouped with SparseGPT as a retraining-free, post-training pruning method.
+- **Pattern:** Used as a baseline for comparison.
+- **Independent Assessment:** Wanda is a heuristic, activation-based method, less principled than optimization-based approaches. The distinction is accurate.
+
+**LLM-Pruner (Ma et al., 2023):**
+- **Author Characterization:** "Methods such as... require a retraining phase post-pruning, which is inefficient for billion-scale LLMs."
+- **Pattern:** Authors position their method as more efficient due to no retraining.
+- **Independent Assessment:** LLM-Pruner does require some post-pruning recovery, so the characterization is accurate.
+
+**One-Shot Sensitivity-Aware Mixed Sparsity Pruning (Shao et al., 2024):**
+- **Author Characterization:** "SparseGPT and ISC leverage the OBS framework to calculate saliency... based on which pruning masks are generated and weights updated."
+- **Pattern:** Authors acknowledge the use of sensitivity-based saliency in prior work.
+- **Independent Assessment:** Accurate; these methods use Hessian-based sensitivity for mask selection, which is a different technical approach from the submission.
+
+**Fast and Effective Weight Update for Pruned LLMs (Boža, 2024):**
+- **Author Characterization:** "Employs ADMM to optimize weight updates under iteratively refined pruning masks chosen through heuristic methods based on Wanda."
+- **Pattern:** Authors distinguish their method by using FISTA and a convex model, as opposed to ADMM and heuristic mask selection.
+- **Independent Assessment:** Accurate in terms of technical distinction, though both methods use iterative optimization for weight update.
+
+**NxMTransformer (Dinh et al., 2020):**
+- **Author Characterization:** "Integrate retraining directly into the pruning process... using ADMM."
+- **Pattern:** Authors distinguish their method as retraining-free.
+- **Independent Assessment:** NxMTransformer does require retraining, so the distinction is accurate.
+
+**Accurate Retraining-free Pruning for Pretrained Encoder-based Language Models (Park et al., 2024):**
+- **Author Characterization:** "Error correction techniques are increasingly used to mitigate error accumulations from layer-wise pruning..."
+- **Pattern:** Authors acknowledge the trend of error correction in pruning.
+- **Independent Assessment:** Accurate; error correction is a known technique, but the submission’s intra-layer error elimination is a specific instantiation.
+
+**General Patterns:**
+- Authors consistently position their method as more principled (optimization-based), more efficient (no retraining), and more effective (better performance retention) than prior work.
+- There is a tendency to group prior works by their limitations (heuristic, retraining required, no error correction), sometimes without fully acknowledging technical similarities (e.g., optimization framing in SparseGPT).
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claim 1: First LASSO-like Convex Optimization Model for Layer-wise Post-Training Pruning of LLMs**
+- **Most Similar Prior:** SparseGPT, Pruning Foundation Models (MRP), Related Paper 1 (A Convex-optimization-based Layer-wise Post-training Pruner for LLMs)
+- **Claimed Difference:** Convex (LASSO-like) formulation, solved by FISTA, as opposed to approximate or non-convex regression in SparseGPT.
+- **Independent Assessment:** SparseGPT uses approximate sparse regression (not strictly convex), while MRP and Related Paper 1 also use convex optimization (MRP: Multiple Removal Problem). The use of FISTA for LASSO is a technical distinction, but the overall paradigm (layer-wise convex optimization for pruning) is present in Related Paper 1 and MRP. The claim of being "first" is likely overstated, as Related Paper 1 and MRP predate or are concurrent with this submission.
+- **Substantive vs. Superficial:** The use of FISTA is a technical implementation detail; the conceptual advance over MRP or Related Paper 1 is limited.
+
+**Claim 2: Application of FISTA for Efficient Solution**
+- **Most Similar Prior:** Fast and Effective Weight Update (ADMM), MRP (custom solvers)
+- **Claimed Difference:** FISTA is used for efficiency and scalability.
+- **Independent Assessment:** FISTA is a standard algorithm for LASSO problems; ADMM is used in other works for similar purposes. The choice of FISTA may offer speed or convergence benefits, but is not a conceptual leap.
+- **Substantive vs. Superficial:** This is an implementation choice, not a fundamental methodological advance.
+
+**Claim 3: Cumulative Error Elimination Mechanism within Decoder Layers**
+- **Most Similar Prior:** Park et al. (2024), El Halabi et al. (2022), DSnoT (error correction)
+- **Claimed Difference:** Explicit intra-layer error correction to prevent error accumulation.
+- **Independent Assessment:** Error correction is a known technique in pruning literature. The submission’s specific mechanism (cumulative error elimination within decoder layers) may be a novel instantiation, but the general idea is not new.
+- **Substantive vs. Superficial:** The mechanism may offer practical benefits, but is an incremental extension of known error correction strategies.
+
+**Claim 4: Unified Support for Unstructured and 2:4 Semi-Structured Pruning**
+- **Most Similar Prior:** SparseGPT, MaskLLM, NxMTransformer, DaSS
+- **Claimed Difference:** Unified framework for both sparsity types, via hard thresholding after FISTA.
+- **Independent Assessment:** Several prior works (SparseGPT, MaskLLM, NxMTransformer) support both unstructured and N:M sparsity, often via different mask selection or optimization strategies. The submission’s approach (hard thresholding post-FISTA) is a practical adaptation, not a conceptual novelty.
+- **Substantive vs. Superficial:** Routine adaptation; not a unique contribution.
+
+**Claim 5: Ability to Prune 70B LLMs on a Single 40GB GPU Without Retraining**
+- **Most Similar Prior:** SparseGPT, Wanda, DSnoT
+- **Claimed Difference:** Scalability and efficiency.
+- **Independent Assessment:** SparseGPT and Wanda also demonstrate pruning of 70B+ models on a single GPU, retraining-free. The claim is accurate in terms of capability, but not unique.
+- **Substantive vs. Superficial:** Not a novel contribution; matches field standards.
+
+**Claim 6: Superior Performance Over SOTA Methods**
+- **Most Similar Prior:** SparseGPT, Wanda, DSnoT, PERP
+- **Claimed Difference:** Higher performance retention at high sparsity.
+- **Independent Assessment:** Empirical results show strong performance, but improvements may be due to implementation details (e.g., error correction, optimization solver) rather than conceptual advances. The margin of improvement should be interpreted in the context of similar methods.
+- **Substantive vs. Superficial:** Incremental improvement; not a paradigm shift.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The field of LLM pruning is highly active, with rapid evolution from heuristic to optimization-based, adaptive, and hardware-aware methods. Many papers have appeared in the last 1-2 years.
+- **Recent Surveys:** See "A Survey of Pruning Methods for Large Language Models" (2024), "A Survey on Efficient Large Language Model Inference" (2024), and "A Survey of Structured Pruning for Transformers" (2023).
+- **Trends:** Shift from heuristic to principled optimization, from uniform to adaptive sparsity, and from unstructured to hardware-friendly patterns. Emphasis on retraining-free, scalable methods for billion-parameter models.
+- **Incremental Advances:** Most recent papers offer incremental improvements (e.g., new optimization solvers, better error correction, adaptive sparsity allocation) rather than radical innovations. Implementation details and engineering optimizations often drive empirical gains.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The claim of being the "first" to use a LASSO-like convex model for layer-wise post-training pruning is not fully supported, given Related Paper 1 and MRP.
+- **Terminology Differences:** The distinction between "convex optimization" and "sparse regression" is sometimes blurred; several prior works use similar mathematical formulations under different names.
+- **Empirical Improvements:** Gains over SOTA may be due to implementation details (e.g., FISTA vs. ADMM, error correction) rather than conceptual advances.
+- **Routine Adaptations:** Support for both unstructured and 2:4 sparsity is now common; the submission’s approach is a practical adaptation.
+- **Error Correction:** The intra-layer error elimination is a specific mechanism, but error correction is a well-established technique in the field.
+- **Masking Conceptual Similarities:** The submission sometimes downplays the technical overlap with SparseGPT, MRP, and Related Paper 1.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted Relevant Work:** The submission does not cite several highly relevant recent works:
+    - **A Convex-optimization-based Layer-wise Post-training Pruner for LLMs** (very similar in approach)
+    - **Pruning Foundation Models for High Accuracy without Retraining (MRP)**
+    - **MaskLLM** (learnable semi-structured sparsity)
+    - **OWL** (outlier-aware adaptive sparsity)
+    - **LaCo, Sheared LLaMA, DSnoT, DaSS** (various structured and semi-structured pruning advances)
+- **Additional Comparisons Needed:** The submission should compare more directly with MRP, Related Paper 1, and MaskLLM, especially regarding optimization formulation and support for semi-structured sparsity.
+- **Potentially Misleading Characterizations:** The claim of being the first convex optimization-based method is questionable given Related Paper 1 and MRP.
+- **Exaggerated Limitations of Prior Work:** The submission sometimes implies that prior optimization-based methods are not scalable or do not support semi-structured sparsity, which is not always accurate.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+    - Use of FISTA for solving the convex pruning problem is a technical distinction, but not a conceptual leap.
+    - The intra-layer error elimination mechanism is a specific instantiation of error correction, which is a known technique.
+- **Main Relationships to Existing Research:**
+    - The submission is part of a rapidly evolving cluster of optimization-based, retraining-free pruning methods for LLMs.
+    - It is most similar to SparseGPT, MRP, and Related Paper 1, with incremental technical differences.
+- **Strongest Differentiation:**
+    - Efficient FISTA-based solver and explicit intra-layer error correction.
+- **Weakest Differentiation:**
+    - Convex optimization framing and support for semi-structured sparsity, both of which are present in prior work.
+- **Discrepancies Between Author Claims and Independent Assessment:**
+    - The claim of being the first convex optimization-based, layer-wise, post-training pruner is not fully supported.
+    - The technical overlap with Related Paper 1 and MRP is understated.
+    - Empirical improvements may be due to implementation details rather than conceptual advances.
+- **Summary for Reviewers:**
+    - The submission is a strong, well-engineered example of the optimization-based pruning paradigm, with incremental technical improvements.
+    - Its novelty claims should be interpreted in the context of closely related, recently published work with similar formulations.
+    - The field is highly active, and incremental advances are typical; reviewers should calibrate expectations accordingly.
+
+---

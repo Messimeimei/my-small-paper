@@ -1,0 +1,181 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+- The submission, ProCEED, is positioned within the *exemplar-free class-incremental learning* (EFCIL) literature, specifically targeting catastrophic forgetting and prototype drift without storing previous task samples.
+- It draws from and extends two major methodological clusters: (a) *prototype-based/analytic classifier methods* (e.g., FeCAM, PASS, FeTrIL, EFC, ADC), and (b) *ensemble/expert-based approaches* (e.g., EASE, SEED), while also incorporating elements of *knowledge distillation* (e.g., "Adapt Your Teacher", REAL).
+
+**Most Closely Related Prior Works:**
+- **FeCAM (Goswami et al., 2024):** Prototype-based, analytic classifier, addresses feature drift, and is cited as the main baseline.
+- **PASS (Zhu et al., 2021b):** Prototype-based, uses self-supervised learning for representation robustness.
+- **EFC, ADC, FeTrIL, FeTrIL++:** All address prototype drift and analytic classification in EFCIL.
+- **Ensemble/Expert-based:** EASE, SEED, and to some extent RanPAC, though these are less directly cited.
+- **Knowledge Distillation:** "Adapt Your Teacher", "Class-Incremental Learning by Knowledge Distillation", REAL.
+
+**Relation to Methodological Clusters:**
+- ProCEED is best viewed as a *hybrid* of prototype-based drift compensation and ensemble-based inference, with a novel knowledge distillation mechanism. Its main technical novelty claims (prototype realignment, ensemble of deep Gaussian classifiers, and MoE-based distillation) are all present in some form in the landscape, but the specific combination and implementation details are the focus.
+
+**Problem Space and Evaluation:**
+- The submission addresses the standard EFCIL problem: learning new classes incrementally without exemplars, mitigating catastrophic forgetting, and compensating for prototype drift.
+- Evaluation is on standard datasets (CIFAR100/20, TinyImageNet), using accuracy as the main metric, consistent with the field.
+
+**Independent Assessment:**
+- The submission is most closely related to FeCAM, PASS, FeTrIL, EFC, and ADC in terms of prototype drift compensation, and to EASE/SEED in terms of ensemble-based approaches.
+- The knowledge distillation aspect is related to "Adapt Your Teacher" and REAL, though the specific MoE-based distillation is less common.
+- The field is mature, with many recent works addressing similar problems with overlapping techniques.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**FeCAM (Goswami et al., 2024):**
+- Authors cite FeCAM as the main baseline, emphasizing ProCEED's superior accuracy (e.g., "ProCEED outperforms the second-best method FeCAM... by 13%").
+- FeCAM is also referenced in the context of warm-start learning and as a representative of analytic classifier approaches.
+- The authors frame FeCAM as a strong but surpassed baseline, focusing on performance gaps.
+
+**PASS (Zhu et al., 2021b):**
+- Cited as a baseline for accuracy comparison.
+- No technical discussion of PASS's self-supervised representation learning or prototype mixing.
+
+**SSRE (Zhu et al., 2022):**
+- Cited for performance comparison on TinyImageNet.
+
+**General Patterns:**
+- The authors primarily use related work to establish performance baselines, with little technical discussion of how their method differs in mechanism.
+- There is a tendency to frame prior work as limited or surpassed, focusing on accuracy margins rather than technical distinctions.
+- The technical mechanisms of prior works (e.g., how FeCAM handles drift, how PASS uses self-supervision) are not discussed in detail.
+
+**Discrepancies:**
+- The authors do not acknowledge that FeCAM and others also address prototype drift, nor do they discuss the technical similarities in prototype realignment or analytic classification.
+- The knowledge distillation literature is not cited or discussed, despite ProCEED's use of a MoE-based distillation mechanism.
+- Ensemble-based and adapter-based methods (EASE, SEED, RanPAC) are not cited, despite conceptual overlap.
+
+**Rhetoric:**
+- The focus is on performance superiority, with less attention to nuanced technical comparison or acknowledgment of overlapping mechanisms.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claimed Contribution 1: Prototype Consolidation via Dynamic Realignment**
+- **Most Similar Prior Work:** FeCAM, ADC, EFC, FeTrIL, FeTrIL++
+- **Claimed Difference:** ProCEED realigns old task representations into the latest subspace to prevent feature drift, "without extra optimization overhead."
+- **Independent Assessment:** 
+  - FeCAM and ADC both address prototype drift, with FeCAM using analytic compensation and ADC using adversarial drift compensation.
+  - The specific mechanism of "inter-subspace angular drifts" is not detailed in the excerpt, but similar ideas (e.g., aligning prototypes, compensating for feature space changes) are present in FeCAM, ADC, and EFC.
+  - The claim of "no extra optimization overhead" may be a minor implementation detail; FeCAM and EFC also use analytic (non-optimized) adjustments.
+  - The delta appears to be in the specific analytic form of the realignment, but the conceptual approach is not fundamentally new.
+
+**Claimed Contribution 2: Knowledge Distillation from a Mixture of Experts (MoE)**
+- **Most Similar Prior Work:** "Adapt Your Teacher", "Class-Incremental Learning by Knowledge Distillation", REAL
+- **Claimed Difference:** A single expert is fine-tuned and inherits knowledge from others without explicit optimization of the whole ensemble.
+- **Independent Assessment:** 
+  - Prior works use various forms of knowledge distillation, including teacher adaptation and feature map weighting.
+  - The use of a MoE for distillation is less common, but the idea of transferring knowledge from multiple sources is present in the literature.
+  - The claim of "no explicit optimization" may refer to not jointly optimizing the ensemble, but this is an implementation detail rather than a conceptual advance.
+  - The main delta is the specific way the MoE is used for distillation, but the broader concept is not unique.
+
+**Claimed Contribution 3: Prototype-based Ensemble of Deep Gaussian Classifiers**
+- **Most Similar Prior Work:** FeCAM, PASS, FeTrIL, EFC, ADC, EASE, SEED
+- **Claimed Difference:** Use of a prototype-based ensemble of deep Gaussian classifiers for improved plasticity and generalization.
+- **Independent Assessment:** 
+  - FeCAM, FeTrIL, and EFC use analytic (often Gaussian) classifiers on prototypes.
+  - Ensemble-based inference is present in EASE and SEED, though not always with Gaussian classifiers.
+  - The combination of prototype-based Gaussian classifiers in an ensemble is a minor extension of existing ideas.
+  - The delta is in the specific ensemble structure, but the underlying components are well-established.
+
+**General Observations:**
+- Many claimed differences are in implementation details or specific combinations, rather than fundamentally new concepts.
+- The authors do not discuss how their approach relates to recent advances in representation expansion, self-supervision, or adapter-based ensembles.
+- Improvements in accuracy may be due to careful engineering or hyperparameter tuning, rather than conceptual novelty.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+**Field Maturity:**
+- The EFCIL field is highly active, with numerous recent papers (2021–2024) introducing incremental improvements and new combinations of existing techniques.
+- Prototype drift compensation, analytic classifiers, and knowledge distillation are all well-explored areas.
+
+**Recent Surveys/Literature Reviews:**
+- Several recent surveys (not cited in the submission) cover the state of the art in continual learning and EFCIL, e.g., "A Comprehensive Survey of Continual Learning" (Delange et al., 2021), "A Survey on Class-Incremental Learning" (Masana et al., 2022).
+
+**Trends:**
+- Increasing sophistication in prototype management and drift compensation.
+- Growing use of pre-trained models and parameter-efficient adaptation.
+- Integration of self-supervised and contrastive learning for representation robustness.
+- Emphasis on analytic classifiers and ensemble methods for stability-plasticity trade-off.
+
+**Incremental Advances:**
+- Many recent papers introduce new variants or combinations of existing techniques, with performance gains often due to careful engineering or minor technical tweaks.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+**Potential Overstatements of Novelty:**
+- The submission's main contributions (prototype realignment, MoE-based distillation, ensemble of Gaussian classifiers) are all present in some form in prior work.
+- Claimed differences often hinge on implementation details (e.g., "no extra optimization overhead") rather than conceptual advances.
+- The combination of techniques is novel in its specifics, but not in its components.
+
+**Alignment of Claimed Novelty with Evidence:**
+- The authors' characterizations of prior work understate the degree to which prototype drift compensation and analytic classification are already addressed.
+- The knowledge distillation literature is not acknowledged, despite clear overlap.
+
+**Empirical Improvements:**
+- Reported accuracy gains may be due to careful engineering, hyperparameter tuning, or dataset-specific optimizations, rather than conceptual novelty.
+
+**Terminology Differences:**
+- The use of terms like "prototype consolidation" and "ensemble-based" may obscure similarities to prior analytic classifier and ensemble methods.
+
+**Routine Extensions:**
+- The MoE-based distillation and ensemble of Gaussian classifiers are routine extensions of existing ideas.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+**Potentially Relevant Work Not Addressed:**
+- **REAL:** Representation-enhancing analytic learning, combines prototype-based classification with representation robustness.
+- **FeTrIL++:** Feature translation for EFCIL, addresses prototype drift with analytic compensation.
+- **"Adapt Your Teacher":** Adaptive knowledge distillation for EFCIL.
+- **EASE, SEED:** Ensemble and adapter-based methods for CIL.
+- **Representation Robustness and Feature Expansion:** Prototype mixing and feature expansion for EFCIL.
+- **Resurrecting Old Classes with New Data:** Analytic classifier with feature augmentation.
+
+**Areas for Additional Comparison:**
+- The submission should compare with recent analytic classifier and ensemble-based methods, especially those using prototype drift compensation and knowledge distillation.
+- The omission of knowledge distillation and representation expansion literature is notable.
+
+**Incomplete/Misleading Characterizations:**
+- The submission frames FeCAM and others as not addressing prototype drift or ensemble inference, which is inaccurate.
+- The limitations of prior work are sometimes exaggerated to emphasize the submission's contributions.
+
+**Citation Practices:**
+- The authors cite prior work mainly for performance comparison, not for technical context or mechanism.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+**Most Significant Independently Verified Differences:**
+- ProCEED combines prototype realignment, ensemble-based inference, and MoE-based knowledge distillation in a single framework.
+- The specific analytic form of prototype realignment and the use of a MoE for distillation are minor technical variations.
+
+**Main Relationships to Existing Research:**
+- ProCEED is a hybrid of prototype-based drift compensation (FeCAM, ADC, EFC), analytic classification (FeCAM, FeTrIL), and ensemble/expert-based inference (EASE, SEED), with a knowledge distillation component (REAL, "Adapt Your Teacher").
+
+**Strongest and Weakest Differentiation:**
+- **Strongest:** The specific combination of prototype realignment, ensemble-based inference, and MoE-based distillation in one framework.
+- **Weakest:** The individual components (prototype drift compensation, analytic classification, knowledge distillation, ensemble inference) are all well-established.
+
+**Discrepancies Between Author Characterizations and Independent Assessment:**
+- The authors understate the degree to which prior work addresses prototype drift and analytic classification.
+- The knowledge distillation literature is not acknowledged, despite clear overlap.
+- The novelty claims are often based on implementation details rather than conceptual advances.
+
+---
+
+**In summary:**  
+ProCEED is a well-engineered integration of established techniques in EFCIL, with minor technical variations in prototype realignment and knowledge distillation. The main novelty lies in the specific combination and implementation, rather than in fundamentally new concepts. The authors' characterizations of prior work are incomplete, and the field is characterized by rapid, incremental advances with significant overlap in techniques. Reviewers should calibrate expectations accordingly and consider the degree to which empirical gains reflect conceptual innovation versus careful engineering.

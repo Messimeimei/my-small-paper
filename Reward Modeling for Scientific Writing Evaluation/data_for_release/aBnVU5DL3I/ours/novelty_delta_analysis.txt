@@ -1,0 +1,174 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating SaMer in the Research Landscape:**
+
+- **Methodological Cluster:**  
+  SaMer is most closely aligned with the "Multi-dimensional, Fine-grained, and Interpretable Evaluation" cluster, alongside works like FLASK, ArmoRM, Prometheus, and Hummer. These works share a focus on decomposing LLM evaluation into multiple, interpretable dimensions or skills, often with scenario/context awareness.
+
+- **Relation to Prior Work:**  
+  SaMer’s scenario-aware, multi-dimensional approach is conceptually similar to FLASK (skill decomposition), ArmoRM (objective mixture), and Prometheus (rubric-based evaluation). The key claimed distinction is SaMer’s *dynamic* identification and weighting of relevant evaluation dimensions per scenario, rather than relying on a fixed set or user-specified rubric.
+
+- **Problem Space:**  
+  SaMer addresses the challenge of evaluating LLM responses in a way that is both context-sensitive and interpretable, aiming to overcome the limitations of fixed-dimension or black-box evaluators. This is a recognized need in the field, as evidenced by the emergence of scenario-aware and fine-grained evaluation frameworks.
+
+- **Evaluation Approaches:**  
+  SaMer’s use of a large, scenario-diverse preference dataset and multi-head model architecture (dimension predictor, scorer, weightter) is consistent with recent trends toward data-driven, interpretable, and robust evaluation. The use of both single rating and pairwise comparison benchmarks is standard in the field.
+
+- **Most Closely Related Works:**  
+  - **FLASK:** Skill-based, fine-grained evaluation.
+  - **Prometheus:** Rubric-based, customizable, interpretable evaluation.
+  - **ArmoRM:** Mixture-of-experts for context-dependent objectives.
+  - **Generative Judge:** Scenario/rubric diversity in evaluation.
+  - **OffsetBias:** Bias mitigation in LLM-as-a-judge.
+  - **Hummer:** Conflict-aware, fine-grained preference datasets.
+
+**Independent Assessment:**  
+SaMer’s main methodological novelty is the *dynamic, scenario-aware selection and weighting* of evaluation dimensions, as opposed to fixed or user-specified sets. However, the degree to which this is a conceptual advance over, for example, Prometheus’s rubric-based or FLASK’s skill-based approaches depends on the technical details of how scenario-awareness is operationalized and whether prior works already support similar adaptability (see below).
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Citation Patterns and Characterizations:**
+
+- **Aligning with Human Judgement (Liu et al., 2024):**  
+  - *Author Characterization:* Used to justify pairwise preference as more reliable than single-instance evaluation.  
+  - *Citation Context:* "For each sample, considering that it is more reliable for LLMs to perform pairwise comparisons rather than single-instance evaluations..."  
+  - *Assessment:* This is a fair and accurate representation; the cited work does advocate for pairwise preference as more robust.
+
+- **OffsetBias (Huang et al., 2024; Park et al., 2024):**  
+  - *Author Characterization:* Cited as evidence that LLM-as-a-judge exhibits cognitive biases (response length, option order, entity preference).  
+  - *Citation Context:* "LLM as a judge often exhibits cognitive biases towards aspects such as response length, option order, and entity preference..."  
+  - *Assessment:* This is accurate; OffsetBias and related works do focus on identifying and mitigating such biases.
+
+- **Generative Judge (Li et al., 2023; 2024a; Sharma et al., 2023):**  
+  - *Author Characterization:* Used as a source for the design of evaluation dimensions.  
+  - *Citation Context:* "We designed a total of 42 evaluation dimensions, drawing upon previous studies..."  
+  - *Assessment:* This is a reasonable and accurate use of prior work as a source for evaluation criteria.
+
+**Patterns and Discrepancies:**
+
+- The authors generally cite prior work to justify methodological choices (pairwise evaluation, bias awareness, dimension selection) rather than to directly compare SaMer’s capabilities to those of prior systems.
+- There is little direct engagement with the most closely related multi-dimensional evaluators (e.g., FLASK, Prometheus, ArmoRM) in the provided citation context. This may understate the degree of overlap or similarity with these works.
+- No evidence of overtly overstated differences or misleading rhetoric in the provided citation sentences, but the lack of direct comparison with the most similar prior works is notable.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claimed Contribution 1:**  
+*SaMer is the first scenario-aware multi-dimensional evaluator that dynamically identifies and prioritizes relevant evaluation dimensions tailored to each query scenario.*
+
+- **Most Similar Prior Work:**  
+  - *FLASK* (skill-based, fine-grained evaluation)
+  - *Prometheus* (rubric-based, customizable evaluation)
+  - *ArmoRM* (context-dependent objective selection)
+  - *Generative Judge* (scenario/rubric diversity)
+- **Claimed Difference:**  
+  - Dynamic, scenario-aware selection and weighting of evaluation dimensions, as opposed to fixed or user-specified sets.
+- **Independent Assessment:**  
+  - *FLASK* and *Prometheus* both support multi-dimensional, interpretable evaluation, but typically require pre-defined or user-specified dimensions/rubrics.
+  - *ArmoRM* uses a mixture-of-experts for context-dependent objectives, which is similar in spirit to dynamic selection.
+  - *Generative Judge* supports scenario/rubric diversity but may not dynamically infer relevant dimensions per scenario.
+  - The *novelty* of SaMer appears to rest on the *automatic, model-driven identification and weighting* of relevant dimensions for each scenario, rather than relying on external specification.
+  - However, the technical distinction may be subtle: if prior works allow for flexible, user-driven or context-dependent selection, the difference may be more in implementation (automatic vs. manual selection) than in conceptual framework.
+  - The claim of being "first" is somewhat overstated, as context-aware and scenario-adaptive evaluation has been explored, though perhaps not with the exact architecture SaMer proposes.
+
+**Claimed Contribution 2:**  
+*SaMer integrates a text embedding model with three specialized heads (dimension predictor, scorer, and weightter) for flexible, context-sensitive evaluation.*
+
+- **Most Similar Prior Work:**  
+  - *ArmoRM* (mixture-of-experts, context-dependent heads)
+  - *FLASK* (skill-specific scoring)
+- **Claimed Difference:**  
+  - Joint training of embedding with three heads for dimension prediction, scoring, and weighting.
+- **Independent Assessment:**  
+  - The architectural choice of three specialized heads is a technical implementation detail. Prior works (e.g., ArmoRM) use mixtures of experts or multi-head architectures for similar purposes.
+  - The novelty here is incremental: the specific combination and training regime may be new, but the general approach of multi-head, context-sensitive evaluation is established.
+  - The substantive difference is the explicit modeling of both *which* dimensions are relevant (predictor), *how* to score them (scorer), and *how much* to weight them (weightter), all in a unified model.
+
+**Claimed Contribution 3:**  
+*Validated on a large-scale, fine-grained preference dataset spanning multiple real-world scenarios.*
+
+- **Most Similar Prior Work:**  
+  - *FLASK*, *Generative Judge*, *Hummer*, *OffsetBias* (all introduce new, fine-grained or scenario-diverse datasets)
+- **Claimed Difference:**  
+  - The scale and scenario diversity of the dataset.
+- **Independent Assessment:**  
+  - Many recent works introduce new datasets; the field is highly active in this area.
+  - The main difference may be in the *combination* of scale, scenario diversity, and fine-grained dimension annotation, but this is an incremental advance rather than a conceptual leap.
+
+**Summary of Deltas:**  
+- The main independently verified difference is the *automatic, scenario-aware selection and weighting* of evaluation dimensions, operationalized via a multi-head model.
+- Other differences (architecture, dataset) are incremental or implementation-level, not fundamentally new concepts.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  The field of LLM evaluation is highly active and rapidly evolving, with many recent papers (2023–2024) introducing new methods, datasets, and benchmarks.
+- **Recent Surveys/Literature Reviews:**  
+  - "A Survey of Large Language Model Evaluation Benchmarks" (2023)
+  - "Evaluating Large Language Models: A Survey" (2024)
+- **Trends:**  
+  - Shift from single-score, black-box evaluation to multi-dimensional, interpretable, and scenario-aware frameworks.
+  - Increasing focus on bias mitigation, robustness, and alignment with human judgment.
+  - Proliferation of new datasets and benchmarks for fine-grained, robust evaluation.
+- **Incremental Advances:**  
+  - Many recent works offer incremental improvements (e.g., new datasets, architectural tweaks, more interpretable outputs) rather than radical conceptual advances.
+  - The bar for "novelty" is rising, with scenario-awareness and fine-grained evaluation now common themes.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The claim of being the "first" scenario-aware, multi-dimensional evaluator is somewhat overstated; prior works (FLASK, Prometheus, ArmoRM) have explored similar territory, though perhaps not with the exact same automatic dimension selection mechanism.
+  - The architectural novelty (three specialized heads) is incremental, as multi-head and mixture-of-experts models are established in the field.
+- **Empirical Improvements:**  
+  - Reported performance gains may be due to dataset scale, training details, or model capacity rather than conceptual advances.
+- **Terminology Differences:**  
+  - Differences in terminology (e.g., "dimension predictor" vs. "skill selector" or "objective expert") may mask underlying conceptual similarities.
+- **Routine Extensions:**  
+  - The integration of dimension prediction, scoring, and weighting is a logical extension of existing multi-dimensional evaluators, rather than a fundamentally new paradigm.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Potentially Relevant Uncited Work:**  
+  - *FLASK* (skill-based, fine-grained evaluation)
+  - *Prometheus* (rubric-based, customizable evaluation)
+  - *ArmoRM* (mixture-of-experts, context-dependent objectives)
+  - *Hummer* (conflict-aware, fine-grained preference datasets)
+- **Need for Additional Comparisons:**  
+  - Direct, head-to-head comparison with FLASK, Prometheus, and ArmoRM would clarify the degree of novelty.
+  - More explicit discussion of how SaMer’s scenario-awareness differs from user-driven or rubric-based approaches is warranted.
+- **Incomplete Characterizations:**  
+  - The submission does not directly address the capabilities of the most similar prior works, which may lead to an incomplete or potentially misleading impression of novelty.
+- **Exaggerated Limitations of Prior Work:**  
+  - The claim that existing evaluators "neglect scenario-specific evaluation criteria" is not fully accurate; several recent works do address this, though perhaps not in the same way.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Difference:**  
+  - SaMer’s *automatic, scenario-aware selection and weighting* of evaluation dimensions per query, operationalized via a multi-head model, is its main technical distinction.
+- **Main Relationships to Existing Research:**  
+  - SaMer is part of a broader trend toward multi-dimensional, interpretable, and scenario-aware LLM evaluation, closely related to FLASK, Prometheus, and ArmoRM.
+- **Strongest Differentiation:**  
+  - The unified, model-driven approach to dimension selection and weighting, as opposed to fixed or user-specified sets.
+- **Weakest Differentiation:**  
+  - The architectural details (multi-head model) and dataset construction are incremental advances, not unique to SaMer.
+- **Discrepancies Between Author Claims and Independent Assessment:**  
+  - The claim of being "first" is overstated; prior works have addressed scenario/context awareness and multi-dimensionality, though perhaps not with the same automatic mechanism.
+  - The lack of direct comparison with the most similar prior works may overstate the degree of novelty.
+- **Reviewer Guidance:**  
+  - The main conceptual advance is the *automatic* adaptation of evaluation dimensions to each scenario, but this is an incremental step within an already active and rapidly evolving field.  
+  - The submission would benefit from a more thorough and direct comparison with the most closely related multi-dimensional, scenario-aware evaluators.
+
+---

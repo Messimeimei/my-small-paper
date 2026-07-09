@@ -1,0 +1,151 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+The submission (ICConv) is positioned within the "Synthetic Data Generation & Augmentation" cluster, focusing on large-scale, automated construction of conversational search datasets. Its stated novelty is the integration of multi-intent and context-aware features at scale, with a quality control pipeline leveraging a contrastive-learning-based dialogue discriminator.
+
+**Most Closely Related Prior Works:**
+- **ConvTrans (Mao et al., 2022):** Automated transformation of web search sessions into conversational data.
+- **Dialog Inpainting (Dai et al., 2022):** Converts web passages into dialogues by generating questions and using sentences as responses.
+- **ConvSDG:** Session data generation for conversational search (not cited).
+- **BlendX, MIntRec2.0:** Multi-intent, complex conversational datasets (not cited).
+- **LAPS, MMConv:** Multimodal, multi-intent, and personalized conversational data (not cited).
+
+**Relation to Methodological Clusters:**
+- **Data Construction & Augmentation:** ICConv’s pipeline (LLM-based query generation, query trees, reverse reformulation, dialogue discriminator) is methodologically similar to ConvTrans, ConvSDG, and Dialog Inpainting, all of which use automated or LLM-based methods for dataset creation.
+- **Multi-Intent and Contextual Modeling:** BlendX and MIntRec2.0 explicitly address multi-intent and context, sometimes with multimodal data, which is also a focus of ICConv.
+- **Quality Control:** The use of a dialogue discriminator for filtering is a recent trend, but not unique—other works (e.g., LAPS) use LLMs or discriminators for data quality.
+
+**Problem Space and Evaluation:**
+- The submission addresses the scarcity of large-scale, high-quality, context- and intent-rich conversational search data, a widely recognized problem.
+- Evaluation via human judgment and dataset statistics is standard; the use of six dialogue/search criteria is in line with recent works.
+
+**Independent Assessment:**
+- ICConv is a direct extension of the automated data construction paradigm, with incremental advances in multi-intent/contextualization and quality control.
+- The field is active, with several recent datasets and methods targeting similar goals, some of which are not cited in the submission.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**ConvTrans (Mao et al., 2022):**
+- **Author Characterization:** "Another approach attempts to convert existing web search sessions... into conversations."
+- **Citation Context:** Cited as an automated dataset construction method using web search sessions.
+- **Independent Assessment:** Accurate in describing the method, but the submission does not discuss the specifics of ConvTrans’s approach to multi-intent or context, nor does it clarify how ICConv’s pipeline substantively differs (e.g., in query tree construction or quality control).
+- **Potential Discrepancy:** The submission implies ConvTrans lacks multi-intent/contextualization, but ConvTrans does model session context and multi-turn interactions, though perhaps not with the same granularity.
+
+**Dialog Inpainting (Dai et al., 2022):**
+- **Author Characterization:** "Converting a large number of web passages into dialogues... using sentences as responses and generating questions."
+- **Citation Context:** Cited as a method for generating dialogue data from passages.
+- **Independent Assessment:** Accurate, but the submission does not address whether Dialog Inpainting supports multi-intent or context-aware dialogue, nor does it compare the quality control or filtering steps.
+- **Potential Discrepancy:** The submission does not acknowledge that Dialog Inpainting can generate context-dependent dialogues, though perhaps not with explicit multi-intent modeling.
+
+**QReCC (Anantha et al., 2020):**
+- **Author Characterization:** Used as a source for query reformulation pairs.
+- **Citation Context:** Cited as a dataset for training query reformulation models.
+- **Independent Assessment:** Accurate; QReCC is a standard resource for query rewriting, but is not a data construction method per se.
+
+**General Patterns:**
+- The authors position their work as a step beyond prior automated dataset construction methods, emphasizing multi-intent/contextualization and quality control.
+- There is a tendency to understate the contextual/multi-intent capabilities of prior works (e.g., ConvTrans, Dialog Inpainting).
+- Several highly relevant recent works (ConvSDG, BlendX, MIntRec2.0, LAPS) are not cited or discussed, despite clear methodological and problem-space overlap.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+## Claimed Contribution 1: **First large-scale synthetic conversational search dataset with multi-intent and context-aware features**
+
+- **Most Similar Prior Work:** BlendX, MIntRec2.0, ConvTrans, ConvSDG
+- **Claimed Difference:** Prior datasets lack both scale and explicit multi-intent/contextualization.
+- **Independent Assessment:**
+  - **Scale:** ICConv’s "over 100,000" conversations is large, but BlendX and MIntRec2.0 also offer large-scale, multi-intent datasets (though sometimes multimodal).
+  - **Multi-Intent/Context:** BlendX and MIntRec2.0 explicitly annotate multi-intent and context; ConvTrans and ConvSDG model session context, though perhaps not with explicit intent labels.
+  - **Delta:** The main difference is the specific combination of automated multi-intent query generation, context-aware session construction, and scale. However, the claim of being "first" is overstated given the existence of BlendX, MIntRec2.0, and ConvSDG.
+  - **Author Characterization vs. Reality:** The submission does not acknowledge these recent datasets, which weakens the "first" claim.
+
+## Claimed Contribution 2: **Novel automated data construction method (multi-intent query generation, query trees, reverse reformulation)**
+
+- **Most Similar Prior Work:** ConvTrans, ConvSDG, Dialog Inpainting, LAPS
+- **Claimed Difference:** Prior methods do not generate multiple natural language queries per keyword query based on latent intents, nor do they contextualize them within sessions using query trees and reverse reformulation.
+- **Independent Assessment:**
+  - **Query Generation:** ConvTrans and ConvSDG generate conversational queries from sessions, but may not explicitly model latent intents or use query trees.
+  - **Query Trees:** The use of query trees for de-contextualized conversation structure is a potentially novel technical detail, though similar graph-based or session-based structures exist in ConvTrans and ConvSDG.
+  - **Reverse Reformulation:** This is a variant of query rewriting, which is common (e.g., QReCC, AdaCQR), but the specific reverse process may be new.
+  - **Delta:** The combination of these steps is somewhat novel, but each component has precedent. The novelty is incremental and may be more in the pipeline integration than in any single step.
+  - **Author Characterization vs. Reality:** The submission does not compare the technical details of its pipeline to those of ConvTrans, ConvSDG, or LAPS, making it difficult to assess the true delta.
+
+## Claimed Contribution 3: **Dialogue discriminator with contrastive learning for quality control**
+
+- **Most Similar Prior Work:** LAPS, BlendX, MIntRec2.0 (use LLMs/discriminators for data filtering)
+- **Claimed Difference:** Prior datasets lack a contrastive-learning-based discriminator for filtering defective conversations.
+- **Independent Assessment:**
+  - **Quality Control:** LLM-based or classifier-based filtering is increasingly common (LAPS, BlendX). The use of contrastive learning for dialogue discrimination is a technical detail that may be new, but the general idea of automated filtering is not.
+  - **Delta:** The specific use of contrastive learning for dialogue discrimination is a minor technical novelty; the overall approach is in line with recent trends.
+  - **Author Characterization vs. Reality:** The submission overstates the uniqueness of this step; similar quality control mechanisms are present in other recent works.
+
+## Claimed Contribution 4: **ICConv as a new standard for evaluation**
+
+- **Most Similar Prior Work:** BlendX, MIntRec2.0, MMConv, LAPS
+- **Claimed Difference:** ICConv relieves data scarcity and sets a new standard.
+- **Independent Assessment:**
+  - **Benchmarking:** The field is rapidly producing new datasets; BlendX and MIntRec2.0 are already used for benchmarking multi-intent and context-aware conversational search.
+  - **Delta:** ICConv adds another resource, but the claim of being a "new standard" is aspirational rather than substantiated.
+  - **Author Characterization vs. Reality:** The claim is not fully supported given the existence of other recent, large-scale, multi-intent/context datasets.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The area is highly active, with multiple new datasets and methods published in the last 1–2 years. The pace of innovation is rapid, and incremental advances are common.
+- **Recent Surveys:** See "Conversational Search: A Survey" (2023), "Conversational Information Seeking: Recent Advances and Open Challenges" (2023), and "A Survey on Conversational Information Retrieval" (2022).
+- **Trends:** Movement toward larger, more realistic, multi-intent, multimodal, and context-rich datasets; increasing use of LLMs for data generation and quality control; focus on retriever alignment and user simulation.
+- **Incremental Advances:** Many recent works offer new datasets or pipelines with modest technical differences; "first" claims are often difficult to substantiate due to the field’s rapid evolution.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The "first" claim is not fully supported; similar datasets (BlendX, MIntRec2.0, ConvSDG) exist with overlapping features.
+- **Empirical Improvements:** The quality of ICConv may be due to careful pipeline engineering and filtering, rather than fundamentally new concepts.
+- **Terminology Differences:** The use of "query trees" and "reverse reformulation" may mask similarities to session-based or graph-based methods in ConvTrans and ConvSDG.
+- **Routine Extensions:** The integration of multi-intent query generation, context-aware session construction, and quality control is a logical extension of recent trends, rather than a conceptual leap.
+- **Uncited Relevant Work:** Several highly relevant recent datasets and methods are not cited or compared, which may mislead readers about the true state of the art.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:** ConvSDG, BlendX, MIntRec2.0, LAPS, and others are not discussed, despite clear relevance.
+- **Additional Comparisons Needed:** The submission should compare ICConv to these datasets in terms of scale, intent/context modeling, and quality control.
+- **Incomplete Characterizations:** The limitations of ConvTrans and Dialog Inpainting are not fully or accurately described; both support some degree of context and multi-turn interaction.
+- **Potentially Exaggerated Limitations:** The submission may overstate the lack of multi-intent/context in prior datasets to emphasize its own contribution.
+- **Citation Practices:** The authors cite only a subset of the most relevant works, which may give an incomplete picture of the field.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - ICConv’s pipeline integrates multi-intent query generation, context-aware session construction, and a contrastive-learning-based dialogue discriminator for quality control.
+  - The use of "query trees" and "reverse reformulation" is a specific technical detail, though similar concepts exist in prior work.
+
+- **Main Relationships to Existing Research:**
+  - ICConv is an incremental advance in the automated construction of conversational search datasets, building on methods from ConvTrans, ConvSDG, Dialog Inpainting, and others.
+  - The field is crowded with recent, large-scale, multi-intent/context-aware datasets (BlendX, MIntRec2.0, LAPS).
+
+- **Strongest Differentiation:**
+  - The specific combination of pipeline steps (multi-intent query generation, query trees, reverse reformulation, contrastive-learning-based filtering) is unique in its integration, though not in individual components.
+
+- **Weakest Differentiation:**
+  - The claim of being the "first" large-scale, multi-intent, context-aware dataset is not substantiated; similar datasets exist.
+  - The novelty of the dialogue discriminator is incremental, as similar quality control mechanisms are present in other works.
+
+- **Discrepancies Between Author Characterizations and Independent Assessment:**
+  - The submission understates the capabilities of prior datasets (e.g., ConvTrans, Dialog Inpainting) and omits discussion of several highly relevant recent works.
+  - The technical differences are more incremental than the authors suggest; the field is characterized by rapid, incremental innovation.
+
+---
+
+**These observations are intended to help reviewers calibrate their assessment of the submission’s novelty and contribution, based on an independent, evidence-based analysis of the research landscape and the relationships between the submission and prior work.**

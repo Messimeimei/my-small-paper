@@ -1,0 +1,173 @@
+---
+# RESEARCH LANDSCAPE ANALYSIS
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the dominant methodological theme is **parameter-efficient fine-tuning (PEFT)** for large language models (LLMs) and related architectures. The methods can be grouped as follows:
+
+#### **Cluster 1: Low-Rank Adaptation and Its Variants**
+- **LoRA** (Low-Rank Adaptation): Introduces trainable low-rank matrices into frozen pre-trained models (Related Paper 2).
+- **ALLoRA** (Submission): Dropout/scaling-free LoRA variant with adaptive learning rates per parameter (Submission).
+- **DoRA**: Decomposes weights into magnitude and direction, applying LoRA to the directional component (Related Paper 3).
+- **Tied-LoRA**: Combines weight tying and selective training for further parameter reduction (Related Paper 4).
+- **LoRA+**: Assigns different learning rates to LoRA matrices A and B (Related Paper 5).
+- **Riemannian Preconditioned LoRA**: Uses Riemannian preconditioners for stable, robust LoRA optimization (Related Paper 1).
+- **MoS (Mixture of Shards)**: MoE-like parameter sharing and differentiation strategies for LoRA (Related Paper 12).
+- **VeRA**: Shares a single pair of low-rank random matrices across all layers, learning only scaling vectors (Related Paper 8).
+
+#### **Cluster 2: Memory- and Optimization-Efficient Training**
+- **GaLore**: Projects gradients into a low-rank space for memory-efficient full-parameter learning (Related Paper 9).
+- **AdaLomo**: Low-memory optimizer with adaptive learning rates and grouped update normalization (Related Paper 7).
+
+#### **Cluster 3: Non-Intrusive and Adapter-Based PEFT**
+- **AdaLink**: Non-intrusive adaptation module between embedding and transformer blocks (Related Paper 10).
+- **Compacter**: Hypercomplex low-rank adapter layers using Kronecker products (Related Paper 13).
+
+#### **Cluster 4: Prompt Tuning and Theoretical Analyses**
+- **Residual Prompt Tuning**: Reparameterizes soft prompts with a shallow residual network (Related Paper 11).
+- **LoRA in NTK Regime**: Theoretical analysis of LoRA’s optimization landscape and generalization (Related Paper 6).
+
+### Methodological Trends and Patterns
+
+- **Low-Rank Decomposition** is the backbone of most PEFT methods, with innovations focusing on how low-rank matrices are initialized, updated, shared, or parameterized.
+- **Parameter Sharing and Reduction**: Methods like Tied-LoRA, VeRA, and MoS aggressively reduce the number of trainable parameters via sharing or tying, often with minimal performance loss.
+- **Optimization Improvements**: Adaptive learning rates (ALLoRA, AdaLomo, LoRA+), preconditioning (Riemannian LoRA), and memory-efficient optimizers (GaLore, AdaLomo) address training stability, speed, and resource constraints.
+- **Non-Intrusive Adaptation**: AdaLink and Compacter explore ways to adapt models without modifying core architectures, reducing engineering and deployment complexity.
+- **Theoretical Guarantees**: LoRA in the NTK regime provides foundational understanding, supporting empirical advances.
+
+### Relationships Between Approaches
+
+- **ALLoRA** builds directly on LoRA, addressing its practical flaws (Dropout, scaling, initialization) and integrating adaptive learning rates, a concept also explored in AdaLomo and LoRA+.
+- **DoRA** and **Tied-LoRA** extend LoRA by rethinking parameterization (directional adaptation, weight tying), while **MoS** and **VeRA** focus on parameter sharing for scalability.
+- **Riemannian Preconditioned LoRA** and **LoRA+** both address optimization dynamics, but via different mathematical tools (preconditioning vs. learning rate scaling).
+- **GaLore** and **AdaLomo** are more general, targeting memory and optimization efficiency, but are highly relevant for PEFT methods.
+- **Compacter** and **AdaLink** represent alternative PEFT paradigms, sometimes orthogonal to low-rank adaptation.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Parameter-Efficient Fine-Tuning (PEFT) of LLMs**
+   - How to adapt large models to new tasks/users with minimal trainable parameters, memory, and storage.
+
+2. **Optimization and Training Stability**
+   - Addressing slow convergence, poor conditioning, sensitivity to hyperparameters, and inefficiency in LoRA and its variants.
+
+3. **Memory and Resource Constraints**
+   - Reducing memory/compute requirements for training and serving large models, especially for consumer hardware or multi-user scenarios.
+
+4. **Theoretical Understanding**
+   - Providing guarantees on trainability, generalization, and optimization landscape for PEFT methods.
+
+5. **Non-Intrusive and Flexible Adaptation**
+   - Enabling adaptation without architectural changes or intrusive modifications.
+
+### Approaches to Similar Problems
+
+- **PEFT**: LoRA, DoRA, Tied-LoRA, VeRA, MoS, Compacter, and AdaLink all tackle PEFT, but differ in parameterization (low-rank, weight tying, sharing, adapters, input-centric modules).
+- **Optimization**: ALLoRA, LoRA+, Riemannian LoRA, and AdaLomo focus on learning rate adaptation, preconditioning, and optimizer design to improve training dynamics.
+- **Memory Efficiency**: GaLore, AdaLomo, MoS, and VeRA address memory constraints via low-rank projections, adaptive optimizers, and parameter sharing.
+- **Theoretical Analysis**: LoRA in the NTK regime uniquely provides mathematical guarantees, supporting empirical methods.
+- **Non-Intrusive Adaptation**: AdaLink and Compacter focus on minimizing engineering overhead and maximizing flexibility.
+
+### Patterns in Problem Formulation
+
+- **From General to Specific**: Early works (LoRA) focus on general PEFT, while later works (ALLoRA, DoRA, Tied-LoRA) address specific limitations (Dropout, scaling, parameter sharing).
+- **From Empirical to Theoretical**: The field is moving from empirical improvements to deeper theoretical understanding (LoRA NTK, Riemannian LoRA).
+- **From Single-Task to Multi-Task/Personalized**: Increasing focus on methods that scale to many users/tasks (MoS, VeRA, Tied-LoRA).
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **Language Understanding**: GLUE, SuperGLUE, Commonsense Reasoning Benchmarks
+- **Large Model Families**: LLaMA, GPT-2, GPT-3, RoBERTa, DeBERTa
+- **Multimodal Tasks**: Visual instruction tuning, image/video-text understanding, VQA, captioning
+- **Pre-training**: C4, Chinese/Python code data
+
+### Evaluation Metrics
+
+- **Task Performance**: Accuracy, F1, SuperGLUE/GLUE scores, task-specific metrics
+- **Parameter/Memory Efficiency**: Number of trainable parameters, memory usage, storage requirements
+- **Training Dynamics**: Convergence rate, robustness to hyperparameters, training speed/throughput
+- **Resource Utilization**: Memory consumption, runtime/storage overhead
+
+### Patterns in Performance Measurement
+
+- **Accuracy/Task Score** is the primary metric for downstream tasks.
+- **Parameter Count and Memory Usage** are critical for PEFT methods, often reported as percentage reduction vs. baselines.
+- **Training Efficiency** (speed, convergence, robustness) is increasingly emphasized, especially for methods targeting optimization improvements.
+- **Theoretical Metrics** (e.g., generalization error, absence of spurious minima) are used in analytical works.
+
+### Comparison of Evaluation Approaches
+
+- **LoRA and Variants**: Focus on accuracy vs. parameter/memory reduction, often on LLMs and GLUE/SuperGLUE.
+- **Optimization-Focused Methods**: Emphasize convergence rate, robustness, and training speed (Riemannian LoRA, AdaLomo, GaLore).
+- **Memory-Efficient Methods**: Report memory/parameter savings alongside task performance (GaLore, MoS, VeRA, Tied-LoRA).
+- **Theoretical Works**: Use mathematical properties and generalization bounds (LoRA NTK).
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: **LoRA and Direct Variants**
+- **Papers**: LoRA, ALLoRA, DoRA, Tied-LoRA, LoRA+, Riemannian Preconditioned LoRA, LoRA NTK
+- **Characteristics**: All build on the LoRA framework, proposing improvements in parameterization, optimization, or theoretical understanding.
+- **Relationships**: ALLoRA, DoRA, Tied-LoRA, and LoRA+ each address specific LoRA limitations; Riemannian LoRA and LoRA NTK provide optimization/theoretical advances.
+
+### Cluster 2: **Parameter Sharing and Extreme Efficiency**
+- **Papers**: VeRA, MoS, Tied-LoRA
+- **Characteristics**: Focus on aggressive parameter sharing/tied adaptation for scaling to many tasks/users.
+- **Relationships**: Tied-LoRA and VeRA are closely related (Tied-LoRA generalizes VeRA); MoS introduces MoE-like sharing.
+
+### Cluster 3: **Memory/Optimization Efficiency**
+- **Papers**: GaLore, AdaLomo
+- **Characteristics**: Target memory and optimization bottlenecks, often orthogonal to PEFT method used.
+- **Relationships**: Both can be combined with LoRA/variants for further efficiency.
+
+### Cluster 4: **Non-Intrusive/Adapter-Based PEFT**
+- **Papers**: AdaLink, Compacter
+- **Characteristics**: Explore PEFT without modifying core model internals, using adapters or input-centric modules.
+
+### Cluster 5: **Prompt Tuning and Theoretical Analysis**
+- **Papers**: Residual Prompt Tuning, LoRA NTK
+- **Characteristics**: Focus on prompt-based adaptation or theoretical properties of PEFT.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression of Ideas
+
+- **LoRA** established the foundation for PEFT via low-rank adaptation.
+- **DoRA, Tied-LoRA, VeRA, MoS**: Each extends LoRA by rethinking parameterization, sharing, or tying, pushing parameter efficiency further.
+- **ALLoRA** (Submission): Synthesizes lessons from LoRA’s practical flaws (Dropout, scaling, initialization) and optimization advances (adaptive learning rates), removing hyperparameters and improving robustness.
+- **LoRA+ and Riemannian LoRA**: Address optimization dynamics, with LoRA+ focusing on learning rate scaling and Riemannian LoRA on preconditioning.
+- **GaLore and AdaLomo**: Generalize memory/optimization efficiency, enabling full-parameter or PEFT training on resource-constrained hardware.
+- **AdaLink and Compacter**: Offer alternative, non-intrusive PEFT paradigms, broadening applicability.
+- **LoRA NTK**: Provides theoretical guarantees, validating and guiding empirical advances.
+
+### Building Blocks and Extensions
+
+- **LoRA** is the core building block; nearly all subsequent methods are extensions or modifications.
+- **Adaptive Learning Rates**: Explored in LoRA+, ALLoRA, AdaLomo, and Riemannian LoRA.
+- **Parameter Sharing/Tying**: Central to Tied-LoRA, VeRA, MoS.
+- **Memory-Efficient Optimization**: GaLore and AdaLomo extend PEFT to broader training efficiency.
+- **Theoretical Analysis**: LoRA NTK and Riemannian LoRA provide mathematical foundations.
+
+### Competing and Complementary Approaches
+
+- **Competing**: Different parameterization/sharing strategies (e.g., Tied-LoRA vs. MoS vs. VeRA) may compete for best trade-off between efficiency and performance.
+- **Complementary**: Memory/optimization methods (GaLore, AdaLomo) can be combined with any PEFT method; theoretical insights (LoRA NTK) inform all.
+
+---
+
+# SUMMARY
+
+The research landscape is centered on **parameter-efficient fine-tuning** for LLMs, with LoRA as the foundational method. The field has rapidly diversified, with innovations in parameterization (DoRA, Tied-LoRA, VeRA, MoS), optimization (ALLoRA, LoRA+, Riemannian LoRA, AdaLomo), and memory efficiency (GaLore, AdaLomo). Non-intrusive and adapter-based methods (AdaLink, Compacter) offer alternative paradigms. Theoretical analyses (LoRA NTK) are beginning to underpin empirical advances. The submission paper, **ALLoRA**, exemplifies the trend of addressing practical flaws in LoRA by integrating adaptive optimization and simplifying hyperparameters, representing a synthesis of methodological and practical insights from the field.

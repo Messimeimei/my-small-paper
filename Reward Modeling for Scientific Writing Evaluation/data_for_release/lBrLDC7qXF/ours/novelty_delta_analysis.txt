@@ -1,0 +1,192 @@
+---
+
+# Novelty Delta Analysis for Reviewer Support: CAB-KGC (ICLR 2024 Submission)
+
+---
+
+## 1. RESEARCH CONTEXT POSITIONING
+
+**a. Position within the Research Landscape**
+
+CAB-KGC is situated at the intersection of several active methodological clusters in Knowledge Graph Completion (KGC):
+
+- **PLM/LLM-based KGC:** Like KG-BERT, MEM-KGC, SimKGC, and KICGPT, CAB-KGC leverages pre-trained language models (BERT) for triple encoding.
+- **Structure-Text Hybrid Models:** CAB-KGC, similar to StAR, CSProm-KG, and NNKGC, seeks to integrate structural/contextual information from the KG into the PLM input, moving beyond text-only approaches.
+- **Contrastive/Negative Sampling Innovations:** CAB-KGC, like SimKGC, addresses the computational and semantic issues of negative sampling, but does so by eliminating it in favor of cross-entropy loss.
+- **Evaluation and Benchmarking:** CAB-KGC introduces a new evaluation metric (EDAS), aligning with a trend toward more robust and nuanced KGC evaluation (cf. CoDEx, PKGC).
+
+**b. Closest Prior Works**
+
+- **KG-BERT (Yao et al., 2019):** The foundational PLM-based KGC model, encoding triples as text for BERT.
+- **MEM-KGC (Choi et al., 2021):** Uses masked language modeling for tail prediction, leveraging entity descriptions.
+- **SimKGC (Wang et al., 2022):** Employs contrastive learning and negative sampling with PLMs.
+- **CSProm-KG, StAR, NNKGC:** Integrate structural KG information into PLM-based or hybrid models.
+- **KICGPT (Wei et al., 2023):** Uses LLMs with in-context learning for KGC, focusing on prompt-based approaches.
+
+**c. Relationship to Methodological Clusters**
+
+- **PLM-based KGC:** CAB-KGC is a direct evolution of KG-BERT/MEM-KGC, but claims to address their reliance on entity descriptions and negative sampling.
+- **Structure-Text Hybrid:** CAB-KGC’s context integration is conceptually similar to CSProm-KG and StAR, though the mechanism (contextualizing BERT input) may differ in detail.
+- **Negative Sampling:** CAB-KGC’s elimination of negative sampling is a notable divergence from SimKGC and most prior PLM-based models.
+
+**d. Problem Space and Evaluation**
+
+- **Problem:** Tail entity prediction in incomplete KGs, with a focus on generalization to unseen entities/relations and efficiency.
+- **Evaluation:** Uses standard metrics (MRR, Hits@K) and introduces EDAS, a new metric for comparative evaluation.
+
+**e. Independent Assessment**
+
+CAB-KGC is best viewed as a synthesis and incremental extension of recent trends: it combines context-aware modeling (from structure-text hybrids), PLM-based triple encoding, and a new evaluation metric. Its main technical differentiators are the explicit elimination of negative sampling and the claim to operate without entity descriptions.
+
+---
+
+## 2. AUTHOR CITATION ANALYSIS
+
+**a. Patterns in Author Characterization**
+
+- **KG-BERT:** Cited as the first BERT-based KGC model, described as relying on entity/relation descriptions and fixed representations, with implied limitations in handling context and unseen entities.
+- **MEM-KGC:** Characterized as using masked language modeling and entity descriptions, with the implication that it cannot generalize to missing descriptions.
+- **SimKGC:** Grouped with other BERT-based models, noted for negative sampling and contrastive learning.
+- **KICGPT:** Described as a prompt-based LLM approach, with limitations in incorporating large-scale KG facts and domain transfer.
+- **DIFT, NNKGC, StAR, etc.:** Included in comparative tables, but not deeply discussed in the narrative.
+
+**b. Accuracy and Balance**
+
+- The authors accurately describe KG-BERT and MEM-KGC as relying on entity descriptions, but do not fully acknowledge that some prior work (e.g., SimKGC, NNKGC, StAR) also attempts to incorporate structural context or reduce reliance on descriptions.
+- The limitations of negative sampling are highlighted, but the authors do not discuss recent advances in negative sampling (e.g., SimKGC’s multiple negative types) or alternative efficient training strategies.
+- The characterization of KICGPT as struggling with domain transfer is plausible, but the discussion is brief and does not engage with the full range of prompt-based or in-context learning methods.
+
+**c. Discrepancies and Rhetoric**
+
+- The claim that prior PLM-based models “overlook” structural/contextual information is somewhat overstated; several recent models (CSProm-KG, StAR, NNKGC) explicitly address this.
+- The narrative tends to understate the diversity of recent structure-aware PLM models, potentially to emphasize CAB-KGC’s novelty.
+- The elimination of negative sampling is presented as a major advance, but the practical impact (vs. improved negative sampling) is not deeply compared.
+
+**d. Substantiation of Claimed Improvements**
+
+- Empirical improvements are reported, but the attribution to specific innovations (context integration, no negative sampling, no descriptions) is not disentangled.
+- The introduction of EDAS is positioned as a major evaluation advance, but its relationship to other recent evaluation innovations (e.g., OWA, CoDEx) is not discussed.
+
+---
+
+## 3. CONTRIBUTION DELTA ANALYSIS
+
+### Contribution 1: **Contextual Information Integration for Tail Prediction**
+
+- **Claim:** CAB-KGC uniquely leverages contextual information from head entities and relations for tail prediction, which prior methods overlook.
+- **Closest Prior Work:** CSProm-KG, StAR, NNKGC, SimKGC (to some extent).
+- **Independent Assessment:**
+  - **Actual Difference:** CAB-KGC encodes KG context (linked entities/relations) directly into BERT input for tail prediction, without relying on entity descriptions.
+  - **Prior Work:** CSProm-KG uses soft prompts to inject structure; StAR uses Siamese encoders for structure and text; NNKGC aggregates multi-hop neighborhoods; SimKGC uses contrastive learning with some context.
+  - **Delta:** The main difference is the *mechanism* of context integration (direct BERT input vs. prompts or GNNs). The *concept* of using KG context is not unique to CAB-KGC.
+  - **Substantiveness:** The difference is more in implementation detail than in conceptual novelty; several recent models also integrate context, though not always in the same way.
+
+### Contribution 2: **No Entity Descriptions Required**
+
+- **Claim:** CAB-KGC eliminates the need for entity descriptions, enabling use on sparse KGs.
+- **Closest Prior Work:** SimKGC, NNKGC, StAR, CSProm-KG (some variants).
+- **Independent Assessment:**
+  - **Actual Difference:** CAB-KGC does not use entity descriptions at all, relying solely on structural context.
+  - **Prior Work:** KG-BERT and MEM-KGC require descriptions; SimKGC and NNKGC can operate with or without descriptions, using structure or context as needed.
+  - **Delta:** CAB-KGC’s strict avoidance of descriptions is a clear, if incremental, difference. However, the *option* to avoid descriptions is present in some prior models.
+  - **Substantiveness:** The difference is practical (guaranteed no description use), but not conceptually unique.
+
+### Contribution 3: **Elimination of Negative Triplet Sampling**
+
+- **Claim:** CAB-KGC avoids negative sampling by using cross-entropy loss, improving speed and robustness.
+- **Closest Prior Work:** SimKGC (innovative negative sampling), some GNN-based models.
+- **Independent Assessment:**
+  - **Actual Difference:** CAB-KGC uses cross-entropy over all candidate entities, removing the need for sampled negatives.
+  - **Prior Work:** Most prior PLM-based models use negative sampling; SimKGC improves it but does not eliminate it.
+  - **Delta:** The elimination of negative sampling is a technical difference, but not unprecedented (some GNN models, e.g., NBFNet, also use full softmax/cross-entropy).
+  - **Substantiveness:** The impact is mainly on training efficiency and possibly robustness; the conceptual advance is moderate.
+
+### Contribution 4: **EDAS Evaluation Metric**
+
+- **Claim:** EDAS provides a more comprehensive and reliable comparative framework for KGC models.
+- **Closest Prior Work:** CoDEx (harder benchmarks), PKGC (OWA evaluation), other metric innovations.
+- **Independent Assessment:**
+  - **Actual Difference:** EDAS is a new metric based on distance from average solution, intended to address limitations of MR/MRR/Hits@K.
+  - **Prior Work:** Other recent work has also critiqued standard metrics and proposed alternatives (e.g., OWA, CoDEx).
+  - **Delta:** The specific formulation of EDAS is new, but the *motivation* (better evaluation) is shared with other recent work.
+  - **Substantiveness:** The metric is a useful addition, but not a conceptual breakthrough.
+
+### Contribution 5: **State-of-the-art Performance**
+
+- **Claim:** CAB-KGC achieves SOTA on multiple benchmarks.
+- **Closest Prior Work:** DIFT, SimKGC, KICGPT, NNKGC, etc.
+- **Independent Assessment:**
+  - **Actual Difference:** Reported improvements on Hit@1 and EDAS ranking.
+  - **Prior Work:** Recent models (DIFT, SimKGC, KICGPT) also report strong results; the margin of improvement varies by dataset.
+  - **Delta:** The SOTA claim is empirically supported, but the attribution to specific innovations is not fully disentangled.
+  - **Substantiveness:** SOTA is a moving target; improvements may be due to implementation, hyperparameters, or data splits.
+
+---
+
+## 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** KGC is a highly active and rapidly evolving field, with frequent incremental advances and a proliferation of PLM/LLM-based, structure-aware, and hybrid models.
+- **Recent Surveys:** See “A Survey on Knowledge Graph Completion: Representation, Evaluation, and Future Directions” (2023), “Knowledge Graph Completion with Pre-trained Language Models: A Survey” (2023).
+- **Trends:** 
+  - Shift from embedding-only to PLM/LLM-based and structure-text hybrid models.
+  - Increasing focus on generalization, efficiency, and realistic evaluation.
+  - Frequent introduction of new metrics and benchmarks.
+- **Incremental Advances:** Many recent papers offer incremental improvements (e.g., new context integration, better negative sampling, new metrics) rather than radical conceptual shifts.
+
+---
+
+## 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The claim that prior work “overlooks” context is overstated; several recent models integrate context, though via different mechanisms.
+- **Novelty Attribution:** Improvements may result from a combination of factors (context integration, no descriptions, no negative sampling, hyperparameters), not solely from the claimed innovations.
+- **Terminology Differences:** “Context-aware” and “structure-aware” are used variably in the literature; differences may be more about implementation than concept.
+- **Routine Extensions:** The elimination of negative sampling and the introduction of a new metric are valuable, but not unprecedented or conceptually radical.
+- **Empirical Improvements:** SOTA results are reported, but the margin and attribution to specific innovations are not fully disentangled.
+
+---
+
+## 6. RELATED WORK CONSIDERATIONS
+
+- **Uncited Relevant Work:** Several recent papers are not cited or discussed, including:
+  - “Dipping PLMs Sauce: Bridging Structure and Text for Effective Knowledge Graph Completion via Conditional Soft Prompting” (CSProm-KG)
+  - “Multi-perspective Improvement of Knowledge Graph Completion with Large Language Models”
+  - “Mixed Geometry Message and Trainable Convolutional Attention Network for Knowledge Graph Completion”
+  - “Chain of History: Learning and Forecasting with LLMs for Temporal Knowledge Graph Completion”
+  - “Exploring Large Language Models for Knowledge Graph Completion”
+  - “Learning Sequence Encoders for Temporal Knowledge Graph Completion”
+- **Comparative Gaps:** The paper does not compare CAB-KGC to all recent structure-aware PLM models (e.g., CSProm-KG, StAR), which may offer similar context integration.
+- **Potentially Misleading Characterizations:** The limitations of prior work (e.g., reliance on descriptions, lack of context) are sometimes exaggerated to emphasize novelty.
+- **Additional Comparisons Needed:** A more thorough comparison with recent structure-text hybrid and prompt-based models would clarify the true delta.
+
+---
+
+## 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**
+  - CAB-KGC eliminates negative sampling in PLM-based KGC, using cross-entropy loss.
+  - CAB-KGC guarantees operation without entity descriptions, relying solely on structural context.
+  - CAB-KGC introduces EDAS, a new evaluation metric for KGC.
+
+- **Main Relationships to Existing Research:**
+  - CAB-KGC is an incremental extension of PLM-based KGC (KG-BERT, MEM-KGC), integrating context in a manner similar to recent structure-aware models (CSProm-KG, StAR, NNKGC).
+  - The elimination of negative sampling and the new metric are practical advances, but not conceptually unique.
+
+- **Strongest Differentiation:**
+  - Strict avoidance of entity descriptions.
+  - Elimination of negative sampling in a PLM-based KGC context.
+
+- **Weakest Differentiation:**
+  - Context integration is not unique; several recent models also incorporate KG structure/context.
+  - The new evaluation metric (EDAS) is a useful addition, but similar motivations exist in other recent work.
+
+- **Discrepancies Between Author Characterizations and Independent Assessment:**
+  - The claim that prior work “overlooks” context is overstated; several recent models address this.
+  - The novelty of eliminating negative sampling is practical but not unprecedented.
+  - The field is highly incremental; many advances are in implementation or evaluation rather than concept.
+
+---
+
+**In summary:**  
+CAB-KGC offers a practical and well-executed synthesis of recent trends in KGC, with incremental advances in context integration, training efficiency, and evaluation. Its main technical deltas are the elimination of negative sampling and strict avoidance of entity descriptions, but the conceptual novelty is moderate given the rapid evolution and diversity of recent structure-aware PLM-based KGC models. The paper’s characterizations of prior work sometimes overstate the novelty of its contributions, and additional comparisons to recent structure-text hybrid and prompt-based models would provide a more complete picture for reviewers.
+
+---

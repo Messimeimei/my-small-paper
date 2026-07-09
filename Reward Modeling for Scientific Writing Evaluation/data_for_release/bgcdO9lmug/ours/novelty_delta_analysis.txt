@@ -1,0 +1,212 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Independent Positioning within the Landscape:**
+
+- **Methodological Cluster:**  
+  The submission, "RePrompt," is situated within the *iterative, feedback-driven prompt optimization* cluster, specifically those methods inspired by gradient descent and leveraging LLM self-reflection and dialogue history. This cluster includes works like GPO (Gradient-based Prompt Optimization), Self-Refine, and Self-Debugging.
+
+- **Most Closely Related Prior Works:**  
+  - **PromptAgent (Tang et al., 2024):** Uses strategic planning (MCTS) and LLM self-reflection for prompt optimization.
+  - **Unleashing the Potential of LLMs as Prompt Optimizers (Pryzant et al., 2023):** Analogy to gradient-based optimization, iterative prompt updates.
+  - **GPO (Wang et al., 2024):** Systematic analysis of gradient-descent-like prompt optimization.
+  - **Self-Refine, Self-Debugging:** Iterative self-feedback for output refinement.
+  - **CriSPO, APEER:** Multi-aspect, feedback-driven prompt optimization (less directly related, but relevant for multi-metric feedback).
+
+- **Relation to Methodological Clusters:**  
+  The submission is most closely aligned with iterative, feedback-driven methods, but distinguishes itself by focusing on *prompt optimization for LLM agents* in settings where *final solution checkers are unavailable*, using *summarization-based reflection* on dialogue history.
+
+- **Problem Space:**  
+  The submission addresses *automatic prompt engineering (APE)* for LLM agents in complex reasoning tasks, specifically where only intermediate feedback is available (e.g., PDDL generation, travel planning). This is a recognized gap in the literature, as most prior APE methods assume access to a final solution checker.
+
+- **Evaluation Approaches:**  
+  The use of "first-round success rate" on PDDL and travel planning tasks is consistent with agentic LLM evaluation, but the focus on *improvement without final checkers* is a distinguishing feature.
+
+- **Verification of Author Positioning:**  
+  The claim that prior APE methods are limited by reliance on final checkers is generally accurate for many search/planning-based methods (PromptAgent, ToT), but some iterative methods (e.g., Self-Refine, Self-Debugging) also use intermediate feedback. The submission's focus on *summarization-based reflection* for prompt updates is a more specific differentiator.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Citation Patterns and Characterizations:**
+
+- **PromptAgent (Tang et al., 2024):**  
+  - *Author Characterization:* "Other works...propose a relatively general solution, like using beam search or Monte Carlo tree search as the 'gradient descent' optimizer."
+  - *Pattern:* Authors group PromptAgent with other search-based optimizers, emphasizing their own method as more 'gradient-descent-like' and reflection-based.
+  - *Accuracy:* PromptAgent does use MCTS and LLM self-reflection, but also incorporates intermediate feedback. The distinction is somewhat accurate, but the overlap in using LLM self-reflection is understated.
+
+- **Unleashing the Potential of LLMs as Prompt Optimizers (Pryzant et al., 2023):**  
+  - *Author Characterization:* Same as above; grouped as using search as a 'gradient descent' optimizer.
+  - *Accuracy:* This work does draw analogies to gradient-based optimization, but the submission's claim of novelty in using reflection and summarization is not directly addressed in the cited context.
+
+- **Tree of Thoughts (Yao et al., 2023a):**  
+  - *Author Characterization:* "Proposed as an extension from the simple line-based architecture of auxiliary output to tree and graph-structured output."
+  - *Pattern:* Authors position ToT as structurally different (tree/graph vs. line-based), implying their method is more process-focused.
+  - *Accuracy:* ToT is indeed focused on reasoning path search, not prompt optimization per se, so the distinction is fair.
+
+- **Teaching LLMs to Self-Debug (Chen et al., 2023):**  
+  - *Author Characterization:* Cited as an example of LLMs being effective in application domains (code, HCI, math).
+  - *Pattern:* Used to motivate the breadth of LLM applications, not as a direct competitor.
+  - *Accuracy:* Accurate, but does not address the method's relevance to iterative self-improvement.
+
+**Discrepancies and Rhetoric:**
+
+- The authors tend to *downplay the overlap* between their method and prior iterative, reflection-based approaches (e.g., PromptAgent, Self-Refine), emphasizing the lack of final checkers and the use of summarization.
+- The grouping of all search/planning-based methods as "gradient descent optimizers" may obscure nuanced differences in how feedback is used (e.g., PromptAgent's use of LLM self-reflection is similar to RePrompt).
+- The distinction between "reflection" and "search" is not always clear-cut in the literature.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Main Claimed Contributions and Independent Assessment:**
+
+### 1. **Gradient-Descent-Like Prompt Optimization via Reflection and Chat History (No Final Checker)**
+
+- **Most Similar Prior Work:**  
+  - *PromptAgent* (Tang et al., 2024): Uses MCTS and LLM self-reflection for prompt optimization, can operate with intermediate feedback.
+  - *GPO* (Wang et al., 2024): Systematic analysis of gradient-descent-like prompt optimization.
+  - *Self-Refine, Self-Debugging:* Iterative self-feedback, but focused on output, not prompt.
+
+- **Claimed Difference:**  
+  - RePrompt does not require a final solution checker, using only intermediate feedback and reflection on chat history.
+
+- **Independently Verified Difference:**  
+  - PromptAgent and GPO both can use intermediate feedback, but often assume access to some form of task-level evaluation. RePrompt's explicit use of *summarization-based analysis* of dialogue history for prompt updates is less common.
+  - The *summarization-based* step-by-step prompt update is a more specific technical difference, though the general idea of using intermediate feedback is not unique.
+
+- **Substantive vs. Superficial:**  
+  - The move from final-checker-based to intermediate-feedback-based optimization is substantive, but the degree of novelty depends on how distinct the summarization/reflection mechanism is from prior self-reflection approaches.
+
+### 2. **Summarization-Based Analysis of Dialogue History for Prompt Improvement**
+
+- **Most Similar Prior Work:**  
+  - *PromptAgent* (uses LLM self-reflection and error feedback).
+  - *Self-Refine* (uses iterative critique and improvement, but on outputs).
+  - *CriSPO* (multi-aspect critique-suggestion, but not specifically summarization of dialogue).
+
+- **Claimed Difference:**  
+  - RePrompt uses summarization of dialogue history to guide prompt updates, rather than relying on explicit error signals or final outputs.
+
+- **Independently Verified Difference:**  
+  - While PromptAgent and Self-Refine use LLM self-reflection, explicit *summarization* of the entire dialogue history as a basis for prompt updates is less common.
+  - However, the distinction may be more about implementation detail (summarization vs. critique) than conceptual advance.
+
+- **Substantive vs. Superficial:**  
+  - The use of summarization is a technical variation; whether it leads to fundamentally different capabilities is not fully established.
+
+### 3. **Prompt Optimization in LLM Agent Scenarios with Only Intermediate Feedback**
+
+- **Most Similar Prior Work:**  
+  - *PromptAgent*, *GPO*, *Self-Refine* (to some extent).
+
+- **Claimed Difference:**  
+  - RePrompt is designed for agentic tasks where only intermediate feedback is available.
+
+- **Independently Verified Difference:**  
+  - Some prior works (PromptAgent, GPO) can operate with intermediate feedback, but often still assume some form of task-level evaluation or checker.
+  - The explicit focus on *agentic, multi-turn tasks* and *dialogue history* is a distinguishing emphasis.
+
+- **Substantive vs. Superficial:**  
+  - The focus on agentic, multi-turn tasks is a meaningful extension, but the underlying iterative feedback mechanism is shared with prior work.
+
+### 4. **Improved Prompt Performance in Multiple LLM Agent Benchmarks without Fine-Tuning**
+
+- **Most Similar Prior Work:**  
+  - *PromptAgent*, *GPO*, *Self-Refine*, *CriSPO*.
+
+- **Claimed Difference:**  
+  - RePrompt achieves improvements without LLM fine-tuning.
+
+- **Independently Verified Difference:**  
+  - Most prior APE methods also do not require LLM fine-tuning; this is not a unique feature.
+
+- **Substantive vs. Superficial:**  
+  - This is a standard property in the field, not a novel contribution.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:**  
+  The field of automatic prompt engineering for LLMs is *rapidly evolving* but still relatively young. Many methods have appeared in the last 1-2 years, with new variants emerging frequently.
+
+- **Recent Surveys/Literature Reviews:**  
+  - *"A Survey on Automatic Prompt Engineering" (2023)*: Reviews APE methods, including iterative, search-based, and feedback-driven approaches.
+  - *"Prompt Engineering for Large Language Models: A Survey" (2024)*: Covers both manual and automatic prompt engineering, including agentic and multi-turn settings.
+
+- **Trends:**  
+  - Shift from static to iterative, feedback-driven prompt optimization.
+  - Increasing use of LLM self-reflection, intermediate feedback, and search/planning algorithms.
+  - Expansion into agentic, multi-turn, and domain-specific tasks.
+  - Growing interest in methods that do not require final solution checkers.
+
+- **Incremental Advances:**  
+  - Many recent papers propose new variants or combinations of existing ideas (e.g., new feedback mechanisms, search strategies, or domain adaptations).
+  - Substantive advances are often in *how* feedback is used (e.g., summarization, critique, multi-aspect), rather than in the overall framework.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Potential Overstatement of Novelty:**  
+  - The claim that RePrompt is the first to use reflection and intermediate feedback for prompt optimization in agentic tasks is *overstated*; PromptAgent and GPO have similar capabilities.
+  - The use of summarization for dialogue history is a technical detail, not a conceptual leap.
+
+- **Alignment of Claimed Novelty with Evidence:**  
+  - The main novelty is the *specific mechanism* (summarization-based reflection), not the overall framework of iterative, feedback-driven prompt optimization.
+  - Improvements in performance may be due to implementation details (e.g., how summarization is performed) rather than a fundamentally new approach.
+
+- **Terminology Differences:**  
+  - The distinction between "reflection," "summarization," and "self-critique" is sometimes blurred; similar mechanisms may be described differently across papers.
+
+- **Routine Extensions:**  
+  - Applying iterative feedback to agentic, multi-turn tasks is a logical extension of prior work, not a radical departure.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Potentially Relevant Uncited Work:**  
+  - *APEER*: Iterative prompt optimization for IR, uses preference-based feedback.
+  - *CriSPO*: Multi-aspect critique-suggestion for prompt optimization.
+  - *RePrompt for Generative Art*: Applies prompt editing to a different domain, but shares iterative feedback principles.
+  - *Self-Refine, Self-Debugging*: Iterative self-improvement, though focused on outputs.
+
+- **Areas for Additional Comparison:**  
+  - More direct comparison with PromptAgent, GPO, and Self-Refine would clarify the incremental advance.
+  - Discussion of multi-aspect feedback (CriSPO, APEER) could contextualize the summarization-based approach.
+
+- **Incomplete/Misleading Characterizations:**  
+  - The claim that prior methods require final checkers is not universally true; some can use intermediate feedback.
+  - The distinction between search/planning and reflection-based methods is not always clear-cut.
+
+- **Citations vs. Actual Relationships:**  
+  - Authors cite PromptAgent and GPO as "search-based," but both use LLM self-reflection and can operate with intermediate feedback, making them closer to RePrompt than implied.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Independently Verified Differences:**  
+  - RePrompt's *summarization-based* analysis of dialogue history for prompt updates is a specific technical variation not widely used in prior work.
+  - The explicit focus on *agentic, multi-turn tasks* without final checkers is a meaningful, though incremental, extension.
+
+- **Main Relationships to Existing Research:**  
+  - RePrompt is closely related to PromptAgent, GPO, and Self-Refine, sharing the iterative, feedback-driven optimization framework.
+  - The main difference is in the *mechanism* of feedback (summarization vs. critique/planning).
+
+- **Strongest and Weakest Differentiation:**  
+  - *Strongest:* Use of summarization of dialogue history for prompt updates in agentic, multi-turn settings.
+  - *Weakest:* The general framework of iterative, feedback-driven prompt optimization is well established; the move away from final checkers is not unique.
+
+- **Discrepancies between Author Characterizations and Independent Assessment:**  
+  - Authors understate the overlap with PromptAgent and GPO, which also use LLM self-reflection and can operate with intermediate feedback.
+  - The novelty is more about *how* feedback is processed (summarization) than *whether* intermediate feedback is used.
+
+---
+
+**In summary:**  
+RePrompt is a technically incremental advance within the established cluster of iterative, feedback-driven prompt optimization for LLM agents. Its main novelty lies in the use of summarization-based reflection on dialogue history for prompt updates, particularly in agentic, multi-turn tasks without final checkers. However, the broader framework and reliance on intermediate feedback are shared with several recent works (PromptAgent, GPO, Self-Refine). The authors' characterizations somewhat overstate the novelty by downplaying these overlaps. Reviewers should consider the degree to which the summarization mechanism constitutes a substantive advance over prior self-reflection and critique-based methods.

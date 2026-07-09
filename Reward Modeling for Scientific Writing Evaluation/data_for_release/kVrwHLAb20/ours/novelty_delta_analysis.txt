@@ -1,0 +1,131 @@
+---
+
+# 1. RESEARCH CONTEXT POSITIONING
+
+**Situating the Submission:**
+- The submission, *Ward*, is positioned at the intersection of dataset ownership/usage detection and LLM watermarking, specifically targeting the problem of *RAG Dataset Inference (RAG-DI)*—detecting unauthorized use of a data owner’s content in Retrieval-Augmented Generation (RAG) systems.
+- Within the research landscape, *Ward* aligns most closely with the "Dataset Ownership and Usage Detection" cluster, alongside *Domain Watermark* and *EnTruth*. These works focus on provable dataset inference and copyright protection, leveraging watermarking or memorization.
+- *Ward* distinguishes itself by leveraging LLM watermarks for dataset inference, providing formal statistical guarantees, and introducing a new evaluation dataset (Frad).
+
+**Relation to Methodological Clusters:**
+- *Ward* builds directly on advances in LLM watermarking (Cluster 1), adapting these techniques for dataset-level inference (Cluster 2).
+- It also adapts and benchmarks against Membership Inference Attacks (MIAs) (Cluster 4), which have been previously applied to LLMs and RAG but are known to have limitations in black-box settings.
+- The submission’s evaluation approach (Frad dataset, statistical metrics) is consistent with recent trends emphasizing robustness, query efficiency, and formal guarantees.
+
+**Place in Problem Space:**
+- The problem of dataset usage detection in RAG is relatively new, with prior work focusing more on output attribution (who generated this text?) or privacy attacks (leakage, poisoning).
+- *Ward* formalizes RAG-DI as a distinct problem, arguing that prior work (e.g., MIAs, output watermarking) does not provide sufficient rigor or applicability for this setting.
+
+**Most Closely Related Prior Works:**
+- *Domain Watermark* and *EnTruth* (dataset ownership/usage detection via watermarking or memorization).
+- LLM watermarking methods (Provable Robust Watermarking, Robust Distortion-free Watermarks, SemStamp, Topic-Based Watermarks).
+- MIAs on RAG and LLMs (Is My Data in Your Retrieval Database?, Do MIAs Work on LLMs?).
+
+**Independent Assessment:**
+- The submission’s core novelty lies in combining LLM watermarking with dataset-level inference for RAG, and in providing formal guarantees.
+- The introduction of the Frad dataset addresses a recognized gap in realistic RAG-DI evaluation.
+- The adaptation of MIAs and the proposal of a simple baseline (Facts) are incremental but necessary for benchmarking.
+
+---
+
+# 2. AUTHOR CITATION ANALYSIS
+
+**Patterns in Author Positioning:**
+- The authors consistently claim that there is "no prior work on RAG-DI," and thus turn to related areas: RAG privacy, MIAs, and LLM watermarking.
+- They position *Ward* as the first to provide provable dataset inference in RAG, and *Frad* as the first realistic RAG-DI dataset.
+
+**Analysis of Specific Citations:**
+
+- **The Good and The Bad (Anderson et al., 2024):**
+  - Cited as related to RAG privacy, not RAG-DI.
+  - Accurate: This work focuses on privacy issues, not dataset inference.
+
+- **BadRAG, PoisonedRAG:**
+  - Cited as addressing broader privacy/security, not dataset inference.
+  - Accurate: These works focus on attacks, not ownership or dataset usage detection.
+
+- **Do Membership Inference Attacks Work on LLMs?:**
+  - Cited as focusing on MIAs in LLMs, primarily in graybox settings, with limited black-box applicability.
+  - Accurate: These works highlight the challenges of MIAs in black-box settings, which is the context for RAG-DI.
+
+- **Watermark Stealing, Provable Robust Watermarking, Topic-Based Watermarks, SemStamp, Robust Distortion-free Watermarks:**
+  - Cited as foundational for LLM watermarking, with mention of robustness and attacks.
+  - Accurate: These works are foundational for the watermarking techniques used in *Ward*.
+
+- **EnTruth, Domain Watermark:**
+  - Cited as proactive approaches to dataset inference via watermarking or memorization, but not in the RAG context.
+  - Potential discrepancy: Both works address dataset usage detection, but the authors do not fully discuss their applicability to RAG or the technical similarities/differences with *Ward*.
+
+- **Is My Data in Your Retrieval Database?:**
+  - Cited as prior work on RAG MIAs, adapted as a baseline.
+  - Accurate: This is a direct predecessor for the baseline comparison.
+
+**Discrepancies and Rhetoric:**
+- The claim that there is "no prior work on RAG-DI" is somewhat overstated; while the specific formalization may be new, *Domain Watermark* and *EnTruth* address highly similar problems (dataset usage detection) and could, in principle, be adapted to RAG.
+- The authors do not discuss recent works on black-box watermark detection or attacks (e.g., Black-Box Detection, B4, Discovering Clues of Spoofed LM Watermarks), which are relevant for robustness claims.
+- The characterization of MIAs as insufficient is accurate, but the distinction between MIAs and watermark-based inference could be more clearly articulated.
+
+---
+
+# 3. CONTRIBUTION DELTA ANALYSIS
+
+**Claimed Contribution 1: First formalization of RAG-DI**
+- **Most Similar Prior Work:** *Domain Watermark*, *EnTruth* (dataset usage detection), MIAs on RAG.
+- **Actual Delta:** *Ward* formalizes RAG-DI specifically for RAG systems, whereas prior works focus on general dataset usage or model training. The technical distinction is the focus on retrieval-augmented generation and the use of LLM watermarks for inference.
+- **Assessment:** The formalization is a meaningful extension, but the underlying problem (dataset usage detection) is not entirely new. The novelty is in the RAG-specific context and the use of LLM watermarks.
+
+**Claimed Contribution 2: Introduction of Frad dataset**
+- **Most Similar Prior Work:** *RAGEval* (scenario-specific RAG evaluation), *Mimir* (for MIAs), *DragonBall* (for watermarking).
+- **Actual Delta:** *Frad* is designed for RAG-DI, modeling fact redundancy and excluding LLM training data. This addresses a gap in realistic evaluation for dataset inference in RAG.
+- **Assessment:** The dataset is a valuable contribution, but similar efforts exist for related tasks (RAGEval, Mimir). The main difference is the focus on RAG-DI and fact redundancy.
+
+**Claimed Contribution 3: Ward—first RAG-DI method based on LLM watermarks with formal guarantees**
+- **Most Similar Prior Work:** *Domain Watermark* (dataset watermarking), *Provable Robust Watermarking* (formal guarantees for LLM watermarks), *EnTruth* (memorization-based detection).
+- **Actual Delta:** *Ward* applies LLM watermarks to the RAG-DI problem, providing statistical guarantees for dataset usage detection. Prior works provide guarantees for output attribution or dataset watermarking, but not specifically for RAG-DI.
+- **Assessment:** The adaptation to RAG-DI and the formal guarantees are substantive, but the core techniques are extensions of existing watermarking methods. The novelty is in the application and formalization, not the underlying watermarking mechanism.
+
+**Claimed Contribution 4: Empirical superiority (accuracy, efficiency, robustness)**
+- **Most Similar Prior Work:** MIAs on RAG, *Domain Watermark*, *EnTruth*.
+- **Actual Delta:** *Ward* outperforms MIAs and simple baselines in the RAG-DI setting, especially in black-box and adversarial scenarios.
+- **Assessment:** The empirical improvements are credible, but may be partly due to the choice of dataset, evaluation setup, or implementation details. The robustness claims would be stronger with direct comparison to recent black-box attacks on watermarks.
+
+---
+
+# 4. FIELD CONTEXT CONSIDERATIONS
+
+- **Field Maturity:** The area of dataset usage detection in RAG is nascent, with most prior work focusing on output attribution or privacy attacks. The shift to data-centric security and ownership is recent.
+- **Recent Surveys:** No comprehensive surveys on RAG-DI exist, but surveys on LLM watermarking and RAG security (e.g., "A Survey of Watermarking for Large Language Models") provide context.
+- **Trends:** The field is moving toward formal guarantees, robustness, and practical deployment. There is an ongoing arms race between watermarking methods and attacks.
+- **Incremental Advances:** Many advances are incremental (e.g., new watermarking schemes, improved robustness), but the formalization of new problem settings (like RAG-DI) is a notable trend.
+
+---
+
+# 5. CRITICAL ASSESSMENT CONSIDERATIONS
+
+- **Overstated Novelty:** The claim of being the "first" in RAG-DI is somewhat overstated, as prior work on dataset usage detection (Domain Watermark, EnTruth) is highly relevant and could be adapted to RAG.
+- **Alignment of Novelty Claims:** The main novelty is in the RAG-specific formalization and evaluation, not in the underlying watermarking technique.
+- **Empirical Improvements:** Superior performance may be influenced by the choice of dataset (Frad), evaluation metrics, or implementation details, rather than conceptual advances.
+- **Terminology Differences:** The distinction between "dataset inference" and "ownership verification" may be more terminological than conceptual.
+- **Routine Extensions:** The adaptation of MIAs and watermarking to RAG-DI, while necessary, is a routine extension rather than a conceptual breakthrough.
+
+---
+
+# 6. RELATED WORK CONSIDERATIONS
+
+- **Omitted Relevant Work:** The submission does not cite recent work on black-box detection of watermarks, black-box scrubbing attacks (B4), or spoofed watermark detection, which are relevant for robustness claims.
+- **Additional Comparisons Needed:** Direct comparison to *Domain Watermark* and *EnTruth* in the RAG context would strengthen the evaluation.
+- **Incomplete Characterizations:** The limitations of MIAs are accurately described, but the potential for adapting dataset watermarking methods to RAG is understated.
+- **Exaggerated Limitations:** The claim that "no prior work on RAG-DI" exists may exaggerate the novelty, given the close relationship to dataset usage detection.
+
+---
+
+# 7. KEY OBSERVATION SUMMARY
+
+- **Most Significant Differences:** *Ward* is the first to formalize and empirically evaluate RAG-DI using LLM watermarks with formal guarantees, and introduces a purpose-built evaluation dataset (Frad).
+- **Main Relationships:** The work is an extension of LLM watermarking and dataset usage detection, adapted to the RAG context.
+- **Strongest Differentiation:** The formalization of RAG-DI and the introduction of Frad are the most distinctive contributions.
+- **Weakest Differentiation:** The underlying watermarking technique and the adaptation of MIAs are incremental extensions of prior work.
+- **Discrepancies:** The claim of being the "first" in RAG-DI is somewhat overstated; prior work on dataset usage detection is highly relevant. The omission of recent black-box watermark attack/detection work limits the robustness claims.
+- **Reviewer Guidance:** The submission’s main novelty is in problem formalization and evaluation, not in the core technical mechanism. The work is a timely and relevant extension, but the degree of conceptual novelty should be calibrated accordingly.
+
+---

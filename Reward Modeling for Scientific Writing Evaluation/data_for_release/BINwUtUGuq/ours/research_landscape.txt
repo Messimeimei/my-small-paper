@@ -1,0 +1,194 @@
+Below is a comprehensive research landscape analysis based on the provided submission and related papers.
+
+---
+
+## 1. METHODOLOGICAL LANDSCAPE
+
+### Main Methodological Approaches
+
+Across the collection, the dominant methodological focus is on **pruning large language models (LLMs)** to reduce their size and computational requirements, with a strong emphasis on **post-training (retraining-free) pruning**. The methods can be grouped as follows:
+
+#### **Cluster 1: Convex Optimization and Sparse Regression-Based Pruning**
+- **Papers:** Submission, Related Paper 1, SparseGPT, Pruning Foundation Models for High Accuracy without Retraining
+- **Description:** These methods formulate pruning as a convex optimization or sparse regression problem, often leveraging algorithms like FISTA or ADMM. They focus on efficient, layer-wise, post-training pruning, supporting both unstructured and semi-structured sparsity. The submission and Related Paper 1 introduce a LASSO-like convex model with FISTA, while SparseGPT uses approximate sparse regression, and Pruning Foundation Models introduces the Multiple Removal Problem (MRP) for optimal multi-weight pruning.
+- **Trends:** Increasing mathematical rigor in pruning formulation, moving from heuristic to optimization-based approaches for better accuracy and scalability.
+
+#### **Cluster 2: Learnable and Probabilistic Masking for Semi-Structured Sparsity**
+- **Papers:** MaskLLM, NxMTransformer, NxMiFormer, DaSS
+- **Description:** These methods introduce learnable or probabilistic mask selection for semi-structured (N:M) sparsity, often using end-to-end training (e.g., Gumbel Softmax in MaskLLM) or ADMM-based optimization (NxMTransformer, NxMiFormer). DaSS further incorporates dependency-awareness for GLU-based LLMs.
+- **Trends:** Shift from static, heuristic mask selection to learnable, data-driven, and hardware-friendly sparsity patterns.
+
+#### **Cluster 3: Sensitivity and Outlier-Aware Pruning**
+- **Papers:** OWL, One-Shot Sensitivity-Aware Mixed Sparsity Pruning
+- **Description:** These methods allocate sparsity non-uniformly across layers, guided by outlier statistics (OWL) or Hessian-based sensitivity (One-Shot Sensitivity-Aware). They challenge the uniform sparsity paradigm, showing that adaptive allocation improves performance at high sparsity.
+- **Trends:** Recognition that model layers differ in importance and sensitivity, leading to more nuanced sparsity allocation.
+
+#### **Cluster 4: Simple, Heuristic, and Activation-Based Pruning**
+- **Papers:** Wanda, DaSS (partially), DSnoT
+- **Description:** Wanda scores weights by combining magnitude and activation norms, enabling fast, retraining-free pruning. DSnoT iteratively prunes and regrows weights based on reconstruction error, also without training.
+- **Trends:** Emphasis on computational efficiency and simplicity, making pruning practical for very large models.
+
+#### **Cluster 5: Structured and Layerwise Pruning**
+- **Papers:** LaCo, LLM-Pruner, Sheared LLaMA, K-prune
+- **Description:** These methods focus on structured pruning at the level of layers, heads, or groups, often with mechanisms to preserve model structure (LaCo, Sheared LLaMA) or knowledge (K-prune, LLM-Pruner). LLM-Pruner uses gradient and Hessian information for group selection, while LaCo collapses layers to preserve architecture.
+- **Trends:** Structured pruning is gaining traction for its hardware compatibility and ease of deployment.
+
+#### **Cluster 6: Post-Pruning Weight Update and Fine-Tuning**
+- **Papers:** Fast and Effective Weight Update for Pruned LLMs, DSnoT, LLM-Pruner
+- **Description:** These works address the challenge of recovering performance after pruning, proposing efficient weight update algorithms (e.g., ADMM-based) or training-free fine-tuning (DSnoT).
+- **Trends:** Reducing or eliminating the need for expensive retraining after pruning.
+
+### Methodological Relationships
+
+- **Optimization-based methods** (FISTA, ADMM) are increasingly used for both unstructured and semi-structured pruning, often outperforming heuristic approaches.
+- **Learnable mask methods** (MaskLLM) and **sensitivity-aware allocation** (OWL, One-Shot Sensitivity-Aware) are complementary: the former focuses on mask selection, the latter on where to prune.
+- **Structured pruning** (LaCo, Sheared LLaMA) is often combined with **post-training recovery** (LLM-Pruner, K-prune) for better performance retention.
+- **Heuristic and activation-based methods** (Wanda, DaSS) offer practical, low-cost alternatives, sometimes serving as baselines or initialization for more advanced methods.
+
+---
+
+## 2. PROBLEM SPACE MAPPING
+
+### Key Problems Addressed
+
+1. **Efficient Pruning of Large Language Models (LLMs) Without Retraining**
+   - Most papers, including the submission, SparseGPT, Wanda, and others, focus on post-training pruning to avoid the cost of retraining.
+
+2. **Maintaining Model Performance at High Sparsity**
+   - A central challenge is to prune aggressively (often 50% or more) while retaining most of the original model’s accuracy or perplexity.
+
+3. **Scalability to Billion-Parameter Models**
+   - Methods are designed to work on models ranging from hundreds of millions to over 100 billion parameters, often on a single GPU.
+
+4. **Hardware-Friendly Sparsity Patterns**
+   - Several works (MaskLLM, NxMTransformer, NxMiFormer, DaSS) target N:M semi-structured sparsity for compatibility with modern accelerators.
+
+5. **Adaptive and Non-Uniform Sparsity Allocation**
+   - OWL and sensitivity-aware methods address the sub-optimality of uniform sparsity, proposing adaptive allocation based on outlier or sensitivity statistics.
+
+6. **Structured Pruning and Model Portability**
+   - LaCo, Sheared LLaMA, and LLM-Pruner focus on structured pruning (layers, heads, groups) to preserve model structure and facilitate deployment.
+
+7. **Efficient Post-Pruning Recovery**
+   - LLM-Pruner, Fast and Effective Weight Update, and DSnoT address the need for fast, lightweight recovery of pruned models.
+
+### Approaches to Similar Problems
+
+- **Pruning Without Retraining:** Submission, SparseGPT, Wanda, and others use post-training methods, but differ in their pruning criteria (optimization-based vs. heuristic vs. sensitivity-aware).
+- **Performance Retention:** Some (e.g., MaskLLM, DaSS) use learnable or dependency-aware masks to better preserve accuracy, while others (K-prune, LLM-Pruner) explicitly measure and minimize knowledge loss.
+- **Hardware Compatibility:** NxMTransformer, NxMiFormer, and MaskLLM focus on N:M sparsity, while DaSS extends this to GLU-based LLMs.
+- **Adaptive Sparsity:** OWL and One-Shot Sensitivity-Aware methods allocate sparsity based on outlier or sensitivity statistics, in contrast to uniform allocation in earlier works.
+
+### Patterns in Problem Formulation
+
+- **From Heuristic to Principled:** Early works use simple heuristics (magnitude, activation norm), while recent works formulate pruning as optimization or sensitivity problems.
+- **From Uniform to Adaptive:** There is a clear trend toward adaptive, non-uniform sparsity allocation.
+- **From Unstructured to Semi-Structured/Structured:** Increasing focus on hardware-friendly and structured sparsity patterns.
+
+---
+
+## 3. EVALUATION LANDSCAPE
+
+### Common Datasets
+
+- **LLM Families:** LLaMA (v1, v2, v3), OPT, BLOOM, Mistral, Gemma, Vicuna, ChatGLM, GPT-3, Nemotron-4
+- **Benchmarks:** WikiText (WikiText-2, WikiText-103), GLUE, SQuAD, various downstream tasks (commonsense, reading comprehension, world knowledge)
+- **Pretraining Data:** Used in Sheared LLaMA and MaskLLM for continued pretraining or mask learning
+
+### Evaluation Metrics
+
+- **Perplexity:** Most common for language modeling tasks, especially for measuring performance retention after pruning.
+- **Zero-shot Task Performance:** Used to assess generalization and downstream utility.
+- **Accuracy/F1 Score:** For classification or QA tasks (GLUE, SQuAD).
+- **Sparsity/Compression Ratio:** Percentage of parameters pruned or model size reduction.
+- **Inference Speedup:** Measured in some works (OWL) using specific inference engines.
+- **Compute Cost:** (Sheared LLaMA) as a percentage of full pretraining compute.
+
+### Patterns in Performance Measurement
+
+- **Relative Performance Retention:** Most works report performance as a percentage of the original model, emphasizing minimal loss at high sparsity.
+- **Direct Comparison to Baselines:** SparseGPT, Wanda, and magnitude pruning are common baselines.
+- **Hardware-Aware Metrics:** Some works (NxMiFormer, DaSS, OWL) report results for hardware-friendly sparsity patterns and measure actual speedup.
+- **Post-Pruning Recovery:** Some methods (LLM-Pruner, DSnoT) report the amount of data and time required for post-pruning recovery.
+
+### Comparison of Evaluation Approaches
+
+- **Breadth vs. Depth:** Some works (e.g., MaskLLM, Sheared LLaMA) evaluate across many tasks and datasets, while others focus on a few representative benchmarks.
+- **Task-Agnostic vs. Task-Specific:** LLM-Pruner and K-prune emphasize task-agnostic pruning, while others focus on specific downstream tasks.
+- **Structured vs. Unstructured Evaluation:** Structured pruning methods often report both accuracy and model portability, while unstructured methods focus on perplexity and sparsity.
+
+---
+
+## 4. RESEARCH CLUSTERS
+
+### Cluster 1: **Optimization-Based Post-Training Pruning**
+- **Papers:** Submission, Related Paper 1, SparseGPT, Pruning Foundation Models, Fast and Effective Weight Update
+- **Characteristics:** Formulate pruning as an optimization problem (convex, sparse regression, ADMM), support both unstructured and semi-structured sparsity, focus on scalability and efficiency, often retraining-free.
+- **Relationships:** These methods build on each other, with the submission and Related Paper 1 extending SparseGPT’s ideas with convex optimization and error correction.
+
+### Cluster 2: **Learnable and Probabilistic Masking for Semi-Structured Sparsity**
+- **Papers:** MaskLLM, NxMTransformer, NxMiFormer, DaSS
+- **Characteristics:** Use learnable or probabilistic mask selection, often with end-to-end training or ADMM, target N:M sparsity, focus on hardware compatibility and transferability.
+- **Relationships:** MaskLLM is unique in its probabilistic approach, while NxMTransformer and NxMiFormer focus on ADMM-based optimization; DaSS adds dependency-awareness.
+
+### Cluster 3: **Sensitivity and Outlier-Aware Adaptive Pruning**
+- **Papers:** OWL, One-Shot Sensitivity-Aware Mixed Sparsity Pruning
+- **Characteristics:** Allocate sparsity non-uniformly based on outlier statistics or Hessian sensitivity, outperform uniform allocation, often retraining-free.
+- **Relationships:** Both challenge the uniform sparsity paradigm and can be combined with other pruning criteria.
+
+### Cluster 4: **Heuristic and Activation-Based Pruning**
+- **Papers:** Wanda, DSnoT, DaSS (partially)
+- **Characteristics:** Use simple, efficient heuristics (magnitude, activation norm, reconstruction error) for fast, retraining-free pruning, often serve as baselines or initialization for more advanced methods.
+
+### Cluster 5: **Structured and Layerwise Pruning**
+- **Papers:** LaCo, LLM-Pruner, Sheared LLaMA, K-prune
+- **Characteristics:** Focus on structured pruning (layers, heads, groups), preserve model structure and portability, often include post-pruning recovery or knowledge preservation.
+
+### Cluster 6: **Post-Pruning Recovery and Fine-Tuning**
+- **Papers:** LLM-Pruner, Fast and Effective Weight Update, DSnoT
+- **Characteristics:** Address the challenge of recovering performance after pruning, propose efficient weight update or training-free fine-tuning.
+
+---
+
+## 5. TECHNICAL EVOLUTION
+
+### Progression and Evolution of Ideas
+
+- **From Heuristic to Optimization:** Early pruning methods relied on simple heuristics (magnitude, activation norm). The field has shifted toward principled, optimization-based approaches (convex optimization, ADMM, sparse regression), enabling higher sparsity with less performance loss.
+- **From Uniform to Adaptive Sparsity:** Uniform sparsity was the default; recent works (OWL, sensitivity-aware) show that adaptive, non-uniform allocation based on outlier or sensitivity statistics yields better results.
+- **From Unstructured to Semi-Structured/Structured Sparsity:** There is a clear trend toward hardware-friendly sparsity patterns (N:M, layerwise, groupwise), with methods like MaskLLM, NxMTransformer, and DaSS leading the way.
+- **From Post-Pruning Recovery to Training-Free Fine-Tuning:** While some methods require minimal post-training (LLM-Pruner, LaCo), others (DSnoT) achieve significant recovery without any training, using mask adaptation.
+- **From Task-Specific to Task-Agnostic Pruning:** Methods like LLM-Pruner and K-prune emphasize preserving general-purpose capabilities, enabling multi-task deployment.
+
+### Building Blocks and Extensions
+
+- **SparseGPT** established the feasibility of one-shot, retraining-free pruning for billion-scale LLMs, inspiring optimization-based extensions (FISTAPruner, MRP).
+- **ADMM and FISTA** are increasingly used for efficient, scalable optimization in both unstructured and semi-structured pruning.
+- **Learnable mask selection** (MaskLLM) and **dependency-aware metrics** (DaSS) extend the pruning paradigm to be more data-driven and structure-aware.
+- **Sensitivity and outlier analysis** (OWL, One-Shot Sensitivity-Aware) are now used to guide adaptive sparsity allocation.
+
+### Competing and Complementary Approaches
+
+- **Heuristic vs. Optimization-Based:** Heuristic methods (Wanda, DSnoT) are fast and practical, but optimization-based methods (FISTAPruner, SparseGPT) achieve higher accuracy at high sparsity.
+- **Uniform vs. Adaptive Sparsity:** Adaptive methods (OWL, sensitivity-aware) consistently outperform uniform allocation, especially at high sparsity.
+- **Unstructured vs. Structured/Semi-Structured:** Structured pruning (LaCo, Sheared LLaMA) is more compatible with deployment, while unstructured methods offer more flexibility but less hardware efficiency.
+- **Post-Pruning Recovery:** Some methods (LLM-Pruner, DSnoT) focus on efficient recovery, while others (FISTAPruner, SparseGPT) aim for minimal loss without recovery.
+
+---
+
+# **Summary Table of Key Clusters and Methods**
+
+| Cluster | Key Methods/Papers | Main Features | Trends |
+|---------|--------------------|--------------|--------|
+| Convex Optimization & Sparse Regression | Submission, Related Paper 1, SparseGPT, MRP, Fast Weight Update | Optimization-based, retraining-free, scalable, supports unstructured/semi-structured | From heuristic to principled, scalable to 100B+ |
+| Learnable/Probabilistic Masking | MaskLLM, NxMTransformer, NxMiFormer, DaSS | Learnable/probabilistic masks, N:M sparsity, hardware-friendly | Data-driven, transferability, hardware compatibility |
+| Sensitivity/Outlier-Aware | OWL, One-Shot Sensitivity-Aware | Adaptive, non-uniform sparsity, outlier/sensitivity-guided | Adaptive allocation, better high-sparsity performance |
+| Heuristic/Activation-Based | Wanda, DSnoT, DaSS | Simple, efficient, retraining-free, activation-based | Practical, fast, often baseline or initialization |
+| Structured/Layerwise Pruning | LaCo, LLM-Pruner, Sheared LLaMA, K-prune | Layer/group pruning, structure preservation, knowledge retention | Structured, portable, minimal retraining |
+| Post-Pruning Recovery | LLM-Pruner, Fast Weight Update, DSnoT | Efficient recovery, training-free fine-tuning | Minimize post-pruning cost, fast deployment |
+
+---
+
+# **Conclusion**
+
+The research landscape in LLM pruning is rapidly evolving from simple, heuristic, and uniform approaches to sophisticated, optimization-based, adaptive, and hardware-aware methods. The field is converging on scalable, retraining-free solutions that maintain high performance at aggressive sparsity levels, with increasing attention to structured and semi-structured sparsity for real-world deployment. The submission paper (FISTAPruner) exemplifies this trend, combining convex optimization, efficient algorithms, error correction, and support for both unstructured and semi-structured pruning, setting a new standard for scalable, effective LLM pruning.
