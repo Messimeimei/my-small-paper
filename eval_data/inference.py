@@ -1,10 +1,107 @@
 import re
 import os
+import time
+import random
 import argparse
 import json
 import numpy as np
 import pandas as pd
 from datasets import Dataset, DatasetDict
+
+
+def model_display_name(model_name: str) -> str:
+    """Basename of --model_name for logs / progress bars."""
+    return os.path.basename(str(model_name).rstrip("/")) or str(model_name)
+
+
+def completion_token_counts(completions, tokenizer=None, prompts=None):
+    """
+    Exact token counts from vLLM RequestOutput when available;
+    otherwise fall back to the model tokenizer.
+    """
+    out_toks = []
+    in_toks = []
+    for i, c in enumerate(completions):
+        out_ids = c.outputs[0].token_ids if c.outputs else None
+        if out_ids is not None:
+            out_toks.append(len(out_ids))
+        elif tokenizer is not None:
+            text = c.outputs[0].text if c.outputs else ""
+            out_toks.append(len(tokenizer.encode(str(text), add_special_tokens=False)))
+        else:
+            out_toks.append(0)
+
+        prompt_ids = getattr(c, "prompt_token_ids", None)
+        if prompt_ids is not None:
+            in_toks.append(len(prompt_ids))
+        elif tokenizer is not None and prompts is not None:
+            msg = prompts[i]
+            if isinstance(msg, str):
+                in_toks.append(len(tokenizer.encode(msg, add_special_tokens=False)))
+            else:
+                in_toks.append(
+                    len(
+                        tokenizer.apply_chat_template(
+                            msg, tokenize=True, add_generation_prompt=True
+                        )
+                    )
+                )
+        else:
+            in_toks.append(0)
+    return out_toks, in_toks
+
+
+def summarize_rollout_timing(
+    n_samples: int,
+    elapsed_sec: float,
+    outputs,
+    output_token_lens=None,
+    prompt_token_lens=None,
+    tokenizer=None,
+) -> dict:
+    elapsed_sec = float(max(elapsed_sec, 1e-9))
+    out_chars = int(sum(len(str(t)) for t in outputs if t is not None))
+    if output_token_lens is not None:
+        out_toks = int(sum(int(x) for x in output_token_lens))
+    elif tokenizer is not None:
+        out_toks = int(
+            sum(
+                len(tokenizer.encode(str(t), add_special_tokens=False))
+                for t in outputs
+                if t is not None
+            )
+        )
+    else:
+        out_toks = 0
+    if prompt_token_lens is not None:
+        in_toks = int(sum(int(x) for x in prompt_token_lens))
+    else:
+        in_toks = 0
+    return {
+        "n_samples": int(n_samples),
+        "elapsed_sec": round(elapsed_sec, 3),
+        "samples_per_sec": round(n_samples / elapsed_sec, 3),
+        "sec_per_sample": round(elapsed_sec / max(n_samples, 1), 4),
+        "output_chars": out_chars,
+        "output_tokens": out_toks,
+        "prompt_tokens": in_toks,
+        "output_toks_per_sec": round(out_toks / elapsed_sec, 2),
+        "prompt_toks_per_sec": round(in_toks / elapsed_sec, 2),
+        "total_toks_per_sec": round((in_toks + out_toks) / elapsed_sec, 2),
+    }
+
+def set_global_seed(seed: int):
+    """Fix Python / NumPy / Torch RNGs for as-reproducible-as-possible runs."""
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    try:
+        import torch
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+    except Exception:
+        pass
 
 SCORE_PATTERN = re.compile(r"<score>([^<]+)</score>")
 CORRECTNESS_TAG = re.compile(r"<correctness>\s*([^<]*?)\s*</correctness>", re.IGNORECASE | re.DOTALL)
@@ -105,12 +202,47 @@ def parse_cascade_axes(text):
     }
 
 
-def pred_fully_positive(axes):
-    return int(
-        axes.get("correctness") == "Correct"
-        and axes.get("significance") == "Significant"
-        and axes.get("evidence") == "Sufficient"
-    )
+# Table 46 classes that assume both annotators AGREE on the cascade outcome.
+# Primary cascade outputs cannot emit disagreement classes 3 / 6 / 8 / 10.
+AGREED_TEN_CLASS_IDS = (1, 2, 4, 5, 7, 9)
+TEN_CLASS_SCORE_SET = list(range(1, 11))
+
+
+def axes_to_agreed_label_id(correctness, significance=None, evidence=None):
+    """
+    Map primary-setting cascade axes -> Table 46 label_id under the assumption
+    that both experts would agree with these labels.
+
+    Returns one of {1,2,4,5,7,9}, or None if axes are incomplete/invalid.
+    Cannot represent disagreement classes 3/6/8/10 (needs secondary setting).
+    """
+    if isinstance(correctness, dict):
+        significance = correctness.get("significance")
+        evidence = correctness.get("evidence")
+        correctness = correctness.get("correctness")
+    if correctness is None:
+        return None
+    if correctness == "Not Correct":
+        return 9
+    if correctness != "Correct":
+        return None
+    if significance is None:
+        return None
+    if significance == "Not Significant":
+        return 7
+    if significance == "Significant":
+        if evidence == "Sufficient":
+            return 1
+        if evidence == "Requires More":
+            return 2
+        return None
+    if significance == "Marginally Significant":
+        if evidence == "Sufficient":
+            return 4
+        if evidence == "Requires More":
+            return 5
+        return None
+    return None
 
 
 def get_cascade_reward(axes, gold_c, gold_s, gold_e):
@@ -358,25 +490,76 @@ def empty_result_bucket():
         "rollout_corr_n": [],
         "rollout_sig_n": [],
         "rollout_evi_n": [],
+        "rollout_derived_ten_class_accuracy": [],
+        "rollout_derived_ten_class_f1": [],
+        "rollout_derived_ten_class_macro_f1": [],
+        "rollout_derived_ten_class_reachable_accuracy": [],
+        "rollout_derived_ten_class_reachable_n": [],
     }
 
 
-def update_result_bucket(bucket, rewards, labels, preds, score_sets, cascade_metrics=None):
+def derived_ten_class_from_axes(gold_label_ids, pred_correctness, pred_significance, pred_evidence):
+    """
+    Proxy Table-49 metric for primary cascade runs:
+    map predicted axes -> agreed label_id {1,2,4,5,7,9}, compare to gold label_id.
+    Disagreement gold classes {3,6,8,10} are unreachable from primary-only outputs.
+    """
+    pred_ids = [
+        axes_to_agreed_label_id(c, s, e)
+        for c, s, e in zip(pred_correctness, pred_significance, pred_evidence)
+    ]
+    gold = [float(x) for x in gold_label_ids]
+    score_sets = [TEN_CLASS_SCORE_SET for _ in gold]
+    metrics = classification_metrics(gold, pred_ids, score_sets)
+
+    reachable = [
+        (g, p)
+        for g, p in zip(gold, pred_ids)
+        if int(g) in AGREED_TEN_CLASS_IDS
+    ]
+    if reachable:
+        g_r = [g for g, _ in reachable]
+        p_r = [p for _, p in reachable]
+        reach_m = classification_metrics(
+            g_r, p_r, [TEN_CLASS_SCORE_SET for _ in g_r]
+        )
+        metrics["reachable_accuracy"] = reach_m["accuracy"]
+        metrics["reachable_f1"] = reach_m["f1"]
+        metrics["reachable_n"] = len(g_r)
+    else:
+        metrics["reachable_accuracy"] = 0.0
+        metrics["reachable_f1"] = 0.0
+        metrics["reachable_n"] = 0
+    return metrics
+
+
+def update_result_bucket(
+    bucket,
+    rewards,
+    labels=None,
+    preds=None,
+    score_sets=None,
+    cascade_metrics=None,
+    derived_ten_class_metrics=None,
+    skip_classification=False,
+):
     rewards = np.asarray(rewards, dtype=float)
-    metrics = classification_metrics(labels, preds, score_sets)
+    metrics = {}
     bucket["rollout_reward_dist"].append({reward: int(np.sum(rewards == reward)) for reward in [-0.5, 0.0, 0.25, 0.5, 1.5]})
     bucket["rollout_sums"].append(float(rewards.sum()))
     bucket["rollout_means"].append(float(rewards.mean()) if len(rewards) else 0.0)
     bucket["rollout_stds"].append(float(rewards.std(ddof=1)) if len(rewards) > 1 else 0.0)
-    bucket["rollout_accuracy"].append(metrics["accuracy"])
-    bucket["rollout_f1"].append(metrics["f1"])
-    bucket["rollout_macro_f1"].append(metrics["macro_f1"])
-    bucket["rollout_weighted_f1"].append(metrics["weighted_f1"])
-    bucket["rollout_micro_f1"].append(metrics["micro_f1"])
-    bucket["rollout_ten_class_accuracy"].append(metrics["ten_class_accuracy"])
-    bucket["rollout_mse"].append(metrics["mse"])
-    bucket["rollout_pearson"].append(metrics["pearson"])
-    bucket["rollout_valid_rate"].append(metrics["valid_rate"])
+    if not skip_classification:
+        metrics = classification_metrics(labels, preds, score_sets)
+        bucket["rollout_accuracy"].append(metrics["accuracy"])
+        bucket["rollout_f1"].append(metrics["f1"])
+        bucket["rollout_macro_f1"].append(metrics["macro_f1"])
+        bucket["rollout_weighted_f1"].append(metrics["weighted_f1"])
+        bucket["rollout_micro_f1"].append(metrics["micro_f1"])
+        bucket["rollout_ten_class_accuracy"].append(metrics["ten_class_accuracy"])
+        bucket["rollout_mse"].append(metrics["mse"])
+        bucket["rollout_pearson"].append(metrics["pearson"])
+        bucket["rollout_valid_rate"].append(metrics["valid_rate"])
     if cascade_metrics is not None:
         bucket["rollout_corr_acc"].append(cascade_metrics["correctness_accuracy"])
         bucket["rollout_sig_acc"].append(cascade_metrics["significance_accuracy"])
@@ -385,6 +568,21 @@ def update_result_bucket(bucket, rewards, labels, preds, score_sets, cascade_met
         bucket["rollout_sig_n"].append(cascade_metrics["significance_n"])
         bucket["rollout_evi_n"].append(cascade_metrics["evidence_n"])
         metrics["cascade"] = cascade_metrics
+    if derived_ten_class_metrics is not None:
+        bucket["rollout_derived_ten_class_accuracy"].append(
+            derived_ten_class_metrics["accuracy"]
+        )
+        bucket["rollout_derived_ten_class_f1"].append(derived_ten_class_metrics["f1"])
+        bucket["rollout_derived_ten_class_macro_f1"].append(
+            derived_ten_class_metrics["macro_f1"]
+        )
+        bucket["rollout_derived_ten_class_reachable_accuracy"].append(
+            derived_ten_class_metrics["reachable_accuracy"]
+        )
+        bucket["rollout_derived_ten_class_reachable_n"].append(
+            derived_ten_class_metrics["reachable_n"]
+        )
+        metrics["derived_ten_class"] = derived_ten_class_metrics
     return metrics
 
 
@@ -405,38 +603,36 @@ def finalize_result_bucket(bucket, prefix):
     bucket[f"overall_{prefix}_reward_mean"] = float(np.mean(bucket["rollout_means"]))
     bucket[f"{prefix}_reward_mean_stds"] = float(np.mean(bucket["rollout_stds"]))
 
-    # Paper-style: mean ± std over rollouts
-    bucket["accuracy_mean"], bucket["accuracy_std"] = _mean_std(bucket["rollout_accuracy"])
-    bucket["f1_mean"], bucket["f1_std"] = _mean_std(bucket["rollout_f1"])
-    bucket["macro_f1_mean"], bucket["macro_f1_std"] = _mean_std(bucket["rollout_macro_f1"])
-    bucket["weighted_f1_mean"], bucket["weighted_f1_std"] = _mean_std(bucket["rollout_weighted_f1"])
-    bucket["micro_f1_mean"], bucket["micro_f1_std"] = _mean_std(bucket["rollout_micro_f1"])
-    bucket["ten_class_accuracy_mean"], bucket["ten_class_accuracy_std"] = _mean_std(
-        bucket["rollout_ten_class_accuracy"]
-    )
-    bucket["mse_mean"], bucket["mse_std"] = _mean_std(bucket["rollout_mse"])
-    bucket["pearson_mean"], bucket["pearson_std"] = _mean_std(bucket["rollout_pearson"])
-    bucket["valid_rate_mean"] = float(np.mean(bucket["rollout_valid_rate"]))
-    bucket["paper_metrics"] = {
-        "accuracy": f"{bucket['accuracy_mean']:.4f} ± {bucket['accuracy_std']:.4f}",
-        "f1": f"{bucket['f1_mean']:.4f} ± {bucket['f1_std']:.4f}",
-        "macro_f1": f"{bucket['macro_f1_mean']:.4f} ± {bucket['macro_f1_std']:.4f}",
-        "weighted_f1": f"{bucket['weighted_f1_mean']:.4f} ± {bucket['weighted_f1_std']:.4f}",
-        "micro_f1": f"{bucket['micro_f1_mean']:.4f} ± {bucket['micro_f1_std']:.4f}",
-        "ten_class_accuracy": (
-            f"{bucket['ten_class_accuracy_mean']:.4f} ± {bucket['ten_class_accuracy_std']:.4f}"
-        ),
-        "mse": f"{bucket['mse_mean']:.4f} ± {bucket['mse_std']:.4f}",
-        "pearson": f"{bucket['pearson_mean']:.4f} ± {bucket['pearson_std']:.4f}",
-    }
-    # PeerReview Bench Task 2 (meta-reviewer 10-class): Acc + F1.
-    bucket["peerreview_task2_metrics"] = {
-        "accuracy": bucket["paper_metrics"]["accuracy"],
-        "f1": bucket["paper_metrics"]["f1"],
-        "ten_class_accuracy": bucket["paper_metrics"]["ten_class_accuracy"],
-        "macro_f1": bucket["paper_metrics"]["macro_f1"],
-    }
-    if bucket["rollout_corr_acc"]:
+    is_cascade = bool(bucket["rollout_corr_acc"])
+    bucket["paper_metrics"] = {}
+
+    # Classification metrics (SciRM / Task2 10-class). Skipped for cascade runs.
+    if bucket["rollout_accuracy"]:
+        bucket["accuracy_mean"], bucket["accuracy_std"] = _mean_std(bucket["rollout_accuracy"])
+        bucket["f1_mean"], bucket["f1_std"] = _mean_std(bucket["rollout_f1"])
+        bucket["macro_f1_mean"], bucket["macro_f1_std"] = _mean_std(bucket["rollout_macro_f1"])
+        bucket["weighted_f1_mean"], bucket["weighted_f1_std"] = _mean_std(bucket["rollout_weighted_f1"])
+        bucket["micro_f1_mean"], bucket["micro_f1_std"] = _mean_std(bucket["rollout_micro_f1"])
+        bucket["ten_class_accuracy_mean"], bucket["ten_class_accuracy_std"] = _mean_std(
+            bucket["rollout_ten_class_accuracy"]
+        )
+        bucket["mse_mean"], bucket["mse_std"] = _mean_std(bucket["rollout_mse"])
+        bucket["pearson_mean"], bucket["pearson_std"] = _mean_std(bucket["rollout_pearson"])
+        bucket["valid_rate_mean"] = float(np.mean(bucket["rollout_valid_rate"]))
+        bucket["paper_metrics"] = {
+            "accuracy": f"{bucket['accuracy_mean']:.4f} ± {bucket['accuracy_std']:.4f}",
+            "f1": f"{bucket['f1_mean']:.4f} ± {bucket['f1_std']:.4f}",
+            "macro_f1": f"{bucket['macro_f1_mean']:.4f} ± {bucket['macro_f1_std']:.4f}",
+            "weighted_f1": f"{bucket['weighted_f1_mean']:.4f} ± {bucket['weighted_f1_std']:.4f}",
+            "micro_f1": f"{bucket['micro_f1_mean']:.4f} ± {bucket['micro_f1_std']:.4f}",
+            "ten_class_accuracy": (
+                f"{bucket['ten_class_accuracy_mean']:.4f} ± {bucket['ten_class_accuracy_std']:.4f}"
+            ),
+            "mse": f"{bucket['mse_mean']:.4f} ± {bucket['mse_std']:.4f}",
+            "pearson": f"{bucket['pearson_mean']:.4f} ± {bucket['pearson_std']:.4f}",
+        }
+
+    if is_cascade:
         corr_m, corr_s = _mean_std(bucket["rollout_corr_acc"])
         sig_m, sig_s = _mean_std(bucket["rollout_sig_acc"])
         evi_m, evi_s = _mean_std(bucket["rollout_evi_acc"])
@@ -455,30 +651,60 @@ def finalize_result_bucket(bucket, prefix):
         bucket["paper_metrics"]["significance_accuracy"] = bucket["peerreview_cascade_metrics"]["significance_accuracy"]
         bucket["paper_metrics"]["evidence_accuracy"] = bucket["peerreview_cascade_metrics"]["evidence_accuracy"]
 
+    if bucket["rollout_derived_ten_class_accuracy"]:
+        d_acc_m, d_acc_s = _mean_std(bucket["rollout_derived_ten_class_accuracy"])
+        d_f1_m, d_f1_s = _mean_std(bucket["rollout_derived_ten_class_f1"])
+        d_mac_m, d_mac_s = _mean_std(bucket["rollout_derived_ten_class_macro_f1"])
+        d_reach_m, d_reach_s = _mean_std(bucket["rollout_derived_ten_class_reachable_accuracy"])
+        reach_n = int(bucket["rollout_derived_ten_class_reachable_n"][-1])
+        bucket["peerreview_derived_ten_class_metrics"] = {
+            "accuracy": f"{d_acc_m:.4f} ± {d_acc_s:.4f}",
+            "f1": f"{d_f1_m:.4f} ± {d_f1_s:.4f}",
+            "macro_f1": f"{d_mac_m:.4f} ± {d_mac_s:.4f}",
+            "reachable_accuracy": f"{d_reach_m:.4f} ± {d_reach_s:.4f}",
+            "reachable_n": reach_n,
+            "note": (
+                "Mapped predicted C/S/E -> agreed label_id {1,2,4,5,7,9} vs gold label_id. "
+                "Disagreement classes {3,6,8,10} are unreachable from primary cascade outputs."
+            ),
+        }
 
-def init_model(model_name, max_model_len, max_tokens, temp, top_p, enable_thinking=False, gpu_util=0.9):
+
+def init_model(model_name, max_model_len, max_tokens, temp, top_p, enable_thinking=False, gpu_util=0.9, seed=42):
     import torch
     from vllm import LLM
 
     supports_thinking = validate_thinking_config(model_name, enable_thinking)
 
-    model = LLM(model=model_name, dtype=torch.bfloat16, max_model_len=max_model_len, trust_remote_code=True, gpu_memory_utilization=gpu_util)
+    model = LLM(
+        model=model_name,
+        dtype=torch.bfloat16,
+        max_model_len=max_model_len,
+        trust_remote_code=True,
+        gpu_memory_utilization=gpu_util,
+        seed=seed,
+    )
 
     sampling_params = model.get_default_sampling_params()
     sampling_params.max_tokens = max_tokens
     sampling_params.temperature = temp
     sampling_params.top_p = top_p
+    sampling_params.seed = seed
 
     return model, sampling_params, supports_thinking
 
 
 def inference(batch, model, sampling_params, enable_thinking=False, supports_thinking=False):
+    tokenizer = model.get_tokenizer()
     if supports_thinking:
-        tokenizer = model.get_tokenizer()
         prompts = format_chat_prompts(tokenizer, batch['prompt'], enable_thinking)
         completions = model.generate(prompts, sampling_params)
+        out_toks, in_toks = completion_token_counts(completions, tokenizer=tokenizer, prompts=prompts)
     else:
         completions = model.chat(batch['prompt'], sampling_params)
+        out_toks, in_toks = completion_token_counts(
+            completions, tokenizer=tokenizer, prompts=batch['prompt']
+        )
     outputs = [completion.outputs[0].text for completion in completions]
 
     if is_cascade_example_batch(batch):
@@ -486,7 +712,7 @@ def inference(batch, model, sampling_params, enable_thinking=False, supports_thi
         pred_c = [a["correctness"] for a in axes_list]
         pred_s = [a["significance"] for a in axes_list]
         pred_e = [a["evidence"] for a in axes_list]
-        preds = [float(pred_fully_positive(a)) if a["correctness"] is not None else None for a in axes_list]
+        pred_label_ids = [axes_to_agreed_label_id(a) for a in axes_list]
         rewards = np.array([
             get_cascade_reward(axes, gc, gs, ge)
             for axes, gc, gs, ge in zip(
@@ -504,14 +730,15 @@ def inference(batch, model, sampling_params, enable_thinking=False, supports_thi
                 f"Pred: C={pred_c[0]} S={pred_s[0]} E={pred_e[0]}\n"
                 f"Reward: {rewards[0]}\n\n"
             )
-        # HF datasets dislikes None in string columns sometimes; keep None for metrics.
         return {
             "output": outputs,
             "reward": rewards,
-            "pred_score": preds,
             "pred_correctness": pred_c,
             "pred_significance": pred_s,
             "pred_evidence": pred_e,
+            "pred_label_id": pred_label_ids,
+            "output_token_len": out_toks,
+            "prompt_token_len": in_toks,
         }
 
     preds = [parse_score(text) for text in outputs]
@@ -521,7 +748,13 @@ def inference(batch, model, sampling_params, enable_thinking=False, supports_thi
     ])
     if outputs:
         print(f"\nEXAMPLE FROM BATCH\n\nCompletion: {outputs[0]}\n\nLabel:{batch['labels'][0]}\n\nReward: {rewards[0]}\n\n")
-    return {'output': outputs, 'reward': rewards, 'pred_score': preds}
+    return {
+        'output': outputs,
+        'reward': rewards,
+        'pred_score': preds,
+        'output_token_len': out_toks,
+        'prompt_token_len': in_toks,
+    }
 
 
 def _cascade_metrics_from_df(df, preds=None, out_col=None):
@@ -566,10 +799,6 @@ def aggregate_from_dataframe(df, rollout):
 
         if is_cascade:
             axes_list = [parse_cascade_axes(text) for text in df[out_col].tolist()]
-            preds = [
-                float(pred_fully_positive(a)) if a["correctness"] is not None else None
-                for a in axes_list
-            ]
             if reward_col in df.columns:
                 rewards = df[reward_col].tolist()
             else:
@@ -582,25 +811,42 @@ def aggregate_from_dataframe(df, rollout):
                         df["evidence_primary"].tolist(),
                     )
                 ]
-            labels = df["labels"].tolist()
-            score_sets = df["score_sets"].tolist()
             cascade_m = _cascade_metrics_from_df(df, out_col=out_col)
+            derived_m = None
+            if "label_id" in df.columns:
+                derived_m = derived_ten_class_from_axes(
+                    df["label_id"].tolist(),
+                    [a["correctness"] for a in axes_list],
+                    [a["significance"] for a in axes_list],
+                    [a["evidence"] for a in axes_list],
+                )
             update_result_bucket(
-                results["whole_task"], rewards, labels, preds, score_sets, cascade_metrics=cascade_m
+                results["whole_task"],
+                rewards,
+                cascade_metrics=cascade_m,
+                derived_ten_class_metrics=derived_m,
+                skip_classification=True,
             )
             for aspect in aspects:
                 mask = df["aspect"] == aspect
                 sub = df.loc[mask]
-                sub_preds = [p for p, m in zip(preds, mask.tolist()) if m]
                 sub_rewards = np.asarray(rewards)[mask.values]
                 sub_cascade = _cascade_metrics_from_df(sub, out_col=out_col)
+                sub_derived = None
+                if "label_id" in sub.columns:
+                    sub_axes = [parse_cascade_axes(t) for t in sub[out_col].tolist()]
+                    sub_derived = derived_ten_class_from_axes(
+                        sub["label_id"].tolist(),
+                        [a["correctness"] for a in sub_axes],
+                        [a["significance"] for a in sub_axes],
+                        [a["evidence"] for a in sub_axes],
+                    )
                 update_result_bucket(
                     results[aspect],
                     sub_rewards,
-                    sub["labels"].tolist(),
-                    sub_preds,
-                    sub["score_sets"].tolist(),
                     cascade_metrics=sub_cascade,
+                    derived_ten_class_metrics=sub_derived,
+                    skip_classification=True,
                 )
         else:
             preds = [parse_score(text) for text in df[out_col].tolist()]
@@ -629,6 +875,37 @@ def aggregate_from_dataframe(df, rollout):
     for aspect in aspects:
         finalize_result_bucket(results[aspect], "aspect")
     return results
+
+
+def _print_task_summary(task, wt, prefix=""):
+    """Pretty-print metrics; cascade prints Table47 (+ optional derived 10-class), not fully-positive."""
+    pfx = f"{prefix}[{task}] " if prefix == "" else prefix
+    if "peerreview_cascade_metrics" in wt:
+        print(f"{pfx}reward_mean: {wt['overall_task_reward_mean']:.4f}")
+        casc = wt["peerreview_cascade_metrics"]
+        print(
+            f"{pfx}PeerReview Cascade (Table47-style): "
+            f"Corr={casc['correctness_accuracy']} | "
+            f"Sig={casc['significance_accuracy']} | "
+            f"Evid={casc['evidence_accuracy']} "
+            f"(n={casc['correctness_n']}/{casc['significance_n']}/{casc['evidence_n']})"
+        )
+        derived = wt.get("peerreview_derived_ten_class_metrics")
+        if derived:
+            print(
+                f"{pfx}Derived 10-class (axes→label_id vs gold label_id): "
+                f"Acc={derived['accuracy']} | F1={derived['f1']} | "
+                f"reachable_acc={derived['reachable_accuracy']} "
+                f"(n={derived['reachable_n']}; unreachable gold classes 3/6/8/10)"
+            )
+    else:
+        print(
+            f"{pfx}accuracy: {wt['paper_metrics']['accuracy']} | "
+            f"f1: {wt['paper_metrics']['f1']} | "
+            f"mse: {wt['paper_metrics']['mse']} | "
+            f"pearson: {wt['paper_metrics']['pearson']} | "
+            f"reward_mean: {wt['overall_task_reward_mean']:.4f}"
+        )
 
 
 def main(args):
@@ -660,31 +937,10 @@ def main(args):
             with open(out_json, "w") as fw:
                 json.dump(task_dict, fw, indent=4)
             print(f"[recompute] wrote {out_json}")
-            wt = results["whole_task"]
-            t2 = wt.get("peerreview_task2_metrics", {})
-            print(
-                f"  accuracy: {wt['paper_metrics']['accuracy']} | "
-                f"f1: {wt['paper_metrics']['f1']} | "
-                f"macro_f1: {wt['paper_metrics']['macro_f1']} | "
-                f"mse: {wt['paper_metrics']['mse']} | "
-                f"pearson: {wt['paper_metrics']['pearson']} | "
-                f"reward_mean: {wt['overall_task_reward_mean']:.4f}"
-            )
-            if t2:
-                print(
-                    f"  [PeerReview Task2] Acc: {t2['accuracy']} | "
-                    f"F1: {t2['f1']} | ten_class_acc: {t2['ten_class_accuracy']}"
-                )
-            casc = wt.get("peerreview_cascade_metrics")
-            if casc:
-                print(
-                    f"  [PeerReview Cascade] Corr: {casc['correctness_accuracy']} | "
-                    f"Sig: {casc['significance_accuracy']} | "
-                    f"Evid: {casc['evidence_accuracy']} "
-                    f"(n={casc['correctness_n']}/{casc['significance_n']}/{casc['evidence_n']})"
-                )
+            _print_task_summary(task, results["whole_task"], prefix="  ")
         return
 
+    set_global_seed(args.seed)
     eval_dataset = load_data(args.dataset_file)['test']
     model, sampling_params, supports_thinking = init_model(
         args.model_name,
@@ -693,6 +949,7 @@ def main(args):
         args.temp,
         args.top_p,
         enable_thinking=args.enable_thinking,
+        seed=args.seed,
     )
     inference_kwargs = {
         'model': model,
@@ -704,34 +961,66 @@ def main(args):
     for task in set(eval_dataset['task']):
 
         task_dataset = eval_dataset.filter(lambda ex: ex['task'] == task)
+        model_tag = model_display_name(args.model_name)
+        task_label = f"{task}|{model_tag}"
+        n_samples = len(task_dataset)
+        print(
+            f"[{task_label}] start | n={n_samples} | "
+            f"batch_size={args.batch_size} | rollout={args.rollout} | "
+            f"temp={args.temp} | seed={args.seed} | model={args.model_name}"
+        )
 
         results = {aspect: empty_result_bucket() for aspect in set(task_dataset['aspect'])}
         results['whole_task'] = empty_result_bucket()
 
         outputs = []
+        timing_rollouts = []
+        task_t0 = time.perf_counter()
 
         for turn in range(args.rollout):
+            t0 = time.perf_counter()
             ds = task_dataset.map(
                 inference,
                 fn_kwargs=inference_kwargs,
                 batched=True,
                 batch_size=args.batch_size,
-                desc=f"[{task}] Rollout {turn + 1}/{args.rollout}",
+                desc=f"[{task_label}] Rollout {turn + 1}/{args.rollout}",
             ).to_pandas()
+            elapsed = time.perf_counter() - t0
+            rollout_timing = summarize_rollout_timing(
+                len(ds),
+                elapsed,
+                ds["output"].tolist(),
+                output_token_lens=ds["output_token_len"].tolist() if "output_token_len" in ds.columns else None,
+                prompt_token_lens=ds["prompt_token_len"].tolist() if "prompt_token_len" in ds.columns else None,
+            )
+            rollout_timing["rollout"] = turn + 1
+            timing_rollouts.append(rollout_timing)
+            print(
+                f"[{task_label}] Rollout {turn + 1}/{args.rollout} done | "
+                f"{rollout_timing['elapsed_sec']:.2f}s | "
+                f"{rollout_timing['samples_per_sec']:.2f} samples/s | "
+                f"{rollout_timing['sec_per_sample']:.3f} s/sample | "
+                f"{rollout_timing['output_toks_per_sec']:.0f} out_tok/s | "
+                f"{rollout_timing['prompt_toks_per_sec']:.0f} in_tok/s"
+            )
 
-            keep_cols = ["output", "reward", "pred_score"]
+            keep_cols = ["output", "reward", "output_token_len", "prompt_token_len"]
             rename = {
                 "output": f"output_{turn+1}",
                 "reward": f"reward_{turn+1}",
-                "pred_score": f"pred_score_{turn+1}",
+                "output_token_len": f"output_token_len_{turn+1}",
+                "prompt_token_len": f"prompt_token_len_{turn+1}",
             }
-            for c in ("pred_correctness", "pred_significance", "pred_evidence"):
+            for c in ("pred_correctness", "pred_significance", "pred_evidence", "pred_label_id"):
                 if c in ds.columns:
                     keep_cols.append(c)
                     rename[c] = f"{c}_{turn+1}"
+            keep_cols = [c for c in keep_cols if c in ds.columns]
             outputs.append(ds[keep_cols].rename(columns=rename))
 
             cascade_m = None
+            derived_m = None
             if task == CASCADE_TASK or "eval_correctness" in ds.columns:
                 cascade_m = cascade_axis_accuracies(
                     ds["pred_correctness"].tolist(),
@@ -744,20 +1033,22 @@ def main(args):
                     ds["eval_significance"].tolist(),
                     ds["eval_evidence"].tolist(),
                 )
-
-            update_result_bucket(
-                results['whole_task'],
-                ds['reward'].tolist(),
-                ds['labels'].tolist(),
-                ds['pred_score'].tolist(),
-                ds['score_sets'].tolist(),
-                cascade_metrics=cascade_m,
-            )
-
-            for aspect in [k for k in results.keys() if k != 'whole_task']:
-                aspect_subset = ds[ds['aspect'] == aspect]
-                aspect_cascade = None
-                if cascade_m is not None:
+                if "label_id" in ds.columns:
+                    derived_m = derived_ten_class_from_axes(
+                        ds["label_id"].tolist(),
+                        ds["pred_correctness"].tolist(),
+                        ds["pred_significance"].tolist(),
+                        ds["pred_evidence"].tolist(),
+                    )
+                update_result_bucket(
+                    results['whole_task'],
+                    ds['reward'].tolist(),
+                    cascade_metrics=cascade_m,
+                    derived_ten_class_metrics=derived_m,
+                    skip_classification=True,
+                )
+                for aspect in [k for k in results.keys() if k != 'whole_task']:
+                    aspect_subset = ds[ds['aspect'] == aspect]
                     aspect_cascade = cascade_axis_accuracies(
                         aspect_subset["pred_correctness"].tolist(),
                         aspect_subset["pred_significance"].tolist(),
@@ -769,23 +1060,72 @@ def main(args):
                         aspect_subset["eval_significance"].tolist(),
                         aspect_subset["eval_evidence"].tolist(),
                     )
+                    aspect_derived = None
+                    if "label_id" in aspect_subset.columns:
+                        aspect_derived = derived_ten_class_from_axes(
+                            aspect_subset["label_id"].tolist(),
+                            aspect_subset["pred_correctness"].tolist(),
+                            aspect_subset["pred_significance"].tolist(),
+                            aspect_subset["pred_evidence"].tolist(),
+                        )
+                    update_result_bucket(
+                        results[aspect],
+                        aspect_subset['reward'].tolist(),
+                        cascade_metrics=aspect_cascade,
+                        derived_ten_class_metrics=aspect_derived,
+                        skip_classification=True,
+                    )
+            else:
                 update_result_bucket(
-                    results[aspect],
-                    aspect_subset['reward'].tolist(),
-                    aspect_subset['labels'].tolist(),
-                    aspect_subset['pred_score'].tolist(),
-                    aspect_subset['score_sets'].tolist(),
-                    cascade_metrics=aspect_cascade,
+                    results['whole_task'],
+                    ds['reward'].tolist(),
+                    ds['labels'].tolist(),
+                    ds['pred_score'].tolist(),
+                    ds['score_sets'].tolist(),
                 )
+                for aspect in [k for k in results.keys() if k != 'whole_task']:
+                    aspect_subset = ds[ds['aspect'] == aspect]
+                    update_result_bucket(
+                        results[aspect],
+                        aspect_subset['reward'].tolist(),
+                        aspect_subset['labels'].tolist(),
+                        aspect_subset['pred_score'].tolist(),
+                        aspect_subset['score_sets'].tolist(),
+                    )
 
         finalize_result_bucket(results['whole_task'], 'task')
         for aspect in [k for k in results.keys() if k != 'whole_task']:
             finalize_result_bucket(results[aspect], 'aspect')
 
-        drop_cols = ['output', 'reward', 'pred_score']
-        for c in ("pred_correctness", "pred_significance", "pred_evidence"):
+        total_infer_sec = time.perf_counter() - task_t0
+        total_samples = sum(r["n_samples"] for r in timing_rollouts)
+        total_out_toks = sum(r["output_tokens"] for r in timing_rollouts)
+        total_in_toks = sum(r["prompt_tokens"] for r in timing_rollouts)
+        efficiency = {
+            "model_name": args.model_name,
+            "model_tag": model_tag,
+            "task": task,
+            "n_samples": n_samples,
+            "batch_size": args.batch_size,
+            "rollout": args.rollout,
+            "token_source": "vllm_request_output_or_model_tokenizer",
+            "rollouts": timing_rollouts,
+            "total_infer_sec": round(total_infer_sec, 3),
+            "total_sample_forwards": total_samples,
+            "mean_samples_per_sec": round(total_samples / max(total_infer_sec, 1e-9), 3),
+            "mean_sec_per_sample": round(total_infer_sec / max(total_samples, 1), 4),
+            "total_output_tokens": total_out_toks,
+            "total_prompt_tokens": total_in_toks,
+            "mean_output_toks_per_sec": round(total_out_toks / max(total_infer_sec, 1e-9), 2),
+            "mean_prompt_toks_per_sec": round(total_in_toks / max(total_infer_sec, 1e-9), 2),
+            "mean_total_toks_per_sec": round((total_in_toks + total_out_toks) / max(total_infer_sec, 1e-9), 2),
+        }
+
+        drop_cols = ['output', 'reward', 'output_token_len', 'prompt_token_len']
+        for c in ("pred_correctness", "pred_significance", "pred_evidence", "pred_label_id", "pred_score"):
             if c in ds.columns:
                 drop_cols.append(c)
+        drop_cols = [c for c in drop_cols if c in ds.columns]
         final_outputs = pd.concat(
             [ds.drop(columns=drop_cols).reset_index(drop=True)] + outputs,
             axis=1,
@@ -793,6 +1133,8 @@ def main(args):
 
         task_dict = vars(args)
         task_dict['task'] = task
+        task_dict['model_tag'] = model_tag
+        task_dict['efficiency'] = efficiency
         task_dict['results'] = results
 
         # Re-create right before write: parent dirs may have been moved/deleted mid-run.
@@ -803,31 +1145,17 @@ def main(args):
             json.dump(task_dict, fw, indent=4)
 
         final_outputs.to_parquet(outputs_path, index=False)
-        print(f"[{task}] wrote {results_path}")
-        print(f"[{task}] wrote {outputs_path}")
-        wt = results['whole_task']
+        print(f"[{task_label}] wrote {results_path}")
+        print(f"[{task_label}] wrote {outputs_path}")
         print(
-            f"[{task}] accuracy: {wt['paper_metrics']['accuracy']} | "
-            f"f1: {wt['paper_metrics']['f1']} | "
-            f"mse: {wt['paper_metrics']['mse']} | "
-            f"pearson: {wt['paper_metrics']['pearson']} | "
-            f"reward_mean: {wt['overall_task_reward_mean']:.4f}"
+            f"[{task_label}] efficiency | total={efficiency['total_infer_sec']:.2f}s | "
+            f"{efficiency['mean_samples_per_sec']:.2f} samples/s | "
+            f"{efficiency['mean_sec_per_sample']:.3f} s/sample | "
+            f"{efficiency['mean_output_toks_per_sec']:.0f} out_tok/s | "
+            f"{efficiency['mean_prompt_toks_per_sec']:.0f} in_tok/s | "
+            f"{efficiency['mean_total_toks_per_sec']:.0f} total_tok/s"
         )
-        if task == "meta_reviewer_eval" or "peerreview_task2_metrics" in wt:
-            t2 = wt["peerreview_task2_metrics"]
-            print(
-                f"[{task}] PeerReview Task2 (10-class): "
-                f"Acc={t2['accuracy']} | F1={t2['f1']}"
-            )
-        if "peerreview_cascade_metrics" in wt:
-            casc = wt["peerreview_cascade_metrics"]
-            print(
-                f"[{task}] PeerReview Cascade (Table47-style): "
-                f"Corr={casc['correctness_accuracy']} | "
-                f"Sig={casc['significance_accuracy']} | "
-                f"Evid={casc['evidence_accuracy']} "
-                f"(n={casc['correctness_n']}/{casc['significance_n']}/{casc['evidence_n']})"
-            )
+        _print_task_summary(task_label, results['whole_task'])
 
 
 if __name__ == '__main__':
@@ -843,6 +1171,12 @@ if __name__ == '__main__':
     parser.add_argument('--rollout', default=5, type=int,
                         help='Number of rollouts. For --recompute_from, <=0 means use all output_* columns.')
     parser.add_argument('--batch_size', default=64, type=int)
+    parser.add_argument(
+        '--seed',
+        default=42,
+        type=int,
+        help='Global + vLLM sampling seed for reproducible generation (default: 42).',
+    )
     parser.add_argument(
         '--enable_thinking',
         action='store_true',

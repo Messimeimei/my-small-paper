@@ -1,11 +1,27 @@
-CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python inference.py \
-  --exp_name peerreview_abs_only_scirm_7b \
-  --model_name /data01/public/yangxin/small-paper/model/SciRM-7B \
-  --dataset_file /data01/public/yangxin/small-paper/data/peerreview-bench/peerreview-bench_abs_only/prompted_meta_reviewer_abs_only.json \
-  --output_path /data01/public/yangxin/small-paper/data/eval_outputs \
+// 显存小的卡，跑 4B 以下模型评测（实测 58/81 GB 显存剩余，可以用 bs=64）
+CUDA_VISIBLE_DEVICES=0 /data01/public/yangxin/.conda/envs/small-paper/bin/python /data01/public/yangxin/small-paper/eval_data/inference.py \
+  --exp_name revision_qwen25_3b \
+  --model_name /data01/public/yangxin/small-paper/model/Qwen2.5-3B-Instruct \
+  --dataset_file /data01/public/yangxin/small-paper/eval_data/prompted_revision_data.json \
+  --output_path /data01/public/yangxin/small-paper/eval_data/eval_outputs \
   --max_model_len 16384 \
   --max_tokens 2048 \
   --temp 0 \
   --top_p 1.0 \
+  --seed 42 \
   --rollout 1 \
-  --batch_size 2
+  --batch_size 64
+
+// 显存大的卡，跑 7B 以下模型评测
+CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python /data01/public/yangxin/small-paper/eval_data/inference.py \
+  --exp_name rev_util_qwen25_7b \
+  --model_name /data01/public/yangxin/small-paper/model/Qwen2.5-7B-Instruct \
+  --dataset_file /data01/public/yangxin/small-paper/eval_data/prompted_rev_util_data.json \
+  --output_path /data01/public/yangxin/small-paper/eval_data/eval_outputs \
+  --max_model_len 16384 \
+  --max_tokens 2048 \
+  --temp 0 \
+  --top_p 1.0 \
+  --seed 42 \
+  --rollout 1 \
+  --batch_size 64
