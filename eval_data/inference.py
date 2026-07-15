@@ -208,6 +208,22 @@ AGREED_TEN_CLASS_IDS = (1, 2, 4, 5, 7, 9)
 TEN_CLASS_SCORE_SET = list(range(1, 11))
 
 
+def is_peerreview_ten_class_task(task=None, score_sets=None):
+    """
+    Detect PeerReview Bench Task-2 secondary setting:
+    one numeric label in {1..10} encoding the collapsed expert-joint class.
+    """
+    if task == "meta_reviewer_eval":
+        return True
+    if not score_sets:
+        return False
+    target = set(float(x) for x in TEN_CLASS_SCORE_SET)
+    try:
+        return all(set(float(x) for x in ss) == target for ss in score_sets)
+    except Exception:
+        return False
+
+
 def axes_to_agreed_label_id(correctness, significance=None, evidence=None):
     """
     Map primary-setting cascade axes -> Table 46 label_id under the assumption
@@ -288,9 +304,21 @@ def is_cascade_example_batch(batch):
     tasks = batch.get("task") or []
     if any(t == CASCADE_TASK for t in tasks):
         return True
+    # When task labels are present, avoid treating secondary-setting combined
+    # prompts as cascade-only just because they also carry eval_* columns.
+    if tasks:
+        return False
     if "cascade_mode" in batch and any(bool(x) for x in batch["cascade_mode"]):
         return True
     return "eval_correctness" in batch and "correctness_primary" in batch
+
+
+def is_combined_peerreview_batch(batch):
+    tasks = batch.get("task") or []
+    if not any(t == "meta_reviewer_eval" for t in tasks):
+        return False
+    needed = {"correctness_primary", "significance_primary", "evidence_primary", "eval_correctness", "labels", "score_sets"}
+    return all(k in batch for k in needed)
 
 
 def cascade_axis_accuracies(
@@ -471,6 +499,7 @@ def classification_metrics(labels, preds, score_sets):
 
 def empty_result_bucket():
     return {
+        "peerreview_ten_class": False,
         "rollout_reward_dist": [],
         "rollout_sums": [],
         "rollout_means": [],
@@ -542,9 +571,12 @@ def update_result_bucket(
     cascade_metrics=None,
     derived_ten_class_metrics=None,
     skip_classification=False,
+    peerreview_ten_class=False,
 ):
     rewards = np.asarray(rewards, dtype=float)
     metrics = {}
+    if peerreview_ten_class:
+        bucket["peerreview_ten_class"] = True
     bucket["rollout_reward_dist"].append({reward: int(np.sum(rewards == reward)) for reward in [-0.5, 0.0, 0.25, 0.5, 1.5]})
     bucket["rollout_sums"].append(float(rewards.sum()))
     bucket["rollout_means"].append(float(rewards.mean()) if len(rewards) else 0.0)
@@ -631,6 +663,23 @@ def finalize_result_bucket(bucket, prefix):
             "mse": f"{bucket['mse_mean']:.4f} ± {bucket['mse_std']:.4f}",
             "pearson": f"{bucket['pearson_mean']:.4f} ± {bucket['pearson_std']:.4f}",
         }
+        if bucket.get("peerreview_ten_class"):
+            bucket["peerreview_ten_class_metrics"] = {
+                "accuracy": f"{bucket['accuracy_mean']:.4f} ± {bucket['accuracy_std']:.4f}",
+                "f1": f"{bucket['f1_mean']:.4f} ± {bucket['f1_std']:.4f}",
+                "macro_f1": f"{bucket['macro_f1_mean']:.4f} ± {bucket['macro_f1_std']:.4f}",
+                "weighted_f1": f"{bucket['weighted_f1_mean']:.4f} ± {bucket['weighted_f1_std']:.4f}",
+                "micro_f1": f"{bucket['micro_f1_mean']:.4f} ± {bucket['micro_f1_std']:.4f}",
+                "ten_class_accuracy": (
+                    f"{bucket['ten_class_accuracy_mean']:.4f} ± {bucket['ten_class_accuracy_std']:.4f}"
+                ),
+                "valid_rate": f"{bucket['valid_rate_mean']:.4f}",
+                "note": (
+                    "Paper-aligned secondary-setting summary for PeerReview Bench Task 2. "
+                    "This prompt format explicitly evaluates the 10-class prediction via <score>. "
+                    "Primary per-axis metrics require structured axis labels in the model output."
+                ),
+            }
 
     if is_cascade:
         corr_m, corr_s = _mean_std(bucket["rollout_corr_acc"])
@@ -706,6 +755,36 @@ def inference(batch, model, sampling_params, enable_thinking=False, supports_thi
             completions, tokenizer=tokenizer, prompts=batch['prompt']
         )
     outputs = [completion.outputs[0].text for completion in completions]
+
+    if is_combined_peerreview_batch(batch):
+        axes_list = [parse_cascade_axes(text) for text in outputs]
+        pred_c = [a["correctness"] for a in axes_list]
+        pred_s = [a["significance"] for a in axes_list]
+        pred_e = [a["evidence"] for a in axes_list]
+        preds = [parse_score(text) for text in outputs]
+        rewards = np.array([
+            get_reward_from_score(pred, label, score_set)
+            for pred, label, score_set in zip(preds, batch['labels'], batch['score_sets'])
+        ])
+        if outputs:
+            print(
+                f"\nEXAMPLE FROM BATCH\n\nCompletion: {outputs[0]}\n\n"
+                f"Gold primary: C={batch['correctness_primary'][0]} "
+                f"S={batch['significance_primary'][0]} E={batch['evidence_primary'][0]}\n"
+                f"Gold 10-class label: {batch['labels'][0]}\n"
+                f"Pred: C={pred_c[0]} S={pred_s[0]} E={pred_e[0]} score={preds[0]}\n"
+                f"Reward: {rewards[0]}\n\n"
+            )
+        return {
+            "output": outputs,
+            "reward": rewards,
+            "pred_score": preds,
+            "pred_correctness": pred_c,
+            "pred_significance": pred_s,
+            "pred_evidence": pred_e,
+            "output_token_len": out_toks,
+            "prompt_token_len": in_toks,
+        }
 
     if is_cascade_example_batch(batch):
         axes_list = [parse_cascade_axes(text) for text in outputs]
@@ -790,6 +869,30 @@ def aggregate_from_dataframe(df, rollout):
         CASCADE_TASK in set(df["task"].tolist())
         or ("eval_correctness" in df.columns and "correctness_primary" in df.columns)
     )
+    if "task" in df.columns and any(t == "meta_reviewer_eval" for t in df["task"].tolist()):
+        is_cascade = False
+    is_combined = (
+        not is_cascade
+        and "correctness_primary" in df.columns
+        and "eval_correctness" in df.columns
+        and "labels" in df.columns
+        and "score_sets" in df.columns
+        and any(t == "meta_reviewer_eval" for t in df["task"].tolist())
+    )
+    is_peerreview_secondary = (
+        not is_cascade
+        and is_peerreview_ten_class_task(
+            task=df["task"].iloc[0] if len(df) and "task" in df.columns else None,
+            score_sets=df["score_sets"].tolist() if "score_sets" in df.columns else None,
+        )
+    )
+    is_peerreview_secondary = (
+        not is_cascade
+        and is_peerreview_ten_class_task(
+            task=df["task"].iloc[0] if len(df) else None,
+            score_sets=df["score_sets"].tolist() if "score_sets" in df.columns else None,
+        )
+    )
 
     for turn in range(1, rollout + 1):
         out_col = f"output_{turn}"
@@ -848,7 +951,8 @@ def aggregate_from_dataframe(df, rollout):
                     derived_ten_class_metrics=sub_derived,
                     skip_classification=True,
                 )
-        else:
+        elif is_combined:
+            axes_list = [parse_cascade_axes(text) for text in df[out_col].tolist()]
             preds = [parse_score(text) for text in df[out_col].tolist()]
             labels = df["labels"].tolist()
             score_sets = df["score_sets"].tolist()
@@ -859,8 +963,55 @@ def aggregate_from_dataframe(df, rollout):
                     get_reward_from_score(pred, label, score_set)
                     for pred, label, score_set in zip(preds, labels, score_sets)
                 ]
+            cascade_m = _cascade_metrics_from_df(df, out_col=out_col)
+            update_result_bucket(
+                results["whole_task"],
+                rewards,
+                labels,
+                preds,
+                score_sets,
+                cascade_metrics=cascade_m,
+                peerreview_ten_class=is_peerreview_secondary,
+            )
+            for aspect in aspects:
+                mask = df["aspect"] == aspect
+                sub = df.loc[mask]
+                sub_rewards = np.asarray(rewards)[mask.values]
+                sub_preds = [p for p, m in zip(preds, mask.tolist()) if m]
+                sub_cascade = _cascade_metrics_from_df(sub, out_col=out_col)
+                update_result_bucket(
+                    results[aspect],
+                    sub_rewards,
+                    sub["labels"].tolist(),
+                    sub_preds,
+                    sub["score_sets"].tolist(),
+                    cascade_metrics=sub_cascade,
+                    peerreview_ten_class=is_peerreview_secondary,
+                )
+        else:
+            preds = [parse_score(text) for text in df[out_col].tolist()]
+            labels = df["labels"].tolist()
+            score_sets = df["score_sets"].tolist()
+            is_peerreview_secondary = is_peerreview_ten_class_task(
+                task=df["task"].iloc[0] if len(df) and "task" in df.columns else None,
+                score_sets=score_sets,
+            )
+            if reward_col in df.columns:
+                rewards = df[reward_col].tolist()
+            else:
+                rewards = [
+                    get_reward_from_score(pred, label, score_set)
+                    for pred, label, score_set in zip(preds, labels, score_sets)
+                ]
 
-            update_result_bucket(results["whole_task"], rewards, labels, preds, score_sets)
+            update_result_bucket(
+                results["whole_task"],
+                rewards,
+                labels,
+                preds,
+                score_sets,
+                peerreview_ten_class=is_peerreview_secondary,
+            )
             for aspect in aspects:
                 mask = df["aspect"] == aspect
                 update_result_bucket(
@@ -869,6 +1020,7 @@ def aggregate_from_dataframe(df, rollout):
                     df.loc[mask, "labels"].tolist(),
                     [p for p, m in zip(preds, mask.tolist()) if m],
                     df.loc[mask, "score_sets"].tolist(),
+                    peerreview_ten_class=is_peerreview_secondary,
                 )
 
     finalize_result_bucket(results["whole_task"], "task")
@@ -898,6 +1050,25 @@ def _print_task_summary(task, wt, prefix=""):
                 f"reachable_acc={derived['reachable_accuracy']} "
                 f"(n={derived['reachable_n']}; unreachable gold classes 3/6/8/10)"
             )
+        sec = wt.get("peerreview_ten_class_metrics")
+        if sec:
+            print(
+                f"{pfx}PeerReview 10-class (Table49-style): "
+                f"Acc={sec['accuracy']} | "
+                f"F1={sec['f1']} | "
+                f"Macro-F1={sec['macro_f1']} | "
+                f"valid_rate={sec['valid_rate']}"
+            )
+    elif "peerreview_ten_class_metrics" in wt:
+        sec = wt["peerreview_ten_class_metrics"]
+        print(f"{pfx}reward_mean: {wt['overall_task_reward_mean']:.4f}")
+        print(
+            f"{pfx}PeerReview 10-class (Table49-style): "
+            f"Acc={sec['accuracy']} | "
+            f"F1={sec['f1']} | "
+            f"Macro-F1={sec['macro_f1']} | "
+            f"valid_rate={sec['valid_rate']}"
+        )
     else:
         print(
             f"{pfx}accuracy: {wt['paper_metrics']['accuracy']} | "
@@ -1021,7 +1192,13 @@ def main(args):
 
             cascade_m = None
             derived_m = None
-            if task == CASCADE_TASK or "eval_correctness" in ds.columns:
+            is_combined = (
+                task == "meta_reviewer_eval"
+                and "eval_correctness" in ds.columns
+                and "correctness_primary" in ds.columns
+                and "pred_correctness" in ds.columns
+            )
+            if task == CASCADE_TASK:
                 cascade_m = cascade_axis_accuracies(
                     ds["pred_correctness"].tolist(),
                     ds["pred_significance"].tolist(),
@@ -1075,13 +1252,65 @@ def main(args):
                         derived_ten_class_metrics=aspect_derived,
                         skip_classification=True,
                     )
-            else:
+            elif is_combined:
+                is_peerreview_secondary = is_peerreview_ten_class_task(
+                    task=task,
+                    score_sets=ds['score_sets'].tolist(),
+                )
+                cascade_m = cascade_axis_accuracies(
+                    ds["pred_correctness"].tolist(),
+                    ds["pred_significance"].tolist(),
+                    ds["pred_evidence"].tolist(),
+                    ds["correctness_primary"].tolist(),
+                    ds["significance_primary"].tolist(),
+                    ds["evidence_primary"].tolist(),
+                    ds["eval_correctness"].tolist(),
+                    ds["eval_significance"].tolist(),
+                    ds["eval_evidence"].tolist(),
+                )
                 update_result_bucket(
                     results['whole_task'],
                     ds['reward'].tolist(),
                     ds['labels'].tolist(),
                     ds['pred_score'].tolist(),
                     ds['score_sets'].tolist(),
+                    cascade_metrics=cascade_m,
+                    peerreview_ten_class=is_peerreview_secondary,
+                )
+                for aspect in [k for k in results.keys() if k != 'whole_task']:
+                    aspect_subset = ds[ds['aspect'] == aspect]
+                    aspect_cascade = cascade_axis_accuracies(
+                        aspect_subset["pred_correctness"].tolist(),
+                        aspect_subset["pred_significance"].tolist(),
+                        aspect_subset["pred_evidence"].tolist(),
+                        aspect_subset["correctness_primary"].tolist(),
+                        aspect_subset["significance_primary"].tolist(),
+                        aspect_subset["evidence_primary"].tolist(),
+                        aspect_subset["eval_correctness"].tolist(),
+                        aspect_subset["eval_significance"].tolist(),
+                        aspect_subset["eval_evidence"].tolist(),
+                    )
+                    update_result_bucket(
+                        results[aspect],
+                        aspect_subset['reward'].tolist(),
+                        aspect_subset['labels'].tolist(),
+                        aspect_subset['pred_score'].tolist(),
+                        aspect_subset['score_sets'].tolist(),
+                        cascade_metrics=aspect_cascade,
+                        peerreview_ten_class=is_peerreview_secondary,
+                    )
+            else:
+                is_peerreview_secondary = is_peerreview_ten_class_task(
+                    task=task,
+                    score_sets=ds['score_sets'].tolist(),
+                )
+                update_result_bucket(
+                    results['whole_task'],
+                    ds['reward'].tolist(),
+                    ds['labels'].tolist(),
+                    ds['pred_score'].tolist(),
+                    ds['score_sets'].tolist(),
+                    peerreview_ten_class=is_peerreview_secondary,
                 )
                 for aspect in [k for k in results.keys() if k != 'whole_task']:
                     aspect_subset = ds[ds['aspect'] == aspect]
@@ -1091,6 +1320,7 @@ def main(args):
                         aspect_subset['labels'].tolist(),
                         aspect_subset['pred_score'].tolist(),
                         aspect_subset['score_sets'].tolist(),
+                        peerreview_ten_class=is_peerreview_secondary,
                     )
 
         finalize_result_bucket(results['whole_task'], 'task')

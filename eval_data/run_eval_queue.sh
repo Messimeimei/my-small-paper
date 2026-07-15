@@ -8,13 +8,11 @@
 #   bash /data01/public/yangxin/small-paper/eval_data/run_eval_queue.sh --restart   # 杀掉旧 tmux 再启动
 #
 # 逻辑简述：
-# 1) 枚举 3 个数据集 × 5 个模型 = 15 个任务
-# 2) 按模型规模拆成两条队列：
-#      small(GPU0): Qwen2.5-3B-Instruct, Qwen3-4B
-#      large(GPU2): Qwen2.5-7B-Instruct, SciRM-7B, SciRM-Ref-7B
+# 1) 枚举 4 个数据集 × 多个模型任务
+# 2) 按模型规模拆成多条队列，可单独给特定模型建 tmux session
 # 3) n<200 → rollout=3, bs=4；n≥200 → rollout=1, bs=64
 # 4) exp_name = <任务短名>_<模型短名>；默认不开 thinking
-# 5) 在两个 tmux 里各自按队列顺序串行执行；默认跳过已有 *_results.json 的任务
+# 5) 在各 tmux 里按队列顺序串行执行；默认跳过已有 *_results.json 的任务
 
 set -euo pipefail
 
@@ -44,6 +42,7 @@ done
 # ---------- 模型短名（用于 exp_name）----------
 model_tag() {
   case "$1" in
+    Gemma-3-4B-It) echo "gemma3_4b_it" ;;
     Qwen2.5-3B-Instruct) echo "qwen25_3b" ;;
     Qwen2.5-7B-Instruct) echo "qwen25_7b" ;;
     Qwen3-4B) echo "qwen3_4b" ;;
@@ -56,6 +55,7 @@ model_tag() {
 # ---------- 数据集：短名 | json 路径 | test 条数 ----------
 DATASETS=(
   "rw_gen|${ROOT}/eval_data/prompted_rw_gen_data.json|1857"
+  "novelty|${ROOT}/eval_data/prompted_novelty_data.json|76"
   "revision|${ROOT}/eval_data/prompted_revision_data.json|6184"
   "rev_util|${ROOT}/eval_data/prompted_rev_util_data.json|4788"
 )
@@ -77,6 +77,12 @@ LARGE_MODELS=(
 LARGE_GPU=2
 LARGE_TMUX="eval_7b"
 
+GEMMA_MODELS=(
+  "Gemma-3-4B-It"
+)
+GEMMA_GPU=2
+GEMMA_TMUX="eval_4b"
+
 # 根据样本数选 rollout / batch_size
 pick_runtime() {
   local n="$1"
@@ -85,6 +91,17 @@ pick_runtime() {
   else
     echo "1 64"
   fi
+}
+
+pick_runtime_for_model_task() {
+  local model="$1"
+  local task="$2"
+  local n="$3"
+  if [[ "${model}" == "Gemma-3-4B-It" && "${task}" == "rw_gen" ]]; then
+    echo "1 64"
+    return
+  fi
+  pick_runtime "${n}"
 }
 
 is_done() {
@@ -132,7 +149,7 @@ emit_queue_script() {
   for model in "${models[@]}"; do
     for ds_entry in "${DATASETS[@]}"; do
       IFS='|' read -r task_short dataset n <<< "${ds_entry}"
-      read -r rollout bs <<< "$(pick_runtime "${n}")"
+      read -r rollout bs <<< "$(pick_runtime_for_model_task "${model}" "${task_short}" "${n}")"
       exp_name="${task_short}_$(model_tag "${model}")"
 
       if is_done "${exp_name}"; then
@@ -198,20 +215,25 @@ start_tmux_queue() {
 
 SMALL_SCRIPT="${LOG_DIR}/queue_small.sh"
 LARGE_SCRIPT="${LOG_DIR}/queue_7b.sh"
+GEMMA_SCRIPT="${LOG_DIR}/queue_4b_gemma.sh"
 
 emit_queue_script "${SMALL_GPU}" "${SMALL_MODELS[@]}" > "${SMALL_SCRIPT}"
 emit_queue_script "${LARGE_GPU}" "${LARGE_MODELS[@]}" > "${LARGE_SCRIPT}"
-chmod +x "${SMALL_SCRIPT}" "${LARGE_SCRIPT}"
+emit_queue_script "${GEMMA_GPU}" "${GEMMA_MODELS[@]}" > "${GEMMA_SCRIPT}"
+chmod +x "${SMALL_SCRIPT}" "${LARGE_SCRIPT}" "${GEMMA_SCRIPT}"
 
 echo "======= planned jobs ======="
 echo "--- small (tmux=${SMALL_TMUX}, GPU=${SMALL_GPU}) ---"
 grep -E '^echo "\[(run|skip)\]' "${SMALL_SCRIPT}" || true
 echo "--- 7b (tmux=${LARGE_TMUX}, GPU=${LARGE_GPU}) ---"
 grep -E '^echo "\[(run|skip)\]' "${LARGE_SCRIPT}" || true
+echo "--- gemma4b (tmux=${GEMMA_TMUX}, GPU=${GEMMA_GPU}) ---"
+grep -E '^echo "\[(run|skip)\]' "${GEMMA_SCRIPT}" || true
 echo "============================"
 echo "queue scripts:"
 echo "  ${SMALL_SCRIPT}"
 echo "  ${LARGE_SCRIPT}"
+echo "  ${GEMMA_SCRIPT}"
 
 if [[ "${DRY_RUN}" -eq 1 ]]; then
   echo "[dry-run] not starting tmux."
@@ -220,10 +242,12 @@ fi
 
 start_tmux_queue "${SMALL_TMUX}" "${SMALL_SCRIPT}"
 start_tmux_queue "${LARGE_TMUX}" "${LARGE_SCRIPT}"
+start_tmux_queue "${GEMMA_TMUX}" "${GEMMA_SCRIPT}"
 
 echo
 echo "Both queues launched (if sessions were free)."
 echo "  tmux attach -t ${SMALL_TMUX}"
 echo "  tmux attach -t ${LARGE_TMUX}"
+echo "  tmux attach -t ${GEMMA_TMUX}"
 echo "  tmux ls"
 echo "  logs: ${LOG_DIR}"
