@@ -6,7 +6,7 @@ import argparse
 import json
 import numpy as np
 import pandas as pd
-from datasets import Dataset, DatasetDict
+from datasets import Dataset, DatasetDict, Features, Value
 
 
 def model_display_name(model_name: str) -> str:
@@ -160,6 +160,33 @@ def load_data(dataset_path):
     dataset = DatasetDict({"train": Dataset.from_list(data["train"]),
                            "test": Dataset.from_list(data["test"])})
     return dataset
+
+
+def map_features_with_predictions(dataset, task=None):
+    """
+    Keep the original dataset schema and pin prediction/output column dtypes so
+    malformed early batches do not get inferred as Arrow `null` columns.
+    """
+    features = Features(dict(dataset.features))
+    features["output"] = Value("string")
+    features["reward"] = Value("float64")
+    features["output_token_len"] = Value("int64")
+    features["prompt_token_len"] = Value("int64")
+
+    if task == "meta_reviewer_eval":
+        features["pred_score"] = Value("float64")
+        features["pred_correctness"] = Value("string")
+        features["pred_significance"] = Value("string")
+        features["pred_evidence"] = Value("string")
+    elif task == CASCADE_TASK:
+        features["pred_correctness"] = Value("string")
+        features["pred_significance"] = Value("string")
+        features["pred_evidence"] = Value("string")
+        features["pred_label_id"] = Value("int64")
+    else:
+        features["pred_score"] = Value("float64")
+
+    return features
 
 
 def parse_score(text):
@@ -1153,6 +1180,7 @@ def main(args):
             ds = task_dataset.map(
                 inference,
                 fn_kwargs=inference_kwargs,
+                features=map_features_with_predictions(task_dataset, task=task),
                 batched=True,
                 batch_size=args.batch_size,
                 desc=f"[{task_label}] Rollout {turn + 1}/{args.rollout}",
