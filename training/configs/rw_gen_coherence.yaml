@@ -1,0 +1,36 @@
+experiment_name: rw_gen_coherence#qwen3_4b#distill_glm-5.2
+model_name_or_path: model/Qwen3-4B
+dataset_path: train_data/lora_data/rw_gen_coherence_4811_distill_glm-5.2.jsonl
+split_path: train_data/lora_data/splits/rw_gen_coherence_glm-5.2_seed20260720.json
+output_root: train_outputs/lora/rw_gen_coherence
+
+split_seed: 20260720
+validation_ratio: 0.10
+
+lora:
+  target_modules: all-linear
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+
+training:
+  max_length: 8192
+  learning_rate: 0.0001
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  num_train_epochs: 3
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  max_grad_norm: 0.3
+  bf16: true
+  gradient_checkpointing: true
+  attn_implementation: sdpa
+  logging_steps: 10
+  save_total_limit: 2
+  report_to: tensorboard
+
+generation:
+  batch_size: 1
+  max_new_tokens: 512
