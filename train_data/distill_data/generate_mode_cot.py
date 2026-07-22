@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import email.utils
 import json
 import os
 import queue
@@ -17,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -32,7 +33,7 @@ DEFAULT_OUTPUT_DIR = SCRIPT_DIR / "preview"
 
 OUTPUT_RE = re.compile(
     r"\A\s*<reasoning>\s*(?P<reasoning>.*?)\s*</reasoning>\s*"
-    r"<score>\s*(?P<score>[01])\s*</score>\s*\Z",
+    r"<score>\s*(?P<score>-?\d+)\s*</score>\s*\Z",
     re.I | re.S,
 )
 
@@ -56,6 +57,27 @@ def parse_args() -> argparse.Namespace:
         help="Maximum completion tokens per call; MoDE-CoTD does not report this value.",
     )
     parser.add_argument("--timeout", type=float, default=180.0)
+    parser.add_argument(
+        "--max-rate-limit-retries",
+        type=int,
+        default=-1,
+        help=(
+            "Retries after HTTP 429; -1 retries indefinitely (default), 0 disables "
+            "the extra retry loop. Ctrl-C still stops safely."
+        ),
+    )
+    parser.add_argument(
+        "--rate-limit-backoff",
+        type=float,
+        default=30.0,
+        help="Initial seconds to wait after HTTP 429 (default: 30).",
+    )
+    parser.add_argument(
+        "--rate-limit-max-backoff",
+        type=float,
+        default=300.0,
+        help="Maximum seconds between HTTP 429 retries (default: 300).",
+    )
     parser.add_argument(
         "--progress-interval",
         type=float,
@@ -108,8 +130,24 @@ def read_rows(path: Path) -> list[dict[str, Any]]:
     for index, row in enumerate(rows):
         if not isinstance(row, dict) or not isinstance(row.get("prompt"), list):
             raise ValueError(f"Row {index} has no valid prompt message list.")
-        if str(row.get("labels")) not in {"0", "1"}:
-            raise ValueError(f"Row {index} has a non-binary gold label: {row.get('labels')!r}")
+        score_sets = row.get("score_sets")
+        if (
+            not isinstance(score_sets, list)
+            or not score_sets
+            or any(isinstance(score, bool) or not isinstance(score, int) for score in score_sets)
+            or len(set(score_sets)) != len(score_sets)
+        ):
+            raise ValueError(
+                f"Row {index} has no valid unique integer score_sets: {score_sets!r}"
+            )
+        gold_label = row.get("labels")
+        if isinstance(gold_label, bool) or not isinstance(gold_label, int):
+            raise ValueError(f"Row {index} has a non-integer gold label: {gold_label!r}")
+        if gold_label not in score_sets:
+            raise ValueError(
+                f"Row {index} gold label {gold_label!r} is not in score_sets "
+                f"{score_sets!r}"
+            )
         sample_id = str(row.get("id", "")).strip()
         if not sample_id:
             raise ValueError(f"Row {index} has no non-empty id.")
@@ -179,8 +217,79 @@ def create_completion(
         return response_record(payload)
 
 
+def retry_after_seconds(error: RateLimitError) -> float | None:
+    """Read Retry-After as either seconds or an HTTP date when the API provides it."""
+    response = getattr(error, "response", None)
+    headers = getattr(response, "headers", None)
+    if headers is None:
+        return None
+    value = headers.get("retry-after")
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        try:
+            retry_at = email.utils.parsedate_to_datetime(value)
+            if retry_at.tzinfo is None:
+                retry_at = retry_at.replace(tzinfo=timezone.utc)
+            return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+
+def wait_with_progress(seconds: float, progress_interval: float) -> None:
+    deadline = time.monotonic() + seconds
+    report_interval = progress_interval if progress_interval > 0 else seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(remaining, report_interval))
+        remaining = deadline - time.monotonic()
+        if remaining > 0 and progress_interval > 0:
+            print(f"    Rate-limit wait remaining: {remaining:.0f}s", flush=True)
+
+
+def create_completion_with_rate_limit_retry(
+    client: OpenAI,
+    model: str,
+    messages: list[dict[str, str]],
+    max_tokens: int,
+    progress_interval: float,
+    max_retries: int,
+    initial_backoff: float,
+    max_backoff: float,
+) -> dict[str, Any]:
+    retry_count = 0
+    while True:
+        try:
+            return create_completion(
+                client, model, messages, max_tokens, progress_interval
+            )
+        except RateLimitError as error:
+            if max_retries >= 0 and retry_count >= max_retries:
+                raise
+            retry_count += 1
+            exponential_delay = min(
+                max_backoff, initial_backoff * (2 ** min(retry_count - 1, 10))
+            )
+            delay = retry_after_seconds(error)
+            if delay is None:
+                delay = exponential_delay
+            else:
+                delay = min(max_backoff, max(delay, initial_backoff))
+            retry_limit = "unlimited" if max_retries < 0 else str(max_retries)
+            print(
+                f"    HTTP 429 rate limit; waiting {delay:.0f}s before retry "
+                f"{retry_count} (limit: {retry_limit}).",
+                flush=True,
+            )
+            wait_with_progress(delay, progress_interval)
+
+
 def parse_teacher_output(
-    call: dict[str, Any],
+    call: dict[str, Any], allowed_scores: set[int]
 ) -> tuple[str | None, int | None, str | None]:
     content = call["content"].strip()
     match = OUTPUT_RE.fullmatch(content)
@@ -190,7 +299,10 @@ def parse_teacher_output(
     reasoning = match.group("reasoning").strip()
     if not reasoning:
         return None, None, "missing_reasoning"
-    return reasoning, int(match.group("score")), None
+    teacher_label = int(match.group("score"))
+    if teacher_label not in allowed_scores:
+        return reasoning, teacher_label, "teacher_label_out_of_score_set"
+    return reasoning, teacher_label, None
 
 
 def safe_filename_part(value: Any, fallback: str) -> str:
@@ -285,7 +397,9 @@ def build_distillation_record(
     teacher_call: dict[str, Any],
 ) -> dict[str, Any]:
     gold_label = int(row["labels"])
-    reasoning, teacher_label, rejection_reason = parse_teacher_output(teacher_call)
+    reasoning, teacher_label, rejection_reason = parse_teacher_output(
+        teacher_call, set(row["score_sets"])
+    )
     if rejection_reason is None and teacher_label != gold_label:
         rejection_reason = "teacher_label_mismatch"
 
@@ -348,6 +462,14 @@ def build_distillation_record(
 
 def main() -> None:
     args = parse_args()
+    if args.max_rate_limit_retries < -1:
+        raise SystemExit("--max-rate-limit-retries must be -1 or greater.")
+    if args.rate_limit_backoff <= 0:
+        raise SystemExit("--rate-limit-backoff must be greater than 0.")
+    if args.rate_limit_max_backoff < args.rate_limit_backoff:
+        raise SystemExit(
+            "--rate-limit-max-backoff must be at least --rate-limit-backoff."
+        )
     input_path = args.input.expanduser().resolve()
     config_path = args.config.expanduser().resolve()
     output_dir = args.output_dir.expanduser().resolve()
@@ -385,6 +507,9 @@ def main() -> None:
         "top_p": 1,
         "max_tokens": args.max_tokens,
         "timeout_seconds": args.timeout,
+        "max_rate_limit_retries": args.max_rate_limit_retries,
+        "rate_limit_backoff_seconds": args.rate_limit_backoff,
+        "rate_limit_max_backoff_seconds": args.rate_limit_max_backoff,
     }
 
     append_jsonl(
@@ -444,12 +569,15 @@ def main() -> None:
                 flush=True,
             )
             print(f"    Sending prompt to {teacher_model}...", flush=True)
-            teacher_call = create_completion(
+            teacher_call = create_completion_with_rate_limit_retry(
                 client,
                 teacher_model,
                 row["prompt"],
                 args.max_tokens,
                 args.progress_interval,
+                args.max_rate_limit_retries,
+                args.rate_limit_backoff,
+                args.rate_limit_max_backoff,
             )
             elapsed = time.monotonic() - sample_started_at
             record = build_distillation_record(

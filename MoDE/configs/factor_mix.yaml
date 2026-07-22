@@ -1,0 +1,66 @@
+# First implementation: official-code-style factor mixing.
+model_name_or_path: model/Qwen3-4B
+
+experts:
+  - name: coherence_deepseek
+    adapter: "train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_deepseek-v4-pro__seed42__20260720T072305Z/adapter"
+  - name: positioning_check_deepseek
+    adapter: "train_outputs/rw_gen_positioning_check/rw_gen_positioning_check#qwen3_4b#distill_deepseek-v4-pro__seed42__20260721T135753Z/adapter"
+  - name: positioning_type_glm
+    adapter: "train_outputs/rw_gen_positioning_type/rw_gen_positioning_type#qwen3_4b#distill_glm-5.2__seed42__20260721T114913Z/adapter"
+
+split_manifest: data/split_manifest.json
+output_root: outputs
+seed: 42
+
+target:
+  aspect: coherence
+  shots_per_class: 5
+
+method:
+  name: mode_official_factor_mix
+  optimizer: nevergrad_ngopt
+  weight_bounds: [-3.0, 3.0]
+  budget: 40
+  l1_alpha: 0.05
+  l1_reduction: mean
+
+  # Dependency-free fallback in the current environment: 9 initial candidates
+  # times 4 generations (initial + 3 updates) gives at most 36 evaluations.
+  scipy_population_size: 9
+  scipy_generations: 3
+
+objective:
+  name: pilot_canonical_score_completion_ce
+  is_pilot: true
+  completion_template: "<score>{label}</score>"
+  max_length: 8192
+  enable_thinking: false
+  truncation: error
+
+runtime:
+  device: cuda
+  expert_cache_device: cuda
+  torch_dtype: bfloat16
+  attn_implementation: sdpa
+
+reference:
+  paper_file: "paper/垂域微调与推理能力/论文/MoDE-CoTD Chain-of-Thought Distillation for Complex Reasoning.pdf"
+  official_repository: "https://github.com/Xiang-Li-oss/MoDE-CoTD"
+  official_tree_commit: "50c2e4a7c590fde0ac3a4800bfe5073af6b98543"
+  official_algorithm_blob: "955b5dba852c0974f29ac2bee12fd3c625646624"
+  paper:
+    optimizer: Shiwa
+    weight_bounds: [-1.5, 1.5]
+    l1_alpha: 0.05
+    l1_reduction: sum
+  official_code:
+    optimizer: NGOpt
+    weight_bounds: [-3.0, 3.0]
+    budget: 40
+    l1_alpha: 0.05
+    l1_reduction: mean
+  recorded_deviations:
+    - "The held-out test data has labels but no gold reasoning, so this implementation optimizes canonical score completion CE rather than full CoT completion CE."
+    - "The task prompt requires reasoning before score, so the score-only objective is a pipeline pilot and can differ from free-generation evaluation; it is not a paper-level CoT reproduction."
+    - "The paper text defines both delta-sum and factor-mix variants; this implementation follows Eq.(1) and the official state-dict factor mix."

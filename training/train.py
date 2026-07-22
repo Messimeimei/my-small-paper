@@ -12,7 +12,6 @@ import math
 import os
 import random
 import re
-import shutil
 import subprocess
 import sys
 import traceback
@@ -32,16 +31,35 @@ from trl import SFTConfig, SFTTrainer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCORE_RE = re.compile(r"<score>\s*([01])\s*</score>", re.I)  # 从生成文本中抽最终 0/1
+CHECKPOINT_RE = re.compile(r"checkpoint-(\d+)$")
+REQUIRED_RESUME_FILES = {
+    "optimizer.pt",
+    "rng_state.pth",
+    "scheduler.pt",
+    "trainer_state.json",
+}
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--resume",
         "--resume-from-checkpoint",
+        dest="resume",
+        type=Path,
         default=None,
-        help="Trainer checkpoint path used to resume an interrupted run.",
+        help=(
+            "Resume an existing run in place. Accepts either a run directory "
+            "(latest complete checkpoint is selected) or checkpoint-* directory."
+        ),
+    )
+    mode.add_argument(
+        "--fresh",
+        action="store_true",
+        help="Explicitly start from the base model in a new timestamped run directory.",
     )
     parser.add_argument(
         "--dry-run",
@@ -307,8 +325,9 @@ def generate_validation(
     batch_size: int,
     max_length: int,
     max_new_tokens: int,
+    logger: logging.Logger | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """训练后生成式验证：greedy 解码，从输出抽 <score>。"""
+    """用训练模型所在设备做 greedy 生成，并从输出抽取 <score>。"""
     was_training = model.training
     original_use_cache = model.config.use_cache
     original_padding_side = tokenizer.padding_side
@@ -323,8 +342,20 @@ def generate_validation(
         # Checkpointing is inactive in eval mode; keep its flag for resumed training.
         model.config.use_cache = True
         tokenizer.padding_side = "left"  # 生成时左填充
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+        if logger is not None:
+            logger.info(
+                "Starting generation validation on training device %s: samples=%d batch_size=%d",
+                device,
+                len(rows),
+                batch_size,
+            )
 
-        for start in range(0, len(rows), batch_size):
+        total_batches = math.ceil(len(rows) / batch_size)
+        progress_interval = max(1, total_batches // 20)
+        batches = range(0, len(rows), batch_size)
+        for batch_index, start in enumerate(batches, start=1):
             batch = rows[start : start + batch_size]
             texts = [
                 tokenizer.apply_chat_template(
@@ -363,6 +394,14 @@ def generate_validation(
                         "output": output,
                     }
                 )
+            if logger is not None and (
+                batch_index % progress_interval == 0 or batch_index == total_batches
+            ):
+                logger.info(
+                    "Generation validation progress: %d/%d",
+                    min(start + batch_size, len(rows)),
+                    len(rows),
+                )
         return classification_metrics(predictions), predictions
     finally:
         # Drop the final generation tensors before returning cached memory to CUDA.
@@ -374,10 +413,6 @@ def generate_validation(
         model.train(was_training)
         if device.type == "cuda":
             torch.cuda.empty_cache()
-
-
-def safe_name(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_") or "value"
 
 
 def build_eval_dataset(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -397,170 +432,8 @@ def write_eval_dataset(path: Path, rows: list[dict[str, Any]]) -> None:
     write_json(path, {"test": build_eval_dataset(rows)})
 
 
-def detect_physical_training_gpu() -> int | None:
-    raw = os.environ.get("CUDA_VISIBLE_DEVICES", "").strip()
-    if not raw:
-        return None
-    first = raw.split(",")[0].strip()
-    return int(first) if first.isdigit() else None
-
-
-def query_gpu_stats() -> dict[int, dict[str, float | int]]:
-    command = [
-        "nvidia-smi",
-        "--query-gpu=index,memory.total,memory.free,utilization.gpu",
-        "--format=csv,noheader,nounits",
-    ]
-    result = subprocess.run(command, text=True, capture_output=True, check=False)
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or "nvidia-smi failed")
-    stats: dict[int, dict[str, float | int]] = {}
-    for line in result.stdout.splitlines():
-        parts = [part.strip() for part in line.split(",")]
-        if len(parts) != 4:
-            continue
-        index, total, free, util = (int(value) for value in parts)
-        stats[index] = {
-            "index": index,
-            "memory_total_mib": total,
-            "memory_free_mib": free,
-            "utilization_gpu": util,
-        }
-    return stats
-
-
-def choose_vllm_gpu(
-    evaluation: dict[str, Any],
-    logger: logging.Logger,
-) -> tuple[int | None, dict[str, Any]]:
-    preferred_gpu = int(evaluation.get("vllm_preferred_gpu", 0))
-    max_gpu_utilization = int(evaluation.get("vllm_max_gpu_utilization", 10))
-    gpu_memory_utilization = float(evaluation.get("vllm_gpu_memory_utilization", 0.9))
-    min_free_memory_gib = evaluation.get("vllm_min_free_memory_gib", 20)
-    training_gpu = detect_physical_training_gpu()
-    stats = query_gpu_stats()
-    gpu = stats.get(preferred_gpu)
-    decision = {
-        "preferred_gpu": preferred_gpu,
-        "training_gpu": training_gpu,
-        "stats": stats,
-        "selected_gpu": None,
-        "reason": None,
-    }
-    if gpu is None:
-        decision["reason"] = f"gpu{preferred_gpu} not found"
-        return None, decision
-    if training_gpu is not None and preferred_gpu == training_gpu:
-        decision["reason"] = f"gpu{preferred_gpu} is the training GPU"
-        return None, decision
-    total_mib = int(gpu["memory_total_mib"])
-    free_mib = int(gpu["memory_free_mib"])
-    util = int(gpu["utilization_gpu"])
-    if min_free_memory_gib is None:
-        required_free_mib = math.ceil(total_mib * gpu_memory_utilization)
-    else:
-        required_free_mib = int(float(min_free_memory_gib) * 1024)
-    decision["required_free_mib"] = required_free_mib
-    if util > max_gpu_utilization:
-        decision["reason"] = f"gpu{preferred_gpu} utilization {util}% > {max_gpu_utilization}%"
-        return None, decision
-    if free_mib < required_free_mib:
-        decision["reason"] = (
-            f"gpu{preferred_gpu} free {free_mib} MiB < required {required_free_mib} MiB"
-        )
-        return None, decision
-    decision["selected_gpu"] = preferred_gpu
-    decision["reason"] = f"gpu{preferred_gpu} accepted"
-    logger.info(
-        "Selected GPU%d for vLLM eval: free=%d/%d MiB util=%d%%",
-        preferred_gpu,
-        free_mib,
-        total_mib,
-        util,
-    )
-    return preferred_gpu, decision
-
-
-def run_vllm_validation(
-    *,
-    model_path: Path,
-    adapter_path: Path,
-    dataset_path: Path,
-    output_root: Path,
-    eval_gpu: int,
-    evaluation: dict[str, Any],
-    logger: logging.Logger,
-) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
-    exp_name = safe_name(f"step_{adapter_path.name}")
-    command = [
-        sys.executable,
-        str(PROJECT_ROOT / "training/evaluate.py"),
-        "--exp_name",
-        exp_name,
-        "--model_name",
-        str(model_path),
-        "--adapter",
-        str(adapter_path),
-        "--dataset_file",
-        str(dataset_path),
-        "--output_path",
-        str(output_root),
-        "--max_model_len",
-        str(int(evaluation.get("max_model_len", 8192))),
-        "--max_tokens",
-        str(int(evaluation.get("max_tokens", 512))),
-        "--temp",
-        str(float(evaluation.get("temp", 0.0))),
-        "--top_p",
-        str(float(evaluation.get("top_p", 1.0))),
-        "--seed",
-        str(int(evaluation.get("seed", 42))),
-        "--rollout",
-        str(int(evaluation.get("rollout", 1))),
-        "--batch_size",
-        str(int(evaluation.get("batch_size", 64))),
-        "--gpu_memory_utilization",
-        str(float(evaluation.get("vllm_gpu_memory_utilization", 0.9))),
-        "--merge_cache",
-        str(resolve_path(evaluation.get("merge_cache", "eval_data/.merged_models"))),
-    ]
-    if bool(evaluation.get("enable_thinking", False)):
-        command.append("--enable_thinking")
-    environment = os.environ.copy()
-    environment["CUDA_VISIBLE_DEVICES"] = str(eval_gpu)
-    logger.info("Launching vLLM eval on physical GPU%d", eval_gpu)
-    result = subprocess.run(
-        command,
-        text=True,
-        capture_output=True,
-        check=False,
-        env=environment,
-        cwd=PROJECT_ROOT,
-    )
-    if result.stdout.strip():
-        logger.info("vLLM eval stdout:\n%s", result.stdout.strip())
-    if result.stderr.strip():
-        logger.warning("vLLM eval stderr:\n%s", result.stderr.strip())
-    if result.returncode != 0:
-        raise RuntimeError(f"vLLM eval failed with exit code {result.returncode}")
-    result_dir = output_root / exp_name
-    metrics_payload = read_json(result_dir / "metrics.json")
-    predictions: list[dict[str, Any]] = []
-    with (result_dir / "predictions.jsonl").open(encoding="utf-8") as handle:
-        for line in handle:
-            if line.strip():
-                predictions.append(json.loads(line))
-    metrics = metrics_payload["aggregate"]
-    meta = {
-        "backend": "vllm",
-        "eval_gpu": eval_gpu,
-        "result_dir": str(result_dir),
-    }
-    return metrics, predictions, meta
-
-
 class GenerativeEvalSFTTrainer(SFTTrainer):
-    """在每次 evaluate 时追加生成式分类验证，并按 step 落盘结果。"""
+    """每次 evaluate 后用训练模型和同一设备做生成式分类验证。"""
 
     def __init__(
         self,
@@ -570,9 +443,7 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         generation_max_length: int,
         generation_max_new_tokens: int,
         run_directory: Path,
-        model_path: Path,
         logger: logging.Logger,
-        evaluation: dict[str, Any],
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -581,16 +452,14 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         self.generation_max_length = generation_max_length
         self.generation_max_new_tokens = generation_max_new_tokens
         self.run_directory = run_directory
-        self.model_path = model_path
         self.logger = logger
-        self.evaluation = evaluation
         self.latest_generation_metrics: dict[str, Any] | None = None
         self.latest_generation_predictions: list[dict[str, Any]] | None = None
-        self.latest_generation_meta: dict[str, Any] | None = None
         self.validation_dataset_path = self.run_directory / "validation_dataset.json"
         write_eval_dataset(self.validation_dataset_path, self.validation_rows)
 
-    def _run_native_generation_validation(self) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    def evaluate(self, *args, metric_key_prefix: str = "eval", **kwargs):  # noqa: ANN002
+        metrics = super().evaluate(*args, metric_key_prefix=metric_key_prefix, **kwargs)
         validation_metrics, predictions = generate_validation(
             self.model,
             self.processing_class,
@@ -598,65 +467,8 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
             batch_size=self.generation_batch_size,
             max_length=self.generation_max_length,
             max_new_tokens=self.generation_max_new_tokens,
+            logger=self.logger,
         )
-        return validation_metrics, predictions, {"backend": "native"}
-
-    def _run_generation_validation(
-        self,
-    ) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
-        backend = str(self.evaluation.get("backend", "auto")).lower()
-        if backend not in {"auto", "native", "vllm"}:
-            raise ValueError(f"Unsupported evaluation backend: {backend}")
-        if backend == "native":
-            return self._run_native_generation_validation()
-
-        if backend in {"auto", "vllm"}:
-            try:
-                eval_gpu, decision = choose_vllm_gpu(self.evaluation, self.logger)
-            except Exception as error:
-                if backend == "vllm":
-                    raise
-                self.logger.warning("vLLM GPU auto-check failed, fallback to native: %s", error)
-                return self._run_native_generation_validation()
-
-            if eval_gpu is not None:
-                step = int(self.state.global_step)
-                adapter_path = self.run_directory / "epoch_eval_adapters" / f"step_{step:06d}"
-                output_root = self.run_directory / "epoch_evals" / "vllm_runs"
-                if adapter_path.exists():
-                    shutil.rmtree(adapter_path)
-                adapter_path.mkdir(parents=True, exist_ok=True)
-                self.save_model(adapter_path)
-                self.processing_class.save_pretrained(adapter_path)
-                try:
-                    metrics, predictions, meta = run_vllm_validation(
-                        model_path=self.model_path,
-                        adapter_path=adapter_path,
-                        dataset_path=self.validation_dataset_path,
-                        output_root=output_root,
-                        eval_gpu=eval_gpu,
-                        evaluation=self.evaluation,
-                        logger=self.logger,
-                    )
-                finally:
-                    shutil.rmtree(adapter_path, ignore_errors=True)
-                meta["auto_gpu_decision"] = decision
-                return metrics, predictions, meta
-
-            if backend == "vllm":
-                raise RuntimeError(f"vLLM requested but unavailable: {decision['reason']}")
-            self.logger.info("Fallback to native validation: %s", decision["reason"])
-            native_metrics, native_predictions, native_meta = (
-                self._run_native_generation_validation()
-            )
-            native_meta["auto_gpu_decision"] = decision
-            return native_metrics, native_predictions, native_meta
-
-        return self._run_native_generation_validation()
-
-    def evaluate(self, *args, metric_key_prefix: str = "eval", **kwargs):  # noqa: ANN002
-        metrics = super().evaluate(*args, metric_key_prefix=metric_key_prefix, **kwargs)
-        validation_metrics, predictions, meta = self._run_generation_validation()
         metric_names = {
             f"{metric_key_prefix}_generation_accuracy": validation_metrics["accuracy"],
             f"{metric_key_prefix}_generation_macro_f1": validation_metrics["macro_f1"],
@@ -670,7 +482,6 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         metrics.update(metric_names)
         self.latest_generation_metrics = validation_metrics
         self.latest_generation_predictions = predictions
-        self.latest_generation_meta = meta
 
         step = int(self.state.global_step)
         epoch_value = self.state.epoch
@@ -681,7 +492,6 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         payload = {
             "step": step,
             "epoch": epoch_value,
-            "generation_backend": meta,
             "metrics": validation_metrics,
             "trainer_metrics": metrics,
         }
@@ -704,6 +514,242 @@ def create_run_directory(config: dict[str, Any], seed: int) -> tuple[str, Path]:
     run_directory = output_root / run_id
     run_directory.mkdir(parents=True, exist_ok=False)
     return run_id, run_directory
+
+
+def checkpoint_step(path: Path) -> int:
+    match = CHECKPOINT_RE.fullmatch(path.name)
+    if match is None:
+        raise ValueError(f"Not a Trainer checkpoint directory: {path}")
+    return int(match.group(1))
+
+
+def validate_resume_checkpoint(checkpoint: Path) -> dict[str, Any]:
+    """Require all state needed for a true optimizer/scheduler/RNG resume."""
+    checkpoint = checkpoint.resolve()
+    if not checkpoint.is_dir():
+        raise ValueError(f"Resume checkpoint does not exist: {checkpoint}")
+    expected_step = checkpoint_step(checkpoint)
+    missing = sorted(
+        filename
+        for filename in REQUIRED_RESUME_FILES
+        if not (checkpoint / filename).is_file()
+        or (checkpoint / filename).stat().st_size == 0
+    )
+    if not any(
+        (checkpoint / filename).is_file() and (checkpoint / filename).stat().st_size > 0
+        for filename in ("adapter_model.safetensors", "adapter_model.bin")
+    ):
+        missing.append("adapter_model.safetensors|adapter_model.bin")
+    if missing:
+        raise ValueError(
+            f"Checkpoint is incomplete and cannot be resumed: {checkpoint}; "
+            f"missing={missing}"
+        )
+    state = read_json(checkpoint / "trainer_state.json")
+    if not isinstance(state, dict):
+        raise ValueError(f"Invalid trainer_state.json in {checkpoint}")
+    actual_step = int(state.get("global_step", -1))
+    if actual_step != expected_step:
+        raise ValueError(
+            f"Checkpoint step mismatch: directory={expected_step}, trainer_state={actual_step}"
+        )
+    return state
+
+
+def find_latest_complete_checkpoint(run_directory: Path) -> tuple[Path, dict[str, Any]]:
+    checkpoint_root = run_directory / "checkpoints"
+    if not checkpoint_root.is_dir():
+        raise ValueError(f"Run has no checkpoints directory: {run_directory}")
+    candidates = sorted(
+        (
+            path
+            for path in checkpoint_root.iterdir()
+            if path.is_dir() and CHECKPOINT_RE.fullmatch(path.name)
+        ),
+        key=checkpoint_step,
+        reverse=True,
+    )
+    errors: list[str] = []
+    for checkpoint in candidates:
+        try:
+            return checkpoint.resolve(), validate_resume_checkpoint(checkpoint)
+        except ValueError as error:
+            errors.append(str(error))
+    detail = f"; invalid candidates={errors}" if errors else ""
+    raise ValueError(f"No complete checkpoint found in {checkpoint_root}{detail}")
+
+
+def resolve_resume_target(
+    target: str | Path,
+) -> tuple[str, Path, Path, dict[str, Any]]:
+    """Resolve a run/checkpoint argument to its run and complete checkpoint."""
+    resolved = resolve_path(target)
+    if CHECKPOINT_RE.fullmatch(resolved.name):
+        if resolved.parent.name != "checkpoints":
+            raise ValueError(
+                f"Checkpoint must be inside a checkpoints/ directory: {resolved}"
+            )
+        run_directory = resolved.parent.parent
+        checkpoint = resolved
+        state = validate_resume_checkpoint(checkpoint)
+    else:
+        run_directory = resolved
+        if not run_directory.is_dir():
+            raise ValueError(f"Resume run directory does not exist: {run_directory}")
+        checkpoint, state = find_latest_complete_checkpoint(run_directory)
+
+    for filename in ("resolved_config.json", "data_summary.json", "manifest.json"):
+        if not (run_directory / filename).is_file():
+            raise ValueError(f"Resume run is missing {filename}: {run_directory}")
+    manifest = read_json(run_directory / "manifest.json")
+    run_id = str(manifest.get("run_id") or run_directory.name)
+    return run_id, run_directory.resolve(), checkpoint.resolve(), state
+
+
+def comparable_resume_config(config: dict[str, Any]) -> tuple[dict[str, Any], float]:
+    """Remove paths that may safely differ when continuing an existing optimizer state."""
+    comparable = json.loads(json.dumps(config))
+    comparable.pop("output_root", None)  # A run may have been relocated after interruption.
+    epochs = float(comparable.setdefault("training", {}).get("num_train_epochs", 3))
+    return comparable, epochs
+
+
+def validate_resume_compatibility(
+    *,
+    run_directory: Path,
+    checkpoint_state: dict[str, Any],
+    resolved_config: dict[str, Any],
+    data_summary: dict[str, Any],
+    validation_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Reject accidental resume with changed model/data/optimizer semantics."""
+    previous_config = read_json(run_directory / "resolved_config.json")
+    previous_data = read_json(run_directory / "data_summary.json")
+    previous_comparable, previous_epochs = comparable_resume_config(previous_config)
+    current_comparable, current_epochs = comparable_resume_config(resolved_config)
+    if previous_comparable != current_comparable:
+        raise ValueError(
+            "Current config is incompatible with the interrupted run. Only output_root "
+            "may change when resuming; use --fresh for changed training semantics."
+        )
+    for key in ("dataset_sha256", "all", "train", "validation"):
+        if previous_data.get(key) != data_summary.get(key):
+            raise ValueError(
+                f"Data summary field {key!r} differs from the interrupted run; "
+                "start with --fresh."
+            )
+    if validation_rows is not None:
+        saved_validation_path = run_directory / "validation_dataset.json"
+        if not saved_validation_path.is_file():
+            raise ValueError(
+                f"Interrupted run has no saved validation_dataset.json: {run_directory}"
+            )
+        saved_payload = read_json(saved_validation_path)
+        saved_ids = [row["id"] for row in saved_payload.get("test", [])]
+        current_ids = [row["id"] for row in validation_rows]
+        if saved_ids != current_ids:
+            raise ValueError(
+                "Fixed split differs from the interrupted run; start with --fresh."
+            )
+    checkpoint_epoch = float(checkpoint_state.get("epoch") or 0.0)
+    if current_epochs <= checkpoint_epoch:
+        raise ValueError(
+            f"No training remains: checkpoint epoch={checkpoint_epoch}, "
+            f"configured num_train_epochs={current_epochs}."
+        )
+    return {
+        "checkpoint_step": int(checkpoint_state["global_step"]),
+        "checkpoint_epoch": checkpoint_epoch,
+        "previous_num_train_epochs": previous_epochs,
+        "configured_num_train_epochs": current_epochs,
+    }
+
+
+def rebase_best_checkpoint_path(
+    checkpoint: Path, run_directory: Path
+) -> dict[str, str] | None:
+    """Repair absolute best-checkpoint paths after a run directory was moved."""
+    state_path = checkpoint / "trainer_state.json"
+    state = read_json(state_path)
+    old_value = state.get("best_model_checkpoint")
+    if not old_value:
+        return None
+    best_step = state.get("best_global_step")
+    best_name = f"checkpoint-{int(best_step)}" if best_step is not None else Path(old_value).name
+    new_path = (run_directory / "checkpoints" / best_name).resolve()
+    if not new_path.is_dir():
+        raise ValueError(
+            f"Best checkpoint recorded by Trainer is unavailable after relocation: {new_path}"
+        )
+    if str(old_value) == str(new_path):
+        return None
+    state["best_model_checkpoint"] = str(new_path)
+    write_json(state_path, state)
+    return {"old": str(old_value), "new": str(new_path)}
+
+
+def begin_attempt(
+    manifest: dict[str, Any],
+    *,
+    mode: str,
+    command: list[str],
+    resume_checkpoint: Path | None,
+    resume_state: dict[str, Any] | None,
+) -> dict[str, Any]:
+    history = manifest.setdefault("attempt_history", [])
+    if not history and manifest.get("started_at_utc"):
+        history.append(
+            {
+                "mode": manifest.get("mode", "fresh"),
+                "status": manifest.get("status", "unknown"),
+                "started_at_utc": manifest.get("started_at_utc"),
+                "finished_at_utc": manifest.get("finished_at_utc"),
+                "command": manifest.get("command"),
+                "error": manifest.get("error"),
+                "traceback": manifest.get("traceback"),
+            }
+        )
+    attempt = {
+        "mode": mode,
+        "status": "running",
+        "started_at_utc": utc_now(),
+        "command": command,
+        "resume_from_checkpoint": str(resume_checkpoint) if resume_checkpoint else None,
+        "resume_from_step": int(resume_state["global_step"]) if resume_state else None,
+        "resume_from_epoch": float(resume_state.get("epoch") or 0.0) if resume_state else None,
+    }
+    history.append(attempt)
+    manifest.update(
+        {
+            "status": "running",
+            "last_started_at_utc": attempt["started_at_utc"],
+            "last_command": command,
+            "resume_from_checkpoint": attempt["resume_from_checkpoint"],
+        }
+    )
+    for key in ("finished_at_utc", "error", "traceback"):
+        manifest.pop(key, None)
+    return attempt
+
+
+def finish_attempt(
+    manifest: dict[str, Any],
+    *,
+    status: str,
+    error: BaseException | None = None,
+) -> None:
+    finished_at = utc_now()
+    attempt = manifest["attempt_history"][-1]
+    attempt.update({"status": status, "finished_at_utc": finished_at})
+    manifest.update({"status": status, "finished_at_utc": finished_at})
+    if error is None:
+        manifest.pop("error", None)
+        manifest.pop("traceback", None)
+        return
+    error_text = f"{type(error).__name__}: {error}"
+    traceback_text = traceback.format_exc()
+    attempt.update({"error": error_text, "traceback": traceback_text})
+    manifest.update({"error": error_text, "traceback": traceback_text})
 
 
 def main() -> None:
@@ -738,14 +784,52 @@ def main() -> None:
         },
     }
 
+    resolved_config = {
+        **config,
+        "model_name_or_path": str(model_path),
+        "dataset_path": str(dataset_path),
+        "split_path": str(split_path),
+        "seed": args.seed,
+    }
+    resume_checkpoint: Path | None = None
+    resume_state: dict[str, Any] | None = None
+    resume_details: dict[str, Any] | None = None
+    if args.resume is not None:
+        run_id, run_directory, resume_checkpoint, resume_state = resolve_resume_target(
+            args.resume
+        )
+        resume_details = validate_resume_compatibility(
+            run_directory=run_directory,
+            checkpoint_state=resume_state,
+            resolved_config=resolved_config,
+            data_summary=data_summary,
+            validation_rows=validation_rows,
+        )
+
     if args.dry_run:
-        print(json.dumps(data_summary, ensure_ascii=False, indent=2))
+        payload: dict[str, Any] = {
+            "mode": "resume" if resume_checkpoint else "fresh",
+            "data_summary": data_summary,
+        }
+        if resume_checkpoint is not None:
+            payload["resume"] = {
+                "run_directory": str(run_directory),
+                "checkpoint": str(resume_checkpoint),
+                **(resume_details or {}),
+            }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is not available; run training on a GPU node.")
 
     # --- run 目录与复现元数据 ---
-    run_id, run_directory = create_run_directory(config, args.seed)
+    if resume_checkpoint is None:
+        run_id, run_directory = create_run_directory(config, args.seed)
+    path_relocation = (
+        rebase_best_checkpoint_path(resume_checkpoint, run_directory)
+        if resume_checkpoint is not None
+        else None
+    )
     log_path = run_directory / "train.log"
     logging.basicConfig(
         level=logging.INFO,
@@ -754,20 +838,7 @@ def main() -> None:
     )
     logger = logging.getLogger(__name__)
 
-    resolved_config = {
-        **config,
-        "model_name_or_path": str(model_path),
-        "dataset_path": str(dataset_path),
-        "split_path": str(split_path),
-        "seed": args.seed,
-    }
-    write_json(run_directory / "resolved_config.json", resolved_config)
-    write_json(run_directory / "data_summary.json", data_summary)
-    manifest = {
-        "run_id": run_id,
-        "status": "running",
-        "started_at_utc": utc_now(),
-        "command": sys.argv,
+    environment_metadata = {
         "git": git_metadata(),
         "versions": {
             "python": sys.version.split()[0],
@@ -784,13 +855,36 @@ def main() -> None:
             "bf16_supported": torch.cuda.is_bf16_supported(),
         },
     }
+    if resume_checkpoint is None:
+        write_json(run_directory / "resolved_config.json", resolved_config)
+        write_json(run_directory / "data_summary.json", data_summary)
+        manifest = {"run_id": run_id, "mode": "fresh", **environment_metadata}
+    else:
+        manifest = read_json(run_directory / "manifest.json")
+        manifest["last_environment"] = environment_metadata
+        manifest["resume_validation"] = resume_details
+        if path_relocation is not None:
+            manifest["best_checkpoint_path_relocation"] = path_relocation
+    attempt = begin_attempt(
+        manifest,
+        mode="resume" if resume_checkpoint else "fresh",
+        command=list(sys.argv),
+        resume_checkpoint=resume_checkpoint,
+        resume_state=resume_state,
+    )
+    if resume_checkpoint is None:
+        manifest.update(
+            {
+                "started_at_utc": attempt["started_at_utc"],
+                "command": list(sys.argv),
+            }
+        )
     write_json(run_directory / "manifest.json", manifest)
 
     try:
         training = config.get("training", {})
         lora = config.get("lora", {})
         generation = config.get("generation", {})
-        evaluation = config.get("evaluation", {})
         if training.get("bf16", True) and not torch.cuda.is_bf16_supported():
             raise RuntimeError("Configured bf16=true, but this GPU does not support BF16.")
 
@@ -872,34 +966,7 @@ def main() -> None:
             generation_max_length=int(training.get("max_length", 8192)),
             generation_max_new_tokens=int(generation.get("max_new_tokens", 512)),
             run_directory=run_directory,
-            model_path=model_path,
             logger=logger,
-            evaluation={
-                "backend": evaluation.get("backend", "auto"),
-                "vllm_preferred_gpu": evaluation.get("vllm_preferred_gpu", 0),
-                "vllm_max_gpu_utilization": evaluation.get(
-                    "vllm_max_gpu_utilization", 10
-                ),
-                "vllm_min_free_memory_gib": evaluation.get(
-                    "vllm_min_free_memory_gib", 20
-                ),
-                "vllm_gpu_memory_utilization": evaluation.get(
-                    "vllm_gpu_memory_utilization", 0.9
-                ),
-                "max_model_len": evaluation.get(
-                    "max_model_len", training.get("max_length", 8192)
-                ),
-                "max_tokens": evaluation.get(
-                    "max_tokens", generation.get("max_new_tokens", 512)
-                ),
-                "temp": evaluation.get("temp", 0.0),
-                "top_p": evaluation.get("top_p", 1.0),
-                "seed": evaluation.get("seed", args.seed),
-                "rollout": evaluation.get("rollout", 1),
-                "batch_size": evaluation.get("batch_size", 64),
-                "merge_cache": evaluation.get("merge_cache", "eval_data/.merged_models"),
-                "enable_thinking": evaluation.get("enable_thinking", False),
-            },
             callbacks=[JsonlLogCallback(run_directory / "train_history.jsonl")],
         )
         trainable_parameters = sum(
@@ -913,14 +980,31 @@ def main() -> None:
         }
         write_json(run_directory / "manifest.json", manifest)
 
-        logger.info("Starting run %s", run_id)
+        if resume_checkpoint is None:
+            logger.info("Starting fresh run %s", run_id)
+        else:
+            logger.info(
+                "Resuming run %s from %s (step=%d epoch=%s)",
+                run_id,
+                resume_checkpoint,
+                resume_state["global_step"],
+                resume_state.get("epoch"),
+            )
+            if path_relocation is not None:
+                logger.info(
+                    "Rebased best checkpoint path: %s -> %s",
+                    path_relocation["old"],
+                    path_relocation["new"],
+                )
         logger.info("Train=%d validation=%d", len(train_rows), len(validation_rows))
         logger.info(
             "Trainable parameters=%d (%.4f%%)",
             trainable_parameters,
             manifest["parameters"]["trainable_percent"],
         )
-        train_result = trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+        train_result = trainer.train(
+            resume_from_checkpoint=str(resume_checkpoint) if resume_checkpoint else None
+        )
         language_model_metrics = trainer.evaluate()
         adapter_directory = run_directory / "adapter"
         trainer.save_model(adapter_directory)
@@ -940,24 +1024,18 @@ def main() -> None:
             "train_metrics": train_result.metrics,
             "language_model_validation": language_model_metrics,
             "generation_validation": validation_metrics,
-            "generation_validation_meta": trainer.latest_generation_meta,
             "adapter_directory": str(adapter_directory),
+            "resume_from_checkpoint": str(resume_checkpoint) if resume_checkpoint else None,
+            "resume_from_step": int(resume_state["global_step"]) if resume_state else None,
         }
         write_json(run_directory / "summary.json", summary)
-        manifest.update({"status": "completed", "finished_at_utc": utc_now()})
+        finish_attempt(manifest, status="completed")
         write_json(run_directory / "manifest.json", manifest)
         logger.info("Completed run %s", run_id)
         logger.info("Validation metrics: %s", validation_metrics)
     except BaseException as error:
         # 失败也写回 manifest，便于事后排查
-        manifest.update(
-            {
-                "status": "failed",
-                "finished_at_utc": utc_now(),
-                "error": f"{type(error).__name__}: {error}",
-                "traceback": traceback.format_exc(),
-            }
-        )
+        finish_attempt(manifest, status="failed", error=error)
         write_json(run_directory / "manifest.json", manifest)
         logger.exception("Run failed")
         raise

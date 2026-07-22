@@ -1,6 +1,6 @@
 # Distillation Data
 
-本目录存放由 [`train_data/cleaned_data`](../cleaned_data/) 生成的教师 CoT 轨迹。脚本使用原始 cleaned prompt，不额外添加 Zero-shot-CoT 提示；只有教师输出严格符合 `<reasoning>...</reasoning><score>0/1</score>` 且分数与金标签一致时，轨迹才标记为 `accepted=true`。
+本目录存放由 [`train_data/cleaned_data`](../cleaned_data/) 生成的教师 CoT 轨迹。脚本使用原始 cleaned prompt，不额外添加 Zero-shot-CoT 提示；只有教师输出严格符合 `<reasoning>...</reasoning><score>整数</score>`、分数属于样本的 `score_sets` 且与金标签一致时，轨迹才标记为 `accepted=true`。因此脚本同时支持 RW 的二分类评分和 RevUtil 的 1–5 分评分。
 
 ## 单文件格式
 
@@ -30,6 +30,39 @@ rw_gen_coherence_4811_distill.jsonl
 - API 返回的内部推理字段 `internal_reasoning`；若服务商不返回 `reasoning_content`，该字段为空字符串；
 - 教师标签、格式是否合法、是否通过金标签过滤及拒绝原因；
 - response ID、finish reason、token 用量、解码参数和耗时。
+
+## 可接受轨迹数据集
+
+每个任务保留一份追加式原始蒸馏文件，并由
+[`extract_accepted_distill.js`](extract_accepted_distill.js) 生成四份只包含
+`accepted=true` 记录的派生文件：
+
+1. `*_distill_glm-5.2.jsonl`：全部可接受的 GLM 轨迹；
+2. `*_distill_deepseek-v4-pro.jsonl`：全部可接受的 DeepSeek 轨迹；
+3. `*_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl`：两位教师答案一致，只保留 GLM 轨迹；
+4. `*_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl`：两位教师答案一致，只保留 DeepSeek 轨迹。
+
+共识数据按 `id` 取两位教师的交集，要求 `teacher_label` 相同，并校验
+`gold_label`、`task`、`aspect` 和 prompt 完全一致。由于派生数据只包含标签等于
+金标签的可接受记录，两份共识文件的样本集合和顺序相同，仅保留的教师完整轨迹
+不同。共识记录额外包含 `consensus_models`、`consensus_teacher_labels` 和
+`consensus_trajectory_teacher` 字段。
+
+重新生成全部三个任务的四份派生数据：
+
+```bash
+node train_data/distill_data/extract_accepted_distill.js
+```
+
+本次抽取结果如下：
+
+| 任务维度 | DeepSeek | GLM | 两位教师一致 |
+|---|---:|---:|---:|
+| coherence | 3629 | 3625 | 3247 |
+| positioning_check | 2666 | 2693 | 2613 |
+| positioning_type | 944 | 953 | 943 |
+
+`positioning_check` 的两位教师蒸馏均已完成，表中数据已从完整原始蒸馏文件刷新。
 
 ## 按模型续跑
 

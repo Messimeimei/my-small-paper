@@ -13,11 +13,11 @@ CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python
   --batch_size 64
 
 // LoRA adapter / checkpoint 评测（vLLM + LoRA；多一个 --adapter）
-CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python \
-  /data01/public/yangxin/small-paper/training/lora/evaluate.py \
-  --exp_name rw_gen_coherence_glm-5.2_lora_ckpt204 \
+CUDA_VISIBLE_DEVICES=0 /data01/public/yangxin/.conda/envs/small-paper/bin/python \
+  /data01/public/yangxin/small-paper/training/evaluate.py \
+  --exp_name rw_gen_coherence_glm-5.2_lora_ckp408 \
   --model_name /data01/public/yangxin/small-paper/model/Qwen3-4B \
-  --adapter /data01/public/yangxin/small-paper/train_outputs/lora/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_glm-5.2__seed42__20260720T131544Z/checkpoints/checkpoint-204 \
+  --adapter /data01/public/yangxin/small-paper/train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_glm-5.2__seed42__20260720T131544Z/checkpoints/checkpoint-408 \
   --dataset_file /data01/public/yangxin/small-paper/test_data/prompted_rw_gen_coherence_data.json \
   --output_path /data01/public/yangxin/small-paper/eval_data/eval_outputs \
   --max_model_len 8192 \
@@ -28,9 +28,6 @@ CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python
   --rollout 1 \
   --batch_size 64 \
   --gpu_memory_utilization 0.9
-
-// 说明：首次会 CPU merge LoRA 到 eval_data/.merged_models/，之后复用。
-// 共享 GPU 不要用 0.9；按空闲显存估算，例如空闲~20GB/80GB 用 0.25。
 
 // 显存大的卡，跑 7B 以下模型评测（实测 7B 模型的 32k 上下文可以跑 bs=8， 跑16会崩掉）
 CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python /data01/public/yangxin/small-paper/eval_data/inference.py \
@@ -73,7 +70,7 @@ CUDA_VISIBLE_DEVICES=0 /data01/public/yangxin/.conda/envs/small-paper/bin/python
 
 // 全量 RW coherence 蒸馏（同模型已跑过的样本会跳过；结果写 distill_data/*.jsonl）
 /data01/public/yangxin/.conda/envs/small-paper/bin/python /data01/public/yangxin/small-paper/train_data/distill_data/generate_mode_cot.py \
-  --input /data01/public/yangxin/small-paper/train_data/cleaned_data/rw_gen_positioning_type_954.json \
+  --input /data01/public/yangxin/small-paper/train_data/cleaned_data/rw_gen_positioning_check_2822.json \
   --output-dir /data01/public/yangxin/small-paper/train_data/distill_data \
   --model deepseek-v4-pro \
   --max-tokens 2048 \
