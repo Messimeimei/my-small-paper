@@ -1,0 +1,144 @@
+# First implementation: official-code-style factor mixing.
+model_name_or_path: model/Qwen3-4B
+
+# 先统一用 deepseek 蒸馏得到的专家，并排除 coherence 专家
+experts:
+  # - name: coherence_deepseek
+  #   adapter: "train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_deepseek-v4-pro__seed42__20260720T072305Z/adapter"
+  - name: positioning_check_deepseek
+    adapter: "train_outputs/rw_gen_positioning_check/rw_gen_positioning_check#qwen3_4b#distill_deepseek-v4-pro__seed42__20260721T135753Z/adapter"
+  - name: positioning_type_deepseek
+    adapter: "train_outputs/rw_gen_positioning_type/rw_gen_positioning_type#qwen3_4b#distill_deepseek-v4-pro__seed42__20260722T013136Z/adapter"
+
+output_root: outputs
+seed: 42
+
+target:
+  aspect: coherence
+  shots_per_class: 5
+
+# Runtime data routing. --target selects one entry and --shots-per-class selects
+# one calibration file from that entry. Paths are relative to MoDE/.
+datasets:
+  coherence:
+    calibration_files:
+      1: data/coherence/validation_k1_per_class_cal2_seed42.json
+      3: data/coherence/validation_k3_per_class_cal6_seed42.json
+      5: data/coherence/validation_k5_per_class_cal10_seed42.json
+    test_file: data/coherence/clean_test1046.json
+  positioning_check:
+    calibration_files:
+      1: data/positioning_check/validation_k1_per_class_cal2_seed42.json
+      3: data/positioning_check/validation_k3_per_class_cal6_seed42.json
+      5: data/positioning_check/validation_k5_per_class_cal10_seed42.json
+    test_file: data/positioning_check/clean_test603.json
+  positioning_type:
+    calibration_files:
+      1: data/positioning_type/validation_k1_per_class_cal2_seed42.json
+      3: data/positioning_type/validation_k3_per_class_cal6_seed42.json
+      5: data/positioning_type/validation_k5_per_class_cal10_seed42.json
+    test_file: data/positioning_type/clean_test204.json
+  actionability:
+    calibration_files:
+      1: data/actionability/validation_k1_per_class_cal5_seed42.json
+      3: data/actionability/validation_k3_per_class_cal15_seed42.json
+      5: data/actionability/validation_k5_per_class_cal25_seed42.json
+    test_file: data/actionability/clean_test1000.json
+  grounding_specificity:
+    calibration_files:
+      1: data/grounding_specificity/api_validation_k1_per_class_cal5_seed42.json
+      3: data/grounding_specificity/api_validation_k3_per_class_cal15_seed42.json
+      5: data/grounding_specificity/api_validation_k5_per_class_cal25_seed42.json
+    test_file: data/grounding_specificity/clean_test1000.json
+  helpfulness:
+    calibration_files:
+      1: data/helpfulness/api_validation_k1_per_class_cal5_seed42.json
+      3: data/helpfulness/api_validation_k3_per_class_cal15_seed42.json
+      5: data/helpfulness/api_validation_k5_per_class_cal25_seed42.json
+    test_file: data/helpfulness/clean_test1000.json
+  verifiability:
+    calibration_files:
+      1: data/verifiability/api_validation_k1_per_class_cal5_seed42.json
+      3: data/verifiability/api_validation_k3_per_class_cal15_seed42.json
+      5: data/verifiability/api_validation_k5_per_class_cal25_seed42.json
+    test_file: data/verifiability/clean_test788.json
+  verifiability_extraction:
+    calibration_files:
+      1: data/verifiability_extraction/api_validation_k1_per_class_cal2_seed42.json
+      3: data/verifiability_extraction/api_validation_k3_per_class_cal6_seed42.json
+      5: data/verifiability_extraction/api_validation_k5_per_class_cal10_seed42.json
+    test_file: data/verifiability_extraction/clean_test1000.json
+  novelty:
+    calibration_files:
+      1: data/novelty/api_validation_k1_per_class_cal2_seed42.json
+      3: data/novelty/api_validation_k3_per_class_cal6_seed42.json
+      5: data/novelty/api_validation_k5_per_class_cal10_seed42.json
+    test_file: data/novelty/clean_test66.json
+  revision_relatedness:
+    calibration_files:
+      1: data/revision_relatedness/api_validation_k1_per_class_cal2_seed42.json
+      3: data/revision_relatedness/api_validation_k3_per_class_cal6_seed42.json
+      5: data/revision_relatedness/api_validation_k5_per_class_cal10_seed42.json
+    test_file: data/revision_relatedness/clean_test3026.json
+  revision_correctness:
+    calibration_files:
+      1: data/revision_correctness/api_validation_k1_per_class_cal2_seed42.json
+      3: data/revision_correctness/api_validation_k3_per_class_cal6_seed42.json
+      5: data/revision_correctness/api_validation_k5_per_class_cal10_seed42.json
+    test_file: data/revision_correctness/clean_test3026.json
+  meta_reviewer:
+    # 10-way labels; classes 2/5 are too rare for k>1 without duplication.
+    calibration_files:
+      1: data/meta_reviewer/api_validation_k1_per_class_cal10_seed42.json
+    test_file: data/meta_reviewer/clean_test767.json
+    objective_max_length: 32768
+
+method:
+  name: mode_official_factor_mix
+  optimizer: nevergrad_ngopt
+  weight_bounds: [-3.0, 3.0]
+  budget: 40
+  l1_alpha: 0.05
+  # Keep mean for official-code reproduction; use sum when comparing expert counts.
+  l1_reduction: sum
+
+  # Both optimizers evaluate zero, every one-hot expert, and the equal-weight
+  # anchor before free search. For NGOpt these anchors count toward budget.
+  # SciPy keeps them in a population of max(this value, expert_count + 2, 5).
+  scipy_population_size: 9
+  scipy_generations: 3
+
+objective:
+  name: validation_teacher_cot_completion_ce
+  completion_source: teacher_completion
+  max_length: 8192
+  enable_thinking: false
+  truncation: error
+
+runtime:
+  device: cuda
+  expert_cache_device: cuda
+  torch_dtype: bfloat16
+  attn_implementation: sdpa
+
+reference:
+  paper_file: "paper/垂域微调与推理能力/论文/MoDE-CoTD Chain-of-Thought Distillation for Complex Reasoning.pdf"
+  official_repository: "https://github.com/Xiang-Li-oss/MoDE-CoTD"
+  official_tree_commit: "50c2e4a7c590fde0ac3a4800bfe5073af6b98543"
+  official_algorithm_blob: "955b5dba852c0974f29ac2bee12fd3c625646624"
+  paper:
+    optimizer: Shiwa
+    weight_bounds: [-1.5, 1.5]
+    l1_alpha: 0.05
+    l1_reduction: sum
+  official_code:
+    optimizer: NGOpt
+    weight_bounds: [-3.0, 3.0]
+    budget: 40
+    l1_alpha: 0.05
+    l1_reduction: mean
+  recorded_deviations:
+    - "Calibration is sampled from each selected LoRA expert's original validation split and uses its stored teacher reasoning plus score completion."
+    - "The validation split did not receive gradients but was used for checkpoint selection; it is reused only as MoDE development/calibration data, never as final test."
+    - "The final test is independent of k and is never used by the weight optimizer."
+    - "The paper text defines both delta-sum and factor-mix variants; this implementation follows Eq.(1) and the official state-dict factor mix."

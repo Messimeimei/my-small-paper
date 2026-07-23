@@ -1,0 +1,227 @@
+{
+  "metadata": {
+    "schema_version": 1,
+    "purpose": "mode_unseen_task_api_teacher_calibration",
+    "task": "rev_util",
+    "aspect": "helpfulness",
+    "score_sets": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "shots_per_class": 1,
+    "calibration_count": 5,
+    "calibration_label_counts": {
+      "1": 1,
+      "2": 1,
+      "3": 1,
+      "4": 1,
+      "5": 1
+    },
+    "selected_ids_by_label": {
+      "1": [
+        "train_3681"
+      ],
+      "2": [
+        "train_2002"
+      ],
+      "3": [
+        "train_0165"
+      ],
+      "4": [
+        "train_4605"
+      ],
+      "5": [
+        "train_4546"
+      ]
+    },
+    "selection_seed": 42,
+    "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",
+    "completion_source": "api_teacher_cot_gold_label_agreement",
+    "teacher_model": "deepseek-v4-pro",
+    "candidate_source_file": "train_data/cleaned_data/rev_util_helpfulness_4800.json",
+    "candidate_source_sha256": "a97757bc7c72d8c9ea9f380075a8931129bb1dfc7110525259aae2212feac01d",
+    "test_file": "data/helpfulness/clean_test1000.json",
+    "test_sha256": "9ec48c3205fe5fce16c878bac88d0a4c3c6067951670d59d101075ef769a8a04",
+    "test_count": 1000
+  },
+  "train": [
+    {
+      "id": "train_3681",
+      "task": "rev_util",
+      "aspect": "helpfulness",
+      "labels": 1,
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "prompt": [
+        {
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else.",
+          "role": "system"
+        },
+        {
+          "content": "[QUERY]: Your task is to write a review comment for a scientific paper. The comment should be useful for the authors to help improving the paper.\n\n\n[CRITERIA]: A helpful review should be actionable, grounded on a specific part of the paper, provide justification or evidence to its claims. Scoring rubric is as follows:\n1: The comment fails to identify meaningful weaknesses or suggest improvements, leaving the authors with no actionable feedback.\n2: The comment identifies a weakness or improvement area but is vague, lacks clarity, or provides minimal guidance, making it only slightly beneficial for the authors.\n3: The comment identifies weaknesses or areas for improvement but is incomplete or lacks depth. While the authors gain some insights, the feedback does not fully address their needs for improving the draft.\n4: The comment provides clear and actionable feedback on weaknesses and areas for improvement, though it could be expanded or refined to be fully comprehensive and impactful.\n5: The comment thoroughly identifies weaknesses and offers detailed, actionable, and constructive suggestions that empower the authors to significantly improve their draft.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nANSWER: Lack of novelty: Adversarial attacks by perturbing text has been done on many NLP models and image-text models. It is nicely summarized in related work of this paper. The only new effort is to take similar ideas and apply it on video-text models.\n\nEVALUATION:\n\n<reasoning>This comment simply recaps a section already addressed in the paper and does not offer constructive guidance or specific suggestions on overcoming the stated issue of lack of novelty. Without actionable advice or an indication of how to differentiate or enhance the work, the comment is not useful to the authors and does not contribute to the paper's improvement, aligning with the evaluation score of 1: The comment is not helpful at all.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nANSWER: I don't think the probabilistic connection is drawn very well. It doesn't seem to be made formally enough to take it as anything more than motivational which is fine, but I would suggest the authors either cement this connection more formally or adjust the language to clarify.\n\nEVALUATION:\n\n<reasoning>The comment highlights a potential issue with the way the probabilistic connection is presented in the paper, indicating it might lack formalism and appear purely motivational. While this could be valuable for the authors, the feedback is not specific enough to be fully actionable. The suggestion to either \"cement this connection more formally\" or \"adjust the language to clarify\" is a start, but it lacks specific guidance or examples that would make it more useful. Therefore, the authors are left with only a vague direction for improvement, making this feedback barely helpful. Therefore, the evaluation score should be 2.</reasoning>\n\n<score>2</score>\n\n<END OF EXAMPLE 2>\n\n\n<START OF EXAMPLE 3>\n\nANSWER: It is not clear if the proposed methodology is specific to bimanual manipulation. Just using robotic manipulation could be more appropriate.\n\nEVALUATION:\n\n<reasoning>The comment identifies a potential issue with the specificity of the proposed methodology, questioning whether it is limited to bimanual manipulation or if it could be generalized to robotic manipulation. This is a relevant point that could help the authors clarify the scope and applicability of their methodology. However, the comment lacks depth and does not provide specific suggestions or guidance on how the authors might address this issue. It raises an important question but does not offer actionable steps for improvement, making it somewhat helpful. Therefore, the comment is evaluated as somewhat helpful, consistent with the evaluation score 3.</reasoning>\n\n<score>3</score>\n\n<END OF EXAMPLE 3>\n\n\n<START OF EXAMPLE 4>\n\nANSWER: The authors need to perform ablation experiments to compare the proposed method with other methods (e.g., TubeR) in terms of the number of learnable parameters and GFLOPs.\n\nEVALUATION:\n\n<reasoning>The review comment provides a clear and actionable suggestion for improvement by recommending the authors perform ablation experiments. It specifies the need to compare the proposed method with other methods, such as TubeR, focusing on the number of learnable parameters and GFLOPs. This feedback is direct and offers a concrete step for the authors to enhance their paper, making it mostly helpful. However, it could be further improved by explaining why these comparisons are important or how they might impact the paper's conclusions, which would elevate it to a highly helpful comment. Therefore, it aligns with a score of 4.</reasoning>\n\n<score>4</score>\n\n<END OF EXAMPLE 4>\n\n\n<START OF EXAMPLE 5>\n\nANSWER: Finally, and similarly to above, i’d like to see an experiment where the image is occluded (half of the image is randomly blacked out). This (a) simulates the irregularity that is often present in neural/behavioral data (e.g. keypoint detection failed for some mice in some frames), and (b) would allow us to inspect the long-range “inference” capacity of the model, as opposed to a nearly-supervised reconstruction task. Again, these should be reasonably easy experiments to run. I’d expect to see all of these experiments included in a final version (unless the authors can convince me otherwise).\n\nEVALUATION:\n\n<reasoning>The comment is highly helpful as it provides a clear and specific suggestion for an additional experiment that could significantly enhance the paper. By proposing an experiment where the image is occluded, the reviewer not only identifies a potential area for improvement but also explains the rationale behind it—simulating irregularities in data and testing the model's inference capacity. This feedback is actionable and constructive, offering the authors a concrete way to strengthen their work. The expectation that these experiments be included unless justified otherwise further emphasizes the importance of this suggestion, making it a valuable contribution to the paper's development.</reasoning>\n\n<score>5</score>\n\n<END OF EXAMPLE 5>\n\n\n[ANSWER]: 1. The idea is not novel, this error detection model is just a semantic matching model between natural question and SQL query.",
+          "role": "user"
+        }
+      ],
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>\nThe comment identifies a weakness by stating that the idea is not novel and that the error detection model is just a semantic matching model between a natural question and an SQL query. However, it fails to provide any justification, evidence, or specific reference to the paper. It offers no actionable suggestions for improvement, such as how the authors could address the lack of novelty or differentiate their approach. The feedback is entirely dismissive and does not guide the authors toward concrete revisions. Therefore, it fits the description of a score 1 comment: it fails to identify meaningful weaknesses or suggest improvements, leaving no actionable feedback.\n</reasoning>\n<score>1</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "deepseek-v4-pro",
+        "generated_at_utc": "2026-07-22T09:24:38.965741+00:00",
+        "response_id": "0920f02d-7d0f-4ba2-b5ef-5fee09ef4350",
+        "trajectory_quality_status": "auto_accepted_label_match"
+      }
+    },
+    {
+      "id": "train_2002",
+      "task": "rev_util",
+      "aspect": "helpfulness",
+      "labels": 2,
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "prompt": [
+        {
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else.",
+          "role": "system"
+        },
+        {
+          "content": "[QUERY]: Your task is to write a review comment for a scientific paper. The comment should be useful for the authors to help improving the paper.\n\n\n[CRITERIA]: A helpful review should be actionable, grounded on a specific part of the paper, provide justification or evidence to its claims. Scoring rubric is as follows:\n1: The comment fails to identify meaningful weaknesses or suggest improvements, leaving the authors with no actionable feedback.\n2: The comment identifies a weakness or improvement area but is vague, lacks clarity, or provides minimal guidance, making it only slightly beneficial for the authors.\n3: The comment identifies weaknesses or areas for improvement but is incomplete or lacks depth. While the authors gain some insights, the feedback does not fully address their needs for improving the draft.\n4: The comment provides clear and actionable feedback on weaknesses and areas for improvement, though it could be expanded or refined to be fully comprehensive and impactful.\n5: The comment thoroughly identifies weaknesses and offers detailed, actionable, and constructive suggestions that empower the authors to significantly improve their draft.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nANSWER: Lack of novelty: Adversarial attacks by perturbing text has been done on many NLP models and image-text models. It is nicely summarized in related work of this paper. The only new effort is to take similar ideas and apply it on video-text models.\n\nEVALUATION:\n\n<reasoning>This comment simply recaps a section already addressed in the paper and does not offer constructive guidance or specific suggestions on overcoming the stated issue of lack of novelty. Without actionable advice or an indication of how to differentiate or enhance the work, the comment is not useful to the authors and does not contribute to the paper's improvement, aligning with the evaluation score of 1: The comment is not helpful at all.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nANSWER: I don't think the probabilistic connection is drawn very well. It doesn't seem to be made formally enough to take it as anything more than motivational which is fine, but I would suggest the authors either cement this connection more formally or adjust the language to clarify.\n\nEVALUATION:\n\n<reasoning>The comment highlights a potential issue with the way the probabilistic connection is presented in the paper, indicating it might lack formalism and appear purely motivational. While this could be valuable for the authors, the feedback is not specific enough to be fully actionable. The suggestion to either \"cement this connection more formally\" or \"adjust the language to clarify\" is a start, but it lacks specific guidance or examples that would make it more useful. Therefore, the authors are left with only a vague direction for improvement, making this feedback barely helpful. Therefore, the evaluation score should be 2.</reasoning>\n\n<score>2</score>\n\n<END OF EXAMPLE 2>\n\n\n<START OF EXAMPLE 3>\n\nANSWER: It is not clear if the proposed methodology is specific to bimanual manipulation. Just using robotic manipulation could be more appropriate.\n\nEVALUATION:\n\n<reasoning>The comment identifies a potential issue with the specificity of the proposed methodology, questioning whether it is limited to bimanual manipulation or if it could be generalized to robotic manipulation. This is a relevant point that could help the authors clarify the scope and applicability of their methodology. However, the comment lacks depth and does not provide specific suggestions or guidance on how the authors might address this issue. It raises an important question but does not offer actionable steps for improvement, making it somewhat helpful. Therefore, the comment is evaluated as somewhat helpful, consistent with the evaluation score 3.</reasoning>\n\n<score>3</score>\n\n<END OF EXAMPLE 3>\n\n\n<START OF EXAMPLE 4>\n\nANSWER: The authors need to perform ablation experiments to compare the proposed method with other methods (e.g., TubeR) in terms of the number of learnable parameters and GFLOPs.\n\nEVALUATION:\n\n<reasoning>The review comment provides a clear and actionable suggestion for improvement by recommending the authors perform ablation experiments. It specifies the need to compare the proposed method with other methods, such as TubeR, focusing on the number of learnable parameters and GFLOPs. This feedback is direct and offers a concrete step for the authors to enhance their paper, making it mostly helpful. However, it could be further improved by explaining why these comparisons are important or how they might impact the paper's conclusions, which would elevate it to a highly helpful comment. Therefore, it aligns with a score of 4.</reasoning>\n\n<score>4</score>\n\n<END OF EXAMPLE 4>\n\n\n<START OF EXAMPLE 5>\n\nANSWER: Finally, and similarly to above, i’d like to see an experiment where the image is occluded (half of the image is randomly blacked out). This (a) simulates the irregularity that is often present in neural/behavioral data (e.g. keypoint detection failed for some mice in some frames), and (b) would allow us to inspect the long-range “inference” capacity of the model, as opposed to a nearly-supervised reconstruction task. Again, these should be reasonably easy experiments to run. I’d expect to see all of these experiments included in a final version (unless the authors can convince me otherwise).\n\nEVALUATION:\n\n<reasoning>The comment is highly helpful as it provides a clear and specific suggestion for an additional experiment that could significantly enhance the paper. By proposing an experiment where the image is occluded, the reviewer not only identifies a potential area for improvement but also explains the rationale behind it—simulating irregularities in data and testing the model's inference capacity. This feedback is actionable and constructive, offering the authors a concrete way to strengthen their work. The expectation that these experiments be included unless justified otherwise further emphasizes the importance of this suggestion, making it a valuable contribution to the paper's development.</reasoning>\n\n<score>5</score>\n\n<END OF EXAMPLE 5>\n\n\n[ANSWER]: 3. Are there cases where Legendre decomposition might be less preferred compared to other methods?",
+          "role": "user"
+        }
+      ],
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>\nThe comment poses a question about potential limitations of Legendre decomposition, which could be a meaningful area for improvement by prompting the authors to discuss cases where their method might be less effective. However, it is extremely brief, lacking any justification, evidence, or reference to a specific part of the paper. It does not explain why this question is important, nor does it offer actionable suggestions on how to address it (e.g., adding a limitations section, conducting comparative experiments). The authors are left with only a vague prompt and minimal guidance, making the feedback only slightly beneficial. This aligns with the score of 2: identifies a weakness or improvement area but is vague and lacks clarity.\n</reasoning>\n<score>2</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "deepseek-v4-pro",
+        "generated_at_utc": "2026-07-22T09:26:46.286999+00:00",
+        "response_id": "1910b08b-0c09-4e17-a348-ec140983fc11",
+        "trajectory_quality_status": "auto_accepted_label_match"
+      }
+    },
+    {
+      "id": "train_0165",
+      "task": "rev_util",
+      "aspect": "helpfulness",
+      "labels": 3,
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "prompt": [
+        {
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else.",
+          "role": "system"
+        },
+        {
+          "content": "[QUERY]: Your task is to write a review comment for a scientific paper. The comment should be useful for the authors to help improving the paper.\n\n\n[CRITERIA]: A helpful review should be actionable, grounded on a specific part of the paper, provide justification or evidence to its claims. Scoring rubric is as follows:\n1: The comment fails to identify meaningful weaknesses or suggest improvements, leaving the authors with no actionable feedback.\n2: The comment identifies a weakness or improvement area but is vague, lacks clarity, or provides minimal guidance, making it only slightly beneficial for the authors.\n3: The comment identifies weaknesses or areas for improvement but is incomplete or lacks depth. While the authors gain some insights, the feedback does not fully address their needs for improving the draft.\n4: The comment provides clear and actionable feedback on weaknesses and areas for improvement, though it could be expanded or refined to be fully comprehensive and impactful.\n5: The comment thoroughly identifies weaknesses and offers detailed, actionable, and constructive suggestions that empower the authors to significantly improve their draft.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nANSWER: Lack of novelty: Adversarial attacks by perturbing text has been done on many NLP models and image-text models. It is nicely summarized in related work of this paper. The only new effort is to take similar ideas and apply it on video-text models.\n\nEVALUATION:\n\n<reasoning>This comment simply recaps a section already addressed in the paper and does not offer constructive guidance or specific suggestions on overcoming the stated issue of lack of novelty. Without actionable advice or an indication of how to differentiate or enhance the work, the comment is not useful to the authors and does not contribute to the paper's improvement, aligning with the evaluation score of 1: The comment is not helpful at all.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nANSWER: I don't think the probabilistic connection is drawn very well. It doesn't seem to be made formally enough to take it as anything more than motivational which is fine, but I would suggest the authors either cement this connection more formally or adjust the language to clarify.\n\nEVALUATION:\n\n<reasoning>The comment highlights a potential issue with the way the probabilistic connection is presented in the paper, indicating it might lack formalism and appear purely motivational. While this could be valuable for the authors, the feedback is not specific enough to be fully actionable. The suggestion to either \"cement this connection more formally\" or \"adjust the language to clarify\" is a start, but it lacks specific guidance or examples that would make it more useful. Therefore, the authors are left with only a vague direction for improvement, making this feedback barely helpful. Therefore, the evaluation score should be 2.</reasoning>\n\n<score>2</score>\n\n<END OF EXAMPLE 2>\n\n\n<START OF EXAMPLE 3>\n\nANSWER: It is not clear if the proposed methodology is specific to bimanual manipulation. Just using robotic manipulation could be more appropriate.\n\nEVALUATION:\n\n<reasoning>The comment identifies a potential issue with the specificity of the proposed methodology, questioning whether it is limited to bimanual manipulation or if it could be generalized to robotic manipulation. This is a relevant point that could help the authors clarify the scope and applicability of their methodology. However, the comment lacks depth and does not provide specific suggestions or guidance on how the authors might address this issue. It raises an important question but does not offer actionable steps for improvement, making it somewhat helpful. Therefore, the comment is evaluated as somewhat helpful, consistent with the evaluation score 3.</reasoning>\n\n<score>3</score>\n\n<END OF EXAMPLE 3>\n\n\n<START OF EXAMPLE 4>\n\nANSWER: The authors need to perform ablation experiments to compare the proposed method with other methods (e.g., TubeR) in terms of the number of learnable parameters and GFLOPs.\n\nEVALUATION:\n\n<reasoning>The review comment provides a clear and actionable suggestion for improvement by recommending the authors perform ablation experiments. It specifies the need to compare the proposed method with other methods, such as TubeR, focusing on the number of learnable parameters and GFLOPs. This feedback is direct and offers a concrete step for the authors to enhance their paper, making it mostly helpful. However, it could be further improved by explaining why these comparisons are important or how they might impact the paper's conclusions, which would elevate it to a highly helpful comment. Therefore, it aligns with a score of 4.</reasoning>\n\n<score>4</score>\n\n<END OF EXAMPLE 4>\n\n\n<START OF EXAMPLE 5>\n\nANSWER: Finally, and similarly to above, i’d like to see an experiment where the image is occluded (half of the image is randomly blacked out). This (a) simulates the irregularity that is often present in neural/behavioral data (e.g. keypoint detection failed for some mice in some frames), and (b) would allow us to inspect the long-range “inference” capacity of the model, as opposed to a nearly-supervised reconstruction task. Again, these should be reasonably easy experiments to run. I’d expect to see all of these experiments included in a final version (unless the authors can convince me otherwise).\n\nEVALUATION:\n\n<reasoning>The comment is highly helpful as it provides a clear and specific suggestion for an additional experiment that could significantly enhance the paper. By proposing an experiment where the image is occluded, the reviewer not only identifies a potential area for improvement but also explains the rationale behind it—simulating irregularities in data and testing the model's inference capacity. This feedback is actionable and constructive, offering the authors a concrete way to strengthen their work. The expectation that these experiments be included unless justified otherwise further emphasizes the importance of this suggestion, making it a valuable contribution to the paper's development.</reasoning>\n\n<score>5</score>\n\n<END OF EXAMPLE 5>\n\n\n[ANSWER]: 1. Motivation: It is not clear what are the advantages and disadvantages of diffusion models compared to GANs. The authors introduced that \"Diffusion models are straightforward to define and efficient to train,\" while did not compare the efficientness of diffusion models and GANs.",
+          "role": "user"
+        }
+      ],
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>\nThe comment identifies a specific weakness in the motivation section: the lack of clarity regarding the advantages and disadvantages of diffusion models compared to GANs, particularly in terms of efficiency. It references a direct quote from the paper and suggests a comparison. However, the feedback is incomplete and lacks depth. While the suggestion to compare efficiency is actionable, it does not specify what dimensions of efficiency (e.g., training time, inference speed, computational resources) should be compared, nor does it explain why this missing comparison undermines the paper's motivation. The authors gain some insight, but the comment does not fully address the need for improvement, leaving room for more detailed guidance. Thus, it aligns with the description of a score of 3: identifies weaknesses or areas for improvement but is incomplete or lacks depth.\n</reasoning>\n<score>3</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "deepseek-v4-pro",
+        "generated_at_utc": "2026-07-22T09:28:04.651731+00:00",
+        "response_id": "f58e2bf2-d066-4d86-ad8e-ae4bcc0cc464",
+        "trajectory_quality_status": "auto_accepted_label_match"
+      }
+    },
+    {
+      "id": "train_4605",
+      "task": "rev_util",
+      "aspect": "helpfulness",
+      "labels": 4,
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "prompt": [
+        {
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else.",
+          "role": "system"
+        },
+        {
+          "content": "[QUERY]: Your task is to write a review comment for a scientific paper. The comment should be useful for the authors to help improving the paper.\n\n\n[CRITERIA]: A helpful review should be actionable, grounded on a specific part of the paper, provide justification or evidence to its claims. Scoring rubric is as follows:\n1: The comment fails to identify meaningful weaknesses or suggest improvements, leaving the authors with no actionable feedback.\n2: The comment identifies a weakness or improvement area but is vague, lacks clarity, or provides minimal guidance, making it only slightly beneficial for the authors.\n3: The comment identifies weaknesses or areas for improvement but is incomplete or lacks depth. While the authors gain some insights, the feedback does not fully address their needs for improving the draft.\n4: The comment provides clear and actionable feedback on weaknesses and areas for improvement, though it could be expanded or refined to be fully comprehensive and impactful.\n5: The comment thoroughly identifies weaknesses and offers detailed, actionable, and constructive suggestions that empower the authors to significantly improve their draft.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nANSWER: Lack of novelty: Adversarial attacks by perturbing text has been done on many NLP models and image-text models. It is nicely summarized in related work of this paper. The only new effort is to take similar ideas and apply it on video-text models.\n\nEVALUATION:\n\n<reasoning>This comment simply recaps a section already addressed in the paper and does not offer constructive guidance or specific suggestions on overcoming the stated issue of lack of novelty. Without actionable advice or an indication of how to differentiate or enhance the work, the comment is not useful to the authors and does not contribute to the paper's improvement, aligning with the evaluation score of 1: The comment is not helpful at all.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nANSWER: I don't think the probabilistic connection is drawn very well. It doesn't seem to be made formally enough to take it as anything more than motivational which is fine, but I would suggest the authors either cement this connection more formally or adjust the language to clarify.\n\nEVALUATION:\n\n<reasoning>The comment highlights a potential issue with the way the probabilistic connection is presented in the paper, indicating it might lack formalism and appear purely motivational. While this could be valuable for the authors, the feedback is not specific enough to be fully actionable. The suggestion to either \"cement this connection more formally\" or \"adjust the language to clarify\" is a start, but it lacks specific guidance or examples that would make it more useful. Therefore, the authors are left with only a vague direction for improvement, making this feedback barely helpful. Therefore, the evaluation score should be 2.</reasoning>\n\n<score>2</score>\n\n<END OF EXAMPLE 2>\n\n\n<START OF EXAMPLE 3>\n\nANSWER: It is not clear if the proposed methodology is specific to bimanual manipulation. Just using robotic manipulation could be more appropriate.\n\nEVALUATION:\n\n<reasoning>The comment identifies a potential issue with the specificity of the proposed methodology, questioning whether it is limited to bimanual manipulation or if it could be generalized to robotic manipulation. This is a relevant point that could help the authors clarify the scope and applicability of their methodology. However, the comment lacks depth and does not provide specific suggestions or guidance on how the authors might address this issue. It raises an important question but does not offer actionable steps for improvement, making it somewhat helpful. Therefore, the comment is evaluated as somewhat helpful, consistent with the evaluation score 3.</reasoning>\n\n<score>3</score>\n\n<END OF EXAMPLE 3>\n\n\n<START OF EXAMPLE 4>\n\nANSWER: The authors need to perform ablation experiments to compare the proposed method with other methods (e.g., TubeR) in terms of the number of learnable parameters and GFLOPs.\n\nEVALUATION:\n\n<reasoning>The review comment provides a clear and actionable suggestion for improvement by recommending the authors perform ablation experiments. It specifies the need to compare the proposed method with other methods, such as TubeR, focusing on the number of learnable parameters and GFLOPs. This feedback is direct and offers a concrete step for the authors to enhance their paper, making it mostly helpful. However, it could be further improved by explaining why these comparisons are important or how they might impact the paper's conclusions, which would elevate it to a highly helpful comment. Therefore, it aligns with a score of 4.</reasoning>\n\n<score>4</score>\n\n<END OF EXAMPLE 4>\n\n\n<START OF EXAMPLE 5>\n\nANSWER: Finally, and similarly to above, i’d like to see an experiment where the image is occluded (half of the image is randomly blacked out). This (a) simulates the irregularity that is often present in neural/behavioral data (e.g. keypoint detection failed for some mice in some frames), and (b) would allow us to inspect the long-range “inference” capacity of the model, as opposed to a nearly-supervised reconstruction task. Again, these should be reasonably easy experiments to run. I’d expect to see all of these experiments included in a final version (unless the authors can convince me otherwise).\n\nEVALUATION:\n\n<reasoning>The comment is highly helpful as it provides a clear and specific suggestion for an additional experiment that could significantly enhance the paper. By proposing an experiment where the image is occluded, the reviewer not only identifies a potential area for improvement but also explains the rationale behind it—simulating irregularities in data and testing the model's inference capacity. This feedback is actionable and constructive, offering the authors a concrete way to strengthen their work. The expectation that these experiments be included unless justified otherwise further emphasizes the importance of this suggestion, making it a valuable contribution to the paper's development.</reasoning>\n\n<score>5</score>\n\n<END OF EXAMPLE 5>\n\n\n[ANSWER]: 4. ln 247, p.6: The similarity with Vovk's work on the fundamental nature of the logarithmic loss is mentioned. However, this similarity is clear to me, as Vovk's result is about the choice of the loss function, instead of the definition of mixability. Please elaborate.",
+          "role": "user"
+        }
+      ],
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>\nThe comment identifies a specific part of the paper (line 247, page 6) and highlights a potential issue: the similarity with Vovk's work might not be clear because Vovk's result concerns the choice of loss function rather than the definition of mixability. The request to elaborate is actionable and provides a concrete direction—the authors need to clarify how their work relates to Vovk's despite this difference. While the comment could be expanded with more detailed suggestions on what aspects to elaborate, it offers clear feedback that directly addresses a point in the paper. This aligns with a score of 4: clear and actionable feedback, though it could be refined for greater comprehensiveness.\n</reasoning>\n<score>4</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "deepseek-v4-pro",
+        "generated_at_utc": "2026-07-22T09:30:47.415116+00:00",
+        "response_id": "dcf80b94-9314-437f-8a01-17ed42630e80",
+        "trajectory_quality_status": "auto_accepted_label_match"
+      }
+    },
+    {
+      "id": "train_4546",
+      "task": "rev_util",
+      "aspect": "helpfulness",
+      "labels": 5,
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "prompt": [
+        {
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else.",
+          "role": "system"
+        },
+        {
+          "content": "[QUERY]: Your task is to write a review comment for a scientific paper. The comment should be useful for the authors to help improving the paper.\n\n\n[CRITERIA]: A helpful review should be actionable, grounded on a specific part of the paper, provide justification or evidence to its claims. Scoring rubric is as follows:\n1: The comment fails to identify meaningful weaknesses or suggest improvements, leaving the authors with no actionable feedback.\n2: The comment identifies a weakness or improvement area but is vague, lacks clarity, or provides minimal guidance, making it only slightly beneficial for the authors.\n3: The comment identifies weaknesses or areas for improvement but is incomplete or lacks depth. While the authors gain some insights, the feedback does not fully address their needs for improving the draft.\n4: The comment provides clear and actionable feedback on weaknesses and areas for improvement, though it could be expanded or refined to be fully comprehensive and impactful.\n5: The comment thoroughly identifies weaknesses and offers detailed, actionable, and constructive suggestions that empower the authors to significantly improve their draft.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nANSWER: Lack of novelty: Adversarial attacks by perturbing text has been done on many NLP models and image-text models. It is nicely summarized in related work of this paper. The only new effort is to take similar ideas and apply it on video-text models.\n\nEVALUATION:\n\n<reasoning>This comment simply recaps a section already addressed in the paper and does not offer constructive guidance or specific suggestions on overcoming the stated issue of lack of novelty. Without actionable advice or an indication of how to differentiate or enhance the work, the comment is not useful to the authors and does not contribute to the paper's improvement, aligning with the evaluation score of 1: The comment is not helpful at all.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nANSWER: I don't think the probabilistic connection is drawn very well. It doesn't seem to be made formally enough to take it as anything more than motivational which is fine, but I would suggest the authors either cement this connection more formally or adjust the language to clarify.\n\nEVALUATION:\n\n<reasoning>The comment highlights a potential issue with the way the probabilistic connection is presented in the paper, indicating it might lack formalism and appear purely motivational. While this could be valuable for the authors, the feedback is not specific enough to be fully actionable. The suggestion to either \"cement this connection more formally\" or \"adjust the language to clarify\" is a start, but it lacks specific guidance or examples that would make it more useful. Therefore, the authors are left with only a vague direction for improvement, making this feedback barely helpful. Therefore, the evaluation score should be 2.</reasoning>\n\n<score>2</score>\n\n<END OF EXAMPLE 2>\n\n\n<START OF EXAMPLE 3>\n\nANSWER: It is not clear if the proposed methodology is specific to bimanual manipulation. Just using robotic manipulation could be more appropriate.\n\nEVALUATION:\n\n<reasoning>The comment identifies a potential issue with the specificity of the proposed methodology, questioning whether it is limited to bimanual manipulation or if it could be generalized to robotic manipulation. This is a relevant point that could help the authors clarify the scope and applicability of their methodology. However, the comment lacks depth and does not provide specific suggestions or guidance on how the authors might address this issue. It raises an important question but does not offer actionable steps for improvement, making it somewhat helpful. Therefore, the comment is evaluated as somewhat helpful, consistent with the evaluation score 3.</reasoning>\n\n<score>3</score>\n\n<END OF EXAMPLE 3>\n\n\n<START OF EXAMPLE 4>\n\nANSWER: The authors need to perform ablation experiments to compare the proposed method with other methods (e.g., TubeR) in terms of the number of learnable parameters and GFLOPs.\n\nEVALUATION:\n\n<reasoning>The review comment provides a clear and actionable suggestion for improvement by recommending the authors perform ablation experiments. It specifies the need to compare the proposed method with other methods, such as TubeR, focusing on the number of learnable parameters and GFLOPs. This feedback is direct and offers a concrete step for the authors to enhance their paper, making it mostly helpful. However, it could be further improved by explaining why these comparisons are important or how they might impact the paper's conclusions, which would elevate it to a highly helpful comment. Therefore, it aligns with a score of 4.</reasoning>\n\n<score>4</score>\n\n<END OF EXAMPLE 4>\n\n\n<START OF EXAMPLE 5>\n\nANSWER: Finally, and similarly to above, i’d like to see an experiment where the image is occluded (half of the image is randomly blacked out). This (a) simulates the irregularity that is often present in neural/behavioral data (e.g. keypoint detection failed for some mice in some frames), and (b) would allow us to inspect the long-range “inference” capacity of the model, as opposed to a nearly-supervised reconstruction task. Again, these should be reasonably easy experiments to run. I’d expect to see all of these experiments included in a final version (unless the authors can convince me otherwise).\n\nEVALUATION:\n\n<reasoning>The comment is highly helpful as it provides a clear and specific suggestion for an additional experiment that could significantly enhance the paper. By proposing an experiment where the image is occluded, the reviewer not only identifies a potential area for improvement but also explains the rationale behind it—simulating irregularities in data and testing the model's inference capacity. This feedback is actionable and constructive, offering the authors a concrete way to strengthen their work. The expectation that these experiments be included unless justified otherwise further emphasizes the importance of this suggestion, making it a valuable contribution to the paper's development.</reasoning>\n\n<score>5</score>\n\n<END OF EXAMPLE 5>\n\n\n[ANSWER]: 1. For comparison with DeiT, can you add DeiT variants with the same number of layers, heads, hidden dimension as CMHSA to do a fair comparison? DeiT with 12 layers performs worse than CMHSA with 6 layers on CIFAR-100 is as expected, thus not a convincing comparison.",
+          "role": "user"
+        }
+      ],
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>\nThe comment identifies a specific weakness in the paper: the comparison with DeiT is unfair because the models have different numbers of layers, heads, and hidden dimensions. It provides clear justification by noting that DeiT with 12 layers performing worse than CMHSA with 6 layers is expected, making the comparison unconvincing. The suggestion to add DeiT variants with matched parameters is actionable and directly addresses the problem. The feedback is grounded, constructive, and would significantly improve the paper's evaluation. While concise, it offers detailed guidance (specifying which hyperparameters to match) and explains the rationale, making it highly helpful. Therefore, it aligns with the criteria for a score of 5.\n</reasoning>\n<score>5</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "deepseek-v4-pro",
+        "generated_at_utc": "2026-07-22T09:33:08.105709+00:00",
+        "response_id": "13a04d87-9c56-4734-af82-66db3875c639",
+        "trajectory_quality_status": "auto_accepted_label_match"
+      }
+    }
+  ]
+}

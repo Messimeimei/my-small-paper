@@ -35,7 +35,7 @@ rw_gen_coherence_4811_distill.jsonl
 
 每个任务保留一份追加式原始蒸馏文件，并由
 [`extract_accepted_distill.js`](extract_accepted_distill.js) 生成四份只包含
-`accepted=true` 记录的派生文件：
+`accepted=true` 记录的双教师派生文件：
 
 1. `*_distill_glm-5.2.jsonl`：全部可接受的 GLM 轨迹；
 2. `*_distill_deepseek-v4-pro.jsonl`：全部可接受的 DeepSeek 轨迹；
@@ -48,7 +48,7 @@ rw_gen_coherence_4811_distill.jsonl
 不同。共识记录额外包含 `consensus_models`、`consensus_teacher_labels` 和
 `consensus_trajectory_teacher` 字段。
 
-重新生成全部三个任务的四份派生数据：
+已有单教师结果的任务只生成对应教师的一份派生文件。重新生成当前全部派生数据：
 
 ```bash
 node train_data/distill_data/extract_accepted_distill.js
@@ -61,8 +61,11 @@ node train_data/distill_data/extract_accepted_distill.js
 | coherence | 3629 | 3625 | 3247 |
 | positioning_check | 2666 | 2693 | 2613 |
 | positioning_type | 944 | 953 | 943 |
+| rev_util / actionability | 1788 | — | — |
 
 `positioning_check` 的两位教师蒸馏均已完成，表中数据已从完整原始蒸馏文件刷新。
+`actionability` 当前只完成 DeepSeek-v4-pro：尝试 4,800 条，接受 1,788 条
+（37.25%）；拒绝包括标签不一致 2,859 条、格式错误 153 条。
 
 ## 按模型续跑
 

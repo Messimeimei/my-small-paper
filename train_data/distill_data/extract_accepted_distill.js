@@ -11,6 +11,12 @@ const sources = [
   "rw_gen_positioning_check_2822_distill.jsonl",
   "rw_gen_positioning_type_954_distill.jsonl",
 ];
+const singleTeacherSources = [
+  {
+    filename: "rev_util_actionability_4800_distill.jsonl",
+    teacher: "deepseek-v4-pro",
+  },
+];
 
 function derivedFilename(sourceFilename, suffix, sampleCount) {
   return sourceFilename.replace(
@@ -122,5 +128,43 @@ for (const sourceFilename of sources) {
       glmConsensus.length,
     ),
     glmConsensus,
+  );
+}
+
+for (const { filename: sourceFilename, teacher } of singleTeacherSources) {
+  const sourcePath = path.join(directory, sourceFilename);
+  const acceptedRows = [];
+  const seenIds = new Set();
+  let latestRunEnd = null;
+  const lines = fs.readFileSync(sourcePath, "utf8").trimEnd().split("\n");
+
+  lines.forEach((line, index) => {
+    const row = JSON.parse(line);
+    if (row.record_type === "run_end" && row.teacher_model === teacher) {
+      latestRunEnd = row;
+      return;
+    }
+    if (row.record_type !== "distillation" || row.teacher_model !== teacher) return;
+    if (!row.accepted) return;
+    if (row.teacher_label !== row.gold_label) {
+      throw new Error(`${sourceFilename}:${index + 1} accepted an incorrect label`);
+    }
+    if (seenIds.has(row.id)) {
+      throw new Error(`${sourceFilename}:${index + 1} duplicates ${teacher}/${row.id}`);
+    }
+    seenIds.add(row.id);
+    acceptedRows.push(row);
+  });
+
+  if (
+    latestRunEnd?.status !== "completed" ||
+    latestRunEnd.remaining_for_model !== 0
+  ) {
+    throw new Error(`${sourceFilename} has no completed ${teacher} run`);
+  }
+
+  writeRows(
+    derivedFilename(sourceFilename, teacher, acceptedRows.length),
+    acceptedRows,
   );
 }

@@ -30,7 +30,7 @@ from trl import SFTConfig, SFTTrainer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SCORE_RE = re.compile(r"<score>\s*([01])\s*</score>", re.I)  # 从生成文本中抽最终 0/1
+SCORE_RE = re.compile(r"<score>\s*(-?\d+)\s*</score>", re.I)
 CHECKPOINT_RE = re.compile(r"checkpoint-(\d+)$")
 REQUIRED_RESUME_FILES = {
     "optimizer.pt",
@@ -124,7 +124,7 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
             label = row.get("label")
             if not sample_id or sample_id in seen_ids:
                 raise ValueError(f"Invalid or duplicate id at {path}:{line_number}")
-            if label not in {0, 1}:
+            if isinstance(label, bool) or not isinstance(label, int):
                 raise ValueError(f"Invalid label at {path}:{line_number}")
             if not isinstance(prompt, list) or not prompt:
                 raise ValueError(f"Invalid prompt at {path}:{line_number}")
@@ -142,10 +142,17 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def validation_counts(rows: list[dict[str, Any]], ratio: float) -> dict[int, int]:
+def score_sets(rows: list[dict[str, Any]]) -> list[int]:
+    """Infer the ordered score set represented by a LoRA dataset."""
+    return sorted({row["label"] for row in rows})
+
+
+def validation_counts(
+    rows: list[dict[str, Any]], labels: list[int], ratio: float
+) -> dict[int, int]:
     """按标签分层，决定验证集每类抽多少条。"""
-    counts = {label: sum(row["label"] == label for row in rows) for label in (0, 1)}
-    target_total = max(2, round(len(rows) * ratio))
+    counts = {label: sum(row["label"] == label for row in rows) for label in labels}
+    target_total = max(len(labels), round(len(rows) * ratio))
     raw = {label: counts[label] * ratio for label in counts}
     selected = {label: math.floor(raw[label]) for label in counts}
     remaining = target_total - sum(selected.values())
@@ -159,6 +166,7 @@ def validation_counts(rows: list[dict[str, Any]], ratio: float) -> dict[int, int
 
 def load_or_create_split(
     rows: list[dict[str, Any]],
+    labels: list[int],
     split_path: Path,
     dataset_hash: str,
     split_seed: int,
@@ -181,11 +189,11 @@ def load_or_create_split(
     rng = random.Random(split_seed)
     per_label = {
         label: [row["id"] for row in rows if row["label"] == label]
-        for label in (0, 1)
+        for label in labels
     }
     for ids in per_label.values():
         rng.shuffle(ids)
-    selected_counts = validation_counts(rows, validation_ratio)
+    selected_counts = validation_counts(rows, labels, validation_ratio)
     validation_ids = {
         sample_id
         for label, ids in per_label.items()
@@ -216,8 +224,10 @@ def split_rows(
     )
 
 
-def label_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
-    return {str(label): sum(row["label"] == label for row in rows) for label in (0, 1)}
+def label_counts(rows: list[dict[str, Any]], labels: list[int]) -> dict[str, int]:
+    return {
+        str(label): sum(row["label"] == label for row in rows) for label in labels
+    }
 
 
 def git_metadata() -> dict[str, Any]:
@@ -276,13 +286,16 @@ def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def classification_metrics(predictions: list[dict[str, Any]]) -> dict[str, Any]:
+def classification_metrics(
+    predictions: list[dict[str, Any]], labels: list[int]
+) -> dict[str, Any]:
     """Accuracy / macro-F1 / 格式有效率 / 混淆矩阵。"""
     total = len(predictions)
-    valid = [row for row in predictions if row["prediction"] in {0, 1}]
+    allowed_scores = set(labels)
+    valid = [row for row in predictions if row["prediction"] in allowed_scores]
     per_class: dict[str, dict[str, float | int]] = {}
     f1_values = []
-    for label in (0, 1):
+    for label in labels:
         tp = sum(row["label"] == label and row["prediction"] == label for row in predictions)
         fp = sum(row["label"] != label and row["prediction"] == label for row in predictions)
         fn = sum(row["label"] == label and row["prediction"] != label for row in predictions)
@@ -302,12 +315,13 @@ def classification_metrics(predictions: list[dict[str, Any]]) -> dict[str, Any]:
                 row["label"] == gold and row["prediction"] == predicted
                 for row in predictions
             )
-            for predicted in (0, 1, None)
+            for predicted in (*labels, None)
         }
-        for gold in (0, 1)
+        for gold in labels
     }
     return {
         "samples": total,
+        "score_sets": labels,
         "accuracy": sum(row["correct"] for row in predictions) / total,
         "macro_f1": sum(f1_values) / len(f1_values),
         "format_valid_rate": len(valid) / total,
@@ -325,6 +339,7 @@ def generate_validation(
     batch_size: int,
     max_length: int,
     max_new_tokens: int,
+    score_sets: list[int],
     logger: logging.Logger | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """用训练模型所在设备做 greedy 生成，并从输出抽取 <score>。"""
@@ -333,6 +348,7 @@ def generate_validation(
     original_padding_side = tokenizer.padding_side
     device = next(model.parameters()).device
     predictions: list[dict[str, Any]] = []
+    allowed_scores = set(score_sets)
     inputs = None
     output_ids = None
     generated = None
@@ -385,6 +401,8 @@ def generate_validation(
             for row, output in zip(batch, outputs, strict=True):
                 scores = SCORE_RE.findall(output)
                 prediction = int(scores[-1]) if scores else None
+                if prediction not in allowed_scores:
+                    prediction = None
                 predictions.append(
                     {
                         "id": row["id"],
@@ -402,7 +420,7 @@ def generate_validation(
                     min(start + batch_size, len(rows)),
                     len(rows),
                 )
-        return classification_metrics(predictions), predictions
+        return classification_metrics(predictions, score_sets), predictions
     finally:
         # Drop the final generation tensors before returning cached memory to CUDA.
         inputs = None
@@ -428,8 +446,10 @@ def build_eval_dataset(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def write_eval_dataset(path: Path, rows: list[dict[str, Any]]) -> None:
-    write_json(path, {"test": build_eval_dataset(rows)})
+def write_eval_dataset(
+    path: Path, rows: list[dict[str, Any]], score_sets: list[int]
+) -> None:
+    write_json(path, {"metadata": {"score_sets": score_sets}, "test": build_eval_dataset(rows)})
 
 
 class GenerativeEvalSFTTrainer(SFTTrainer):
@@ -439,6 +459,7 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         self,
         *args,
         validation_rows: list[dict[str, Any]],
+        score_sets: list[int],
         generation_batch_size: int,
         generation_max_length: int,
         generation_max_new_tokens: int,
@@ -448,6 +469,7 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.validation_rows = validation_rows
+        self.score_sets = score_sets
         self.generation_batch_size = generation_batch_size
         self.generation_max_length = generation_max_length
         self.generation_max_new_tokens = generation_max_new_tokens
@@ -456,7 +478,9 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         self.latest_generation_metrics: dict[str, Any] | None = None
         self.latest_generation_predictions: list[dict[str, Any]] | None = None
         self.validation_dataset_path = self.run_directory / "validation_dataset.json"
-        write_eval_dataset(self.validation_dataset_path, self.validation_rows)
+        write_eval_dataset(
+            self.validation_dataset_path, self.validation_rows, self.score_sets
+        )
 
     def evaluate(self, *args, metric_key_prefix: str = "eval", **kwargs):  # noqa: ANN002
         metrics = super().evaluate(*args, metric_key_prefix=metric_key_prefix, **kwargs)
@@ -467,6 +491,7 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
             batch_size=self.generation_batch_size,
             max_length=self.generation_max_length,
             max_new_tokens=self.generation_max_new_tokens,
+            score_sets=self.score_sets,
             logger=self.logger,
         )
         metric_names = {
@@ -764,8 +789,10 @@ def main() -> None:
     # --- 数据与固定划分 ---
     dataset_hash = sha256_file(dataset_path)
     rows = load_rows(dataset_path)
+    labels = score_sets(rows)
     split = load_or_create_split(
         rows,
+        labels,
         split_path,
         dataset_hash,
         int(config.get("split_seed", 20260720)),
@@ -776,11 +803,15 @@ def main() -> None:
         "dataset": str(dataset_path),
         "dataset_sha256": dataset_hash,
         "split": str(split_path),
-        "all": {"samples": len(rows), "labels": label_counts(rows)},
-        "train": {"samples": len(train_rows), "labels": label_counts(train_rows)},
+        "score_sets": labels,
+        "all": {"samples": len(rows), "labels": label_counts(rows, labels)},
+        "train": {
+            "samples": len(train_rows),
+            "labels": label_counts(train_rows, labels),
+        },
         "validation": {
             "samples": len(validation_rows),
-            "labels": label_counts(validation_rows),
+            "labels": label_counts(validation_rows, labels),
         },
     }
 
@@ -962,6 +993,7 @@ def main() -> None:
             processing_class=tokenizer,
             peft_config=peft_config,
             validation_rows=validation_rows,
+            score_sets=labels,
             generation_batch_size=int(generation.get("batch_size", 1)),
             generation_max_length=int(training.get("max_length", 8192)),
             generation_max_new_tokens=int(generation.get("max_new_tokens", 512)),

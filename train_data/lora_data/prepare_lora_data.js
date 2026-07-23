@@ -12,6 +12,14 @@ const datasetPrefixes = [
   "rw_gen_positioning_check",
   "rw_gen_positioning_type",
 ];
+const singleTeacherDatasets = [
+  {
+    prefix: "rev_util_actionability",
+    suffix: "deepseek-v4-pro",
+    teacherModels: ["deepseek-v4-pro"],
+    trajectoryTeacher: "deepseek-v4-pro",
+  },
+];
 const variants = [
   {
     suffix: "deepseek-v4-pro",
@@ -132,6 +140,26 @@ for (const prefix of datasetPrefixes) {
     }
     writeRows(filename, rows, filename, Buffer.byteLength(content), variant);
   }
+}
+
+for (const dataset of singleTeacherDatasets) {
+  const variant = dataset;
+  const filename = findSourceFilename(dataset.prefix, variant);
+  const sourcePath = path.join(distillDirectory, filename);
+  const content = fs.readFileSync(sourcePath, "utf8");
+  const rows = content
+    .trimEnd()
+    .split("\n")
+    .map((line, index) =>
+      convertRow(JSON.parse(line), filename, index + 1, variant),
+    );
+  const sampleCount = Number(filename.slice(dataset.prefix.length + 1).split("_", 1)[0]);
+  if (!Number.isInteger(sampleCount) || sampleCount !== rows.length) {
+    throw new Error(
+      `${filename} declares ${sampleCount} samples but contains ${rows.length}`,
+    );
+  }
+  writeRows(filename, rows, filename, Buffer.byteLength(content), variant);
 }
 
 const manifestPath = path.join(outputDirectory, "export_manifest.json");

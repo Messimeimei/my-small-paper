@@ -31,6 +31,7 @@ try:
         l1_penalty,
         load_adapter_config,
         load_adapter_state,
+        normalized_config,
         validate_adapter_compatibility,
     )
 except ImportError:  # Direct execution: python MoDE/optimize_factor_mix.py
@@ -40,13 +41,14 @@ except ImportError:  # Direct execution: python MoDE/optimize_factor_mix.py
         l1_penalty,
         load_adapter_config,
         load_adapter_state,
+        normalized_config,
         validate_adapter_compatibility,
     )
 
 
 MODE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = MODE_ROOT.parent
-DEFAULT_CONFIG = MODE_ROOT / "configs" / "factor_mix.yaml"
+DEFAULT_CONFIG = MODE_ROOT / "configs" / "factor_mix-example.yaml"
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,8 +56,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--target",
-        choices=("coherence", "positioning_check", "positioning_type"),
-        help="Override target.aspect from the YAML config.",
+        help=(
+            "Override target.aspect from the YAML config. The target must have a "
+            "matching datasets entry in that config."
+        ),
     )
     parser.add_argument(
         "--shots-per-class",
@@ -82,6 +86,33 @@ def utc_now() -> str:
 
 def compact_utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def expert_set_run_id(experts: Sequence[dict[str, Any]]) -> str:
+    """Return a readable, bounded identifier for the ordered expert set."""
+    names = [str(expert["name"]) for expert in experts]
+    readable_parts = []
+    for name in names:
+        cleaned = "".join(
+            character if character.isascii() and (character.isalnum() or character in "-_")
+            else "-"
+            for character in name
+        ).strip("-_")
+        readable_parts.append((cleaned or "expert")[:24])
+    readable = "--".join(readable_parts)[:80].rstrip("-_")
+    identity = [
+        {
+            "name": str(expert["name"]),
+            "weight_identity": str(
+                expert.get("weight_sha256") or expert.get("adapter", "")
+            ),
+        }
+        for expert in experts
+    ]
+    digest = hashlib.sha256(
+        json.dumps(identity, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:10]
+    return f"n{len(names)}-{readable}-{digest}"
 
 
 def resolve_project_path(value: str | Path) -> Path:
@@ -164,29 +195,18 @@ def set_seed(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-def load_split_manifest(path: Path, target: str, shots_per_class: int) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    try:
-        task = payload["tasks"][target]
-        split = task["splits"][str(shots_per_class)]
-    except (KeyError, TypeError) as error:
-        raise ValueError(
-            f"Manifest {path} has no split for target={target}, "
-            f"shots_per_class={shots_per_class}"
-        ) from error
-    return {"manifest": payload, "task": task, "split": split}
-
-
 def load_calibration_rows(
-    split_path: Path, *, target: str, shots_per_class: int
+    calibration_path: Path, *, target: str, shots_per_class: int
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    payload = json.loads(split_path.read_text(encoding="utf-8"))
+    payload = json.loads(calibration_path.read_text(encoding="utf-8"))
     rows = payload.get("train") if isinstance(payload, dict) else None
     metadata = payload.get("metadata") if isinstance(payload, dict) else None
     if not isinstance(rows, list) or not rows:
-        raise ValueError(f"Calibration file must contain a non-empty train list: {split_path}")
+        raise ValueError(
+            f"Calibration file must contain a non-empty train list: {calibration_path}"
+        )
     if not isinstance(metadata, dict):
-        raise ValueError(f"Calibration file is missing metadata: {split_path}")
+        raise ValueError(f"Calibration file is missing metadata: {calibration_path}")
     if metadata.get("aspect") != target:
         raise ValueError(
             f"Calibration aspect mismatch: expected {target}, got {metadata.get('aspect')}"
@@ -194,26 +214,90 @@ def load_calibration_rows(
     if int(metadata.get("shots_per_class", -1)) != shots_per_class:
         raise ValueError("Calibration shots_per_class does not match the requested split")
 
+    raw_score_sets = metadata.get("score_sets")
+    if raw_score_sets is None:
+        row_score_sets = {
+            tuple(row["score_sets"])
+            for row in rows
+            if isinstance(row, dict) and row.get("score_sets") is not None
+        }
+        if len(row_score_sets) > 1:
+            raise ValueError(
+                f"Calibration rows must share one score_sets definition: {calibration_path}"
+            )
+        if row_score_sets:
+            raw_score_sets = list(next(iter(row_score_sets)))
+        else:
+            try:
+                raw_score_sets = sorted(
+                    {
+                        int(row.get("labels", row.get("label")))
+                        for row in rows
+                        if isinstance(row, dict)
+                    }
+                )
+            except (TypeError, ValueError) as error:
+                raise ValueError(
+                    f"Cannot infer calibration score_sets: {calibration_path}"
+                ) from error
+    if (
+        not isinstance(raw_score_sets, list)
+        or not raw_score_sets
+        or any(
+            isinstance(value, bool) or not isinstance(value, int)
+            for value in raw_score_sets
+        )
+        or len(set(raw_score_sets)) != len(raw_score_sets)
+    ):
+        raise ValueError(f"Invalid calibration score_sets: {raw_score_sets!r}")
+    score_sets = [int(value) for value in raw_score_sets]
+
     seen_ids: set[str] = set()
-    counts = {0: 0, 1: 0}
+    counts = {label: 0 for label in score_sets}
     for index, row in enumerate(rows):
         if not isinstance(row, dict) or not isinstance(row.get("prompt"), list):
-            raise ValueError(f"Invalid calibration row {index} in {split_path}")
+            raise ValueError(f"Invalid calibration row {index} in {calibration_path}")
         sample_id = str(row.get("id", "")).strip()
         if not sample_id or sample_id in seen_ids:
             raise ValueError(f"Missing or duplicate calibration id: {sample_id!r}")
         seen_ids.add(sample_id)
         raw_label = row.get("labels", row.get("label"))
-        if raw_label not in (0, 1, "0", "1"):
+        try:
+            label = int(raw_label)
+        except (TypeError, ValueError):
             raise ValueError(f"Invalid calibration label for {sample_id}: {raw_label!r}")
-        label = int(raw_label)
+        if isinstance(raw_label, bool) or label not in counts:
+            raise ValueError(f"Invalid calibration label for {sample_id}: {raw_label!r}")
+        row_scores = row.get("score_sets")
+        if row_scores is not None and row_scores != score_sets:
+            raise ValueError(
+                f"Calibration row {sample_id} has score_sets {row_scores!r}; "
+                f"expected {score_sets!r}"
+            )
         counts[label] += 1
         if row.get("aspect") != target:
             raise ValueError(f"Calibration row {sample_id} has aspect {row.get('aspect')!r}")
-    if counts != {0: shots_per_class, 1: shots_per_class}:
+        completion = row.get("completion")
+        if (
+            not isinstance(completion, list)
+            or not completion
+            or any(
+                not isinstance(message, dict)
+                or message.get("role") != "assistant"
+                or not isinstance(message.get("content"), str)
+                or not message["content"].strip()
+                for message in completion
+            )
+        ):
+            raise ValueError(
+                f"Calibration row {sample_id} has no valid teacher completion"
+            )
+    expected_counts = {label: shots_per_class for label in score_sets}
+    if counts != expected_counts:
         raise ValueError(
             f"Calibration must contain {shots_per_class} rows per class; got {counts}"
         )
+    metadata["score_sets"] = score_sets
     return rows, metadata
 
 
@@ -222,6 +306,7 @@ def normalized_expert_configs(experts: list[dict[str, Any]]) -> list[dict[str, A
     for expert in experts:
         adapter_path = Path(expert["adapter"])
         config = load_adapter_config(adapter_path)
+        compatibility_config = normalized_config(config)
         run_manifest_path = adapter_path.parent / "manifest.json"
         run_manifest = (
             json.loads(run_manifest_path.read_text(encoding="utf-8"))
@@ -234,14 +319,22 @@ def normalized_expert_configs(experts: list[dict[str, Any]]) -> list[dict[str, A
                 "adapter": str(adapter_path),
                 "source_run_id": run_manifest.get("run_id"),
                 "source_run_status": run_manifest.get("status"),
-                "base_model_name_or_path": config.get("base_model_name_or_path"),
-                "r": config.get("r"),
-                "lora_alpha": config.get("lora_alpha"),
-                "bias": config.get("bias"),
-                "task_type": config.get("task_type"),
-                "target_modules": sorted(config.get("target_modules") or []),
+                **compatibility_config,
                 "weight_sha256": sha256_file(adapter_weight_file(Path(expert["adapter"]))),
             }
+        )
+    hashes = [config["weight_sha256"] for config in configs]
+    duplicate_hashes = sorted(
+        weight_hash for weight_hash in set(hashes) if hashes.count(weight_hash) > 1
+    )
+    if duplicate_hashes:
+        duplicate_names = [
+            [config["name"] for config in configs if config["weight_sha256"] == weight_hash]
+            for weight_hash in duplicate_hashes
+        ]
+        raise ValueError(
+            "Experts must have distinct adapter weights; duplicate groups: "
+            f"{duplicate_names}"
         )
     provenance_fields = {
         "name",
@@ -276,9 +369,9 @@ def resolve_config(args: argparse.Namespace) -> dict[str, Any]:
     if args.optimizer:
         method_config["optimizer"] = args.optimizer
 
-    target = str(target_config.get("aspect", ""))
-    if target not in {"coherence", "positioning_check", "positioning_type"}:
-        raise ValueError(f"Invalid target aspect: {target!r}")
+    target = str(target_config.get("aspect", "")).strip()
+    if not target:
+        raise ValueError("target.aspect must be a non-empty configured dataset name")
     shots_per_class = int(target_config.get("shots_per_class", 0))
     if shots_per_class not in {1, 3, 5}:
         raise ValueError("target.shots_per_class must be one of 1, 3, or 5")
@@ -288,10 +381,11 @@ def resolve_config(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(f"Invalid base model directory: {model_path}")
 
     raw_experts = config.get("experts")
-    if not isinstance(raw_experts, list) or len(raw_experts) != 3:
-        raise ValueError("Config must define exactly three experts")
+    if not isinstance(raw_experts, list) or not raw_experts:
+        raise ValueError("Config must define at least one expert")
     experts: list[dict[str, Any]] = []
     seen_names: set[str] = set()
+    seen_adapters: set[Path] = set()
     for raw_expert in raw_experts:
         if not isinstance(raw_expert, dict):
             raise ValueError("Each expert config must be an object")
@@ -300,18 +394,54 @@ def resolve_config(args: argparse.Namespace) -> dict[str, Any]:
             raise ValueError(f"Missing or duplicate expert name: {name!r}")
         seen_names.add(name)
         adapter = resolve_project_path(raw_expert["adapter"])
+        if adapter in seen_adapters:
+            raise ValueError(f"Duplicate expert adapter path: {adapter}")
+        seen_adapters.add(adapter)
         adapter_weight_file(adapter)
         load_adapter_config(adapter)
         experts.append({"name": name, "adapter": str(adapter)})
 
-    split_manifest_path = resolve_mode_path(config["split_manifest"])
-    split_info = load_split_manifest(split_manifest_path, target, shots_per_class)
-    split_path = resolve_mode_path(split_info["split"]["file"])
-    if sha256_file(split_path) != split_info["split"]["sha256"]:
-        raise ValueError(f"Calibration/test split hash mismatch: {split_path}")
-    calibration_rows, calibration_metadata = load_calibration_rows(
-        split_path, target=target, shots_per_class=shots_per_class
+    datasets = config.get("datasets")
+    if not isinstance(datasets, dict) or target not in datasets:
+        available = sorted(datasets) if isinstance(datasets, dict) else []
+        raise ValueError(
+            f"Config has no datasets entry for target={target!r}; available={available}"
+        )
+    dataset_config = datasets[target]
+    if not isinstance(dataset_config, dict):
+        raise ValueError(f"datasets.{target} must be a YAML object")
+    calibration_files = dataset_config.get("calibration_files")
+    if not isinstance(calibration_files, dict):
+        raise ValueError(f"datasets.{target}.calibration_files must be a YAML object")
+    calibration_value = calibration_files.get(
+        shots_per_class, calibration_files.get(str(shots_per_class))
     )
+    if not calibration_value:
+        raise ValueError(
+            f"datasets.{target}.calibration_files has no {shots_per_class}-shot path"
+        )
+    calibration_path = resolve_mode_path(calibration_value)
+    test_value = dataset_config.get("test_file")
+    if not test_value:
+        raise ValueError(f"datasets.{target}.test_file is required")
+    test_path = resolve_mode_path(test_value)
+    if not calibration_path.is_file():
+        raise ValueError(f"Calibration file does not exist: {calibration_path}")
+    if not test_path.is_file():
+        raise ValueError(f"Final test file does not exist: {test_path}")
+    calibration_rows, calibration_metadata = load_calibration_rows(
+        calibration_path, target=target, shots_per_class=shots_per_class
+    )
+    metadata_test_file = calibration_metadata.get("test_file")
+    if metadata_test_file and resolve_mode_path(metadata_test_file) != test_path:
+        raise ValueError(
+            f"Configured test file {test_path} differs from calibration metadata "
+            f"{metadata_test_file}"
+        )
+    metadata_test_sha256 = calibration_metadata.get("test_sha256")
+    test_sha256 = sha256_file(test_path)
+    if metadata_test_sha256 and metadata_test_sha256 != test_sha256:
+        raise ValueError(f"Final test file hash mismatch: {test_path}")
 
     optimizer = str(method_config.get("optimizer", "nevergrad_ngopt"))
     if optimizer not in {"nevergrad_ngopt", "scipy_differential_evolution"}:
@@ -329,19 +459,26 @@ def resolve_config(args: argparse.Namespace) -> dict[str, Any]:
     resolved["config_path"] = str(config_path)
     resolved["model_name_or_path"] = str(model_path)
     resolved["experts"] = experts
-    resolved["split_manifest"] = str(split_manifest_path)
     resolved["target"].update(
         {
             "aspect": target,
             "shots_per_class": shots_per_class,
-            "split_file": str(split_path),
-            "split_sha256": sha256_file(split_path),
+            "calibration_file": str(calibration_path),
+            "calibration_sha256": sha256_file(calibration_path),
             "calibration_ids": [str(row["id"]) for row in calibration_rows],
-            "held_out_test_count": int(calibration_metadata["test_count"]),
+            "test_file": str(test_path),
+            "test_sha256": sha256_file(test_path),
+            "test_count": int(calibration_metadata["test_count"]),
         }
     )
     resolved["method"]["optimizer"] = optimizer
     resolved["method"]["weight_bounds"] = [float(bounds[0]), float(bounds[1])]
+    objective_max_length = dataset_config.get("objective_max_length")
+    if objective_max_length is not None:
+        objective_max_length = int(objective_max_length)
+        if objective_max_length < 1:
+            raise ValueError(f"datasets.{target}.objective_max_length must be positive")
+        resolved.setdefault("objective", {})["max_length"] = objective_max_length
     resolved["output_root"] = str(resolve_mode_path(config.get("output_root", "outputs")))
     resolved["seed"] = int(config.get("seed", 42))
     return resolved
@@ -355,7 +492,8 @@ def prepare_score_records(
     tokenizer: Any,
     rows: list[dict[str, Any]],
     *,
-    completion_template: str,
+    completion_source: str,
+    completion_template: str | None,
     max_length: int,
     enable_thinking: bool,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -371,12 +509,28 @@ def prepare_score_records(
     completion_lengths = []
     for row in rows:
         label = int(row.get("labels", row.get("label")))
-        completion = completion_template.format(label=label)
+        if completion_source == "teacher_completion":
+            completion_messages = row.get("completion")
+            if not isinstance(completion_messages, list) or not completion_messages:
+                raise ValueError(f"Calibration row {row['id']} has no completion")
+        elif completion_source == "canonical_score":
+            if not completion_template:
+                raise ValueError(
+                    "completion_template is required for canonical_score"
+                )
+            completion_messages = [
+                {
+                    "role": "assistant",
+                    "content": completion_template.format(label=label),
+                }
+            ]
+        else:
+            raise ValueError(f"Unsupported completion_source: {completion_source}")
         prompt_ids = tokenizer.apply_chat_template(
             row["prompt"], tokenize=True, add_generation_prompt=True, **template_kwargs
         )
         full_ids = tokenizer.apply_chat_template(
-            row["prompt"] + [{"role": "assistant", "content": completion}],
+            row["prompt"] + completion_messages,
             tokenize=True,
             add_generation_prompt=False,
             **template_kwargs,
@@ -405,6 +559,7 @@ def prepare_score_records(
             }
         )
     return records, {
+        "completion_source": completion_source,
         "completion_template": completion_template,
         "min_total_tokens": min(lengths),
         "max_total_tokens": max(lengths),
@@ -499,11 +654,11 @@ class FactorMixObjective:
             )
             completion_token_count += targets.numel()
 
-        score_completion_ce = ce_sum / completion_token_count
+        completion_ce = ce_sum / completion_token_count
         regularization = l1_penalty(
             numeric_weights, alpha=self.l1_alpha, reduction=self.l1_reduction
         )
-        objective = score_completion_ce + regularization
+        objective = completion_ce + regularization
         self.evaluation_count += 1
         record = {
             "evaluation": self.evaluation_count,
@@ -512,7 +667,7 @@ class FactorMixObjective:
                 name: weight
                 for name, weight in zip(self.expert_names, numeric_weights, strict=True)
             },
-            "score_completion_ce": score_completion_ce,
+            "completion_ce": completion_ce,
             "completion_token_count": completion_token_count,
             "l1_penalty": regularization,
             "objective": objective,
@@ -523,7 +678,7 @@ class FactorMixObjective:
             self.best_record = record
         print(
             f"eval={self.evaluation_count} stage={stage} objective={objective:.8f} "
-            f"ce={score_completion_ce:.8f} weights={numeric_weights}",
+            f"ce={completion_ce:.8f} weights={numeric_weights}",
             flush=True,
         )
         return record
@@ -554,28 +709,55 @@ def optimize_nevergrad(
     )
     parametrization.random_state.seed(seed)
     optimizer = ng.optimizers.NGOpt(parametrization=parametrization, budget=budget)
-    recommendation = optimizer.minimize(objective, verbosity=1)
+    anchors = optimizer_anchors(dimensions)
+    if budget < len(anchors):
+        raise ValueError(
+            f"Nevergrad budget {budget} is smaller than the {len(anchors)} required "
+            "order-neutral anchor evaluations"
+        )
+
+    # NGOpt's default deterministic trajectory starts with coordinate 0 and can
+    # spend a small budget around that first good point without trying the other
+    # one-hot experts. Tell it every symmetric baseline before free search.
+    for anchor in anchors:
+        optimizer.suggest(anchor)
+        candidate = optimizer.ask()
+        optimizer.tell(candidate, objective(candidate.value))
+    while optimizer.num_ask < budget:
+        candidate = optimizer.ask()
+        optimizer.tell(candidate, objective(candidate.value))
+
+    recommendation = optimizer.provide_recommendation()
     weights = [float(value) for value in recommendation.value]
     return weights, {
         "name": "nevergrad_ngopt",
         "nevergrad_version": package_version("nevergrad"),
         "budget": budget,
+        "anchor_evaluations": [anchor.tolist() for anchor in anchors],
+        "anchor_count": len(anchors),
+        "free_search_evaluations": budget - len(anchors),
         "reported_num_ask": int(getattr(optimizer, "num_ask", budget)),
         "reported_num_tell": int(getattr(optimizer, "num_tell", budget)),
     }
+
+
+def optimizer_anchors(dimensions: int) -> list[np.ndarray]:
+    if dimensions <= 0:
+        raise ValueError("dimensions must be positive")
+    anchors = [np.zeros(dimensions)]
+    anchors.extend(np.eye(dimensions))
+    anchors.append(np.full(dimensions, 1.0 / dimensions))
+    return anchors
 
 
 def initial_scipy_population(
     *, dimensions: int, population_size: int, lower: float, upper: float, seed: int
 ) -> np.ndarray:
     minimum = max(5, dimensions + 2)
-    if population_size < minimum:
-        raise ValueError(f"SciPy population_size must be >= {minimum}")
+    population_size = max(population_size, minimum)
     rng = np.random.default_rng(seed)
     population = rng.uniform(lower, upper, size=(population_size, dimensions))
-    anchors = [np.zeros(dimensions)]
-    anchors.extend(np.eye(dimensions))
-    anchors.append(np.full(dimensions, 1.0 / dimensions))
+    anchors = optimizer_anchors(dimensions)
     for index, anchor in enumerate(anchors[:population_size]):
         population[index] = np.clip(anchor, lower, upper)
     return population
@@ -600,6 +782,7 @@ def optimize_scipy(
         upper=upper,
         seed=seed,
     )
+    actual_population_size = int(population.shape[0])
     result = differential_evolution(
         objective,
         bounds=[(lower, upper)] * dimensions,
@@ -616,7 +799,8 @@ def optimize_scipy(
         "name": "scipy_differential_evolution",
         "scipy_version": package_version("scipy"),
         "generations": generations,
-        "population_size": population_size,
+        "population_size": actual_population_size,
+        "requested_population_size": population_size,
         "nfev": int(result.nfev),
         "nit": int(result.nit),
         "message": str(result.message),
@@ -685,9 +869,9 @@ def main() -> None:
     resolved = resolve_config(args)
     target = resolved["target"]["aspect"]
     shots_per_class = int(resolved["target"]["shots_per_class"])
-    split_path = Path(resolved["target"]["split_file"])
+    calibration_path = Path(resolved["target"]["calibration_file"])
     calibration_rows, calibration_metadata = load_calibration_rows(
-        split_path, target=target, shots_per_class=shots_per_class
+        calibration_path, target=target, shots_per_class=shots_per_class
     )
     expert_configs = normalized_expert_configs(resolved["experts"])
 
@@ -695,9 +879,12 @@ def main() -> None:
         "target": target,
         "shots_per_class": shots_per_class,
         "calibration_count": len(calibration_rows),
-        "held_out_test_count": calibration_metadata["test_count"],
-        "split_file": str(split_path),
+        "test_file": resolved["target"]["test_file"],
+        "test_count": calibration_metadata["test_count"],
+        "calibration_file": str(calibration_path),
         "optimizer": resolved["method"]["optimizer"],
+        "expert_count": len(expert_configs),
+        "expert_set_id": expert_set_run_id(expert_configs),
         "experts": expert_configs,
     }
     if args.dry_run:
@@ -707,8 +894,10 @@ def main() -> None:
     seed = int(resolved["seed"])
     set_seed(seed)
     output_root = Path(resolved["output_root"])
+    expert_set_id = expert_set_run_id(expert_configs)
     run_id = (
-        f"factor_mix__target-{target}__k{shots_per_class}pc__seed{seed}__"
+        f"factor_mix__experts-{expert_set_id}__target-{target}__"
+        f"k{shots_per_class}pc__seed{seed}__"
         f"{compact_utc_now()}"
     )
     run_dir = output_root / run_id
@@ -719,6 +908,9 @@ def main() -> None:
         "status": "running",
         "started_at_utc": utc_now(),
         "command": list(sys.argv),
+        "expert_count": len(expert_configs),
+        "expert_set_id": expert_set_id,
+        "experts": expert_configs,
         "git": git_metadata(),
         "versions": {
             name: package_version(name)
@@ -727,11 +919,10 @@ def main() -> None:
         "implementation": {
             "mixing": "factor_mix: A_hat=sum(w_i*A_i), B_hat=sum(w_i*B_i)",
             "effective_delta": "(alpha/r) * B_hat @ A_hat",
-            "objective": "completion-only token CE over canonical <score>label</score> targets",
+            "objective": "completion-only token CE over validation teacher CoT targets",
             "objective_scope": (
-                "Pipeline pilot: calibration has no gold reasoning although the prompt "
-                "requires reasoning before score; this objective is not equivalent to "
-                "full-CoT CE or free-generation accuracy."
+                "Calibration is selected by the configured target and includes teacher "
+                "reasoning plus score completion. Final test remains independent."
             ),
             "no_model_gradients": True,
             "paper_difference": (
@@ -798,19 +989,18 @@ def main() -> None:
         score_records, token_summary = prepare_score_records(
             tokenizer,
             calibration_rows,
-            completion_template=str(
-                objective_config.get(
-                    "completion_template", "<score>{label}</score>"
-                )
+            completion_source=str(
+                objective_config.get("completion_source", "teacher_completion")
             ),
+            completion_template=objective_config.get("completion_template"),
             max_length=int(objective_config.get("max_length", 8192)),
             enable_thinking=bool(objective_config.get("enable_thinking", False)),
         )
         write_json(
             run_dir / "calibration_summary.json",
             {
-                "split_file": str(split_path),
-                "split_sha256": sha256_file(split_path),
+                "calibration_file": str(calibration_path),
+                "calibration_sha256": sha256_file(calibration_path),
                 "sample_ids": [row["id"] for row in score_records],
                 "labels": [row["label"] for row in score_records],
                 "tokenization": token_summary,
@@ -865,7 +1055,7 @@ def main() -> None:
             "weights": best_weights,
             "weights_by_expert": final_record["weights"],
             "final_objective": final_record["objective"],
-            "final_score_completion_ce": final_record["score_completion_ce"],
+            "final_completion_ce": final_record["completion_ce"],
             "final_l1_penalty": final_record["l1_penalty"],
             "optimizer": optimizer_summary,
             "optimizer_recommendation_weights": recommendation_weights,
@@ -885,8 +1075,8 @@ def main() -> None:
             "source_adapters": expert_configs,
             "objective": resolved["objective"],
             "method_config": method,
-            "split_file": str(split_path),
-            "split_sha256": sha256_file(split_path),
+            "calibration_file": str(calibration_path),
+            "calibration_sha256": sha256_file(calibration_path),
             "run_id": run_id,
         }
         adapter_summary = save_mixed_adapter(
@@ -902,7 +1092,8 @@ def main() -> None:
             "target": target,
             "shots_per_class": shots_per_class,
             "calibration_samples": len(calibration_rows),
-            "held_out_test_samples": calibration_metadata["test_count"],
+            "test_file": resolved["target"]["test_file"],
+            "test_samples": calibration_metadata["test_count"],
             "compatibility": compatibility,
             "tokenization": token_summary,
             "best": best_payload,

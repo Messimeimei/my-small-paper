@@ -181,14 +181,16 @@ def create_completion(
     messages: list[dict[str, str]],
     max_tokens: int,
     progress_interval: float,
+    temperature: float = 0.0,
+    top_p: float = 1.0,
 ) -> dict[str, Any]:
     def request() -> Any:
         return client.chat.completions.create(
             model=model,
             messages=messages,
             n=1,
-            temperature=0,
-            top_p=1,
+            temperature=temperature,
+            top_p=top_p,
             max_tokens=max_tokens,
         )
 
@@ -260,12 +262,20 @@ def create_completion_with_rate_limit_retry(
     max_retries: int,
     initial_backoff: float,
     max_backoff: float,
+    temperature: float = 0.0,
+    top_p: float = 1.0,
 ) -> dict[str, Any]:
     retry_count = 0
     while True:
         try:
             return create_completion(
-                client, model, messages, max_tokens, progress_interval
+                client,
+                model,
+                messages,
+                max_tokens,
+                progress_interval,
+                temperature=temperature,
+                top_p=top_p,
             )
         except RateLimitError as error:
             if max_retries >= 0 and retry_count >= max_retries:

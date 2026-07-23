@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Evaluate a base model + LoRA adapter/checkpoint with vLLM.
+"""Evaluate a base model (optionally + LoRA adapter/checkpoint) with vLLM.
 
-vLLM 0.8.4 + cachetools>=6 breaks enable_lora in spawned workers, so this script
-merges the adapter into a cached full model and loads that with plain vLLM.
+Without --adapter (or with none/None/NONE), loads the base model directly.
+With an adapter path, merges LoRA into a cached full model then loads with
+plain vLLM (vLLM 0.8.4 + cachetools>=6 breaks enable_lora in spawned workers).
 """
 
 from __future__ import annotations
@@ -16,7 +17,6 @@ import random
 import re
 import shutil
 import time
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,11 +27,12 @@ from vllm import LLM, SamplingParams
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SCORE_RE = re.compile(r"<score>\s*([01])\s*</score>", re.I)
+SCORE_RE = re.compile(r"<score>\s*(-?\d+)\s*</score>", re.I)
 DEFAULT_DATASET = (
     PROJECT_ROOT / "rw_gen__coherence__exact_user_deduplicated__test__n1046.json"
 )
-DEFAULT_MERGE_CACHE = PROJECT_ROOT / "eval_data" / ".merged_models"
+DEFAULT_MERGE_CACHE = PROJECT_ROOT / "merged"
+DEFAULT_MERGE_RETENTION_DAYS = 2
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,15 +41,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model_name", required=True, help="Base model path.")
     parser.add_argument(
         "--adapter",
-        required=True,
-        help="LoRA adapter/ or checkpoints/checkpoint-* path.",
+        default=None,
+        help=(
+            "LoRA adapter/ or checkpoints/checkpoint-* path. "
+            "Omit, or pass none/None/NONE, to evaluate the base model only."
+        ),
     )
     parser.add_argument("--dataset_file", default=str(DEFAULT_DATASET))
     parser.add_argument("--output_path", required=True)
     parser.add_argument("--max_model_len", type=int, default=8192)
     parser.add_argument("--max_tokens", type=int, default=512)
-    parser.add_argument("--temp", type=float, default=0.0)
-    parser.add_argument("--top_p", type=float, default=1.0)
+    parser.add_argument(
+        "--temp",
+        type=float,
+        default=0.0,
+        help="Must be 0: every rollout uses greedy decoding.",
+    )
+    parser.add_argument(
+        "--top_p",
+        type=float,
+        default=1.0,
+        help="Must be 1.0: nucleus sampling is disabled for greedy decoding.",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--rollout", type=int, default=1)
     parser.add_argument(
@@ -66,7 +80,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--merge_cache",
         default=str(DEFAULT_MERGE_CACHE),
-        help="Directory for cached merged models.",
+        help="Directory for cached merged models (default: <project>/merged).",
+    )
+    parser.add_argument(
+        "--merge_retention_days",
+        type=float,
+        default=DEFAULT_MERGE_RETENTION_DAYS,
+        help=(
+            "Delete cached merged models older than this many days "
+            f"(default: {DEFAULT_MERGE_RETENTION_DAYS}). "
+            "Set <=0 to disable cleanup."
+        ),
     )
     parser.add_argument(
         "--enable_thinking",
@@ -83,6 +107,16 @@ def utc_now() -> str:
 def resolve_path(value: str | Path) -> Path:
     path = Path(value).expanduser()
     return path.resolve() if path.is_absolute() else (PROJECT_ROOT / path).resolve()
+
+
+def normalize_adapter(value: str | None) -> Path | None:
+    """Return adapter path, or None for base-only eval (omit / none / None / NONE)."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() == "none":
+        return None
+    return resolve_path(text)
 
 
 def set_seed(seed: int) -> None:
@@ -103,21 +137,85 @@ def write_json(path: Path, payload: Any) -> None:
     temporary.replace(path)
 
 
-def parse_label(row: dict[str, Any], index: int) -> int:
+def normalize_score_sets(raw: Any, *, context: str) -> list[int]:
+    if (
+        not isinstance(raw, list)
+        or not raw
+        or any(isinstance(value, bool) or not isinstance(value, int) for value in raw)
+        or len(set(raw)) != len(raw)
+    ):
+        raise ValueError(f"{context} has invalid score_sets: {raw!r}")
+    return list(raw)
+
+
+def parse_label(row: dict[str, Any], index: int, allowed_scores: set[int]) -> int:
     raw = row.get("labels", row.get("label"))
-    if raw in (0, 1, "0", "1"):
-        return int(raw)
-    raise ValueError(f"Row {index} has invalid label: {raw!r}")
+    try:
+        label = int(raw)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"Row {index} has invalid label: {raw!r}") from error
+    if isinstance(raw, bool) or label not in allowed_scores:
+        raise ValueError(
+            f"Row {index} label {raw!r} is outside score_sets "
+            f"{sorted(allowed_scores)}"
+        )
+    return label
 
 
-def load_rows(path: Path) -> list[dict[str, Any]]:
+def load_rows(path: Path) -> tuple[list[dict[str, Any]], list[int]]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, dict):
         rows = payload.get("test", payload.get("train"))
+        metadata = payload.get("metadata")
     else:
         rows = payload
+        metadata = None
     if not isinstance(rows, list) or not rows:
         raise ValueError(f"{path} must contain a non-empty test/train list.")
+
+    declared_score_sets: list[tuple[str, list[int]]] = []
+    if isinstance(metadata, dict) and metadata.get("score_sets") is not None:
+        declared_score_sets.append(
+            (
+                "metadata",
+                normalize_score_sets(
+                    metadata["score_sets"], context=f"{path} metadata"
+                ),
+            )
+        )
+    for index, row in enumerate(rows):
+        if isinstance(row, dict) and row.get("score_sets") is not None:
+            declared_score_sets.append(
+                (
+                    f"row {index}",
+                    normalize_score_sets(
+                        row["score_sets"], context=f"{path} row {index}"
+                    ),
+                )
+            )
+    if declared_score_sets:
+        score_sets = declared_score_sets[0][1]
+        for location, values in declared_score_sets[1:]:
+            if values != score_sets:
+                raise ValueError(
+                    f"{path} {location} score_sets {values} does not match "
+                    f"{score_sets}"
+                )
+    else:
+        observed_labels = []
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise ValueError(f"Row {index} is not an object.")
+            raw = row.get("labels", row.get("label"))
+            try:
+                label = int(raw)
+            except (TypeError, ValueError) as error:
+                raise ValueError(f"Row {index} has invalid label: {raw!r}") from error
+            if isinstance(raw, bool):
+                raise ValueError(f"Row {index} has invalid label: {raw!r}")
+            observed_labels.append(label)
+        score_sets = sorted(set(observed_labels))
+    allowed_scores = set(score_sets)
 
     cleaned: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -131,25 +229,31 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
         cleaned.append(
             {
                 "id": sample_id,
-                "label": parse_label(row, index),
+                "label": parse_label(row, index, allowed_scores),
                 "prompt": row["prompt"],
                 "task": row.get("task"),
                 "aspect": row.get("aspect"),
             }
         )
-    return cleaned
+    return cleaned, score_sets
 
 
-def extract_score(text: str) -> int | None:
+def extract_score(text: str, allowed_scores: set[int]) -> int | None:
     matches = SCORE_RE.findall(text or "")
-    return int(matches[-1]) if matches else None
+    if not matches:
+        return None
+    score = int(matches[-1])
+    return score if score in allowed_scores else None
 
 
-def classification_metrics(predictions: list[dict[str, Any]]) -> dict[str, Any]:
+def classification_metrics(
+    predictions: list[dict[str, Any]], score_sets: list[int]
+) -> dict[str, Any]:
     total = len(predictions)
+    allowed_scores = set(score_sets)
     f1_values = []
     per_class: dict[str, dict[str, float | int]] = {}
-    for label in (0, 1):
+    for label in score_sets:
         tp = sum(row["label"] == label and row["prediction"] == label for row in predictions)
         fp = sum(row["label"] != label and row["prediction"] == label for row in predictions)
         fn = sum(row["label"] == label and row["prediction"] != label for row in predictions)
@@ -165,20 +269,52 @@ def classification_metrics(predictions: list[dict[str, Any]]) -> dict[str, Any]:
         }
     return {
         "samples": total,
+        "score_sets": score_sets,
         "accuracy": sum(bool(row["correct"]) for row in predictions) / total,
         "macro_f1": sum(f1_values) / len(f1_values),
-        "format_valid_rate": sum(row["prediction"] in {0, 1} for row in predictions)
+        "format_valid_rate": sum(
+            row["prediction"] in allowed_scores for row in predictions
+        )
         / total,
         "per_class": per_class,
     }
 
 
-def majority_vote(scores: list[int | None]) -> int | None:
-    valid = [score for score in scores if score in {0, 1}]
-    if not valid:
-        return None
-    counts = Counter(valid)
-    return sorted(counts.items(), key=lambda item: (-item[1], -item[0]))[0][0]
+def mean_rollout_metrics(
+    rollout_metrics: list[dict[str, Any]], score_sets: list[int]
+) -> dict[str, Any]:
+    """Average metrics across rollouts instead of voting across predictions."""
+
+    def summarize(values: list[float | int]) -> tuple[float, float]:
+        array = np.asarray(values, dtype=float)
+        return float(array.mean()), float(array.std())
+
+    aggregate: dict[str, Any] = {
+        "samples": rollout_metrics[0]["samples"],
+        "score_sets": score_sets,
+        "per_class": {},
+    }
+    for metric in ("accuracy", "macro_f1", "format_valid_rate"):
+        mean, std = summarize([rollout[metric] for rollout in rollout_metrics])
+        aggregate[metric] = mean
+        aggregate[f"{metric}_std"] = std
+
+    for label in score_sets:
+        label_key = str(label)
+        per_class = {
+            "support": rollout_metrics[0]["per_class"][label_key]["support"]
+        }
+        for metric in ("precision", "recall", "f1"):
+            mean, std = summarize(
+                [
+                    rollout["per_class"][label_key][metric]
+                    for rollout in rollout_metrics
+                ]
+            )
+            per_class[metric] = mean
+            per_class[f"{metric}_std"] = std
+        aggregate["per_class"][label_key] = per_class
+    return aggregate
 
 
 def chat_template_supports_thinking(tokenizer) -> bool:
@@ -237,11 +373,51 @@ def merged_model_dir(base: Path, adapter: Path, cache_root: Path) -> Path:
     return cache_root / digest.hexdigest()[:16]
 
 
+def _merged_entry_mtime(path: Path) -> float:
+    marker = path / ".ok"
+    if marker.is_file():
+        return marker.stat().st_mtime
+    return path.stat().st_mtime
+
+
+def cleanup_merged_cache(cache_root: Path, retention_days: float) -> None:
+    """Remove stale merged-model directories under cache_root."""
+    if retention_days <= 0 or not cache_root.is_dir():
+        return
+    cutoff = time.time() - retention_days * 86400
+    removed = 0
+    for child in cache_root.iterdir():
+        if not child.is_dir():
+            continue
+        try:
+            mtime = _merged_entry_mtime(child)
+        except OSError:
+            continue
+        if mtime >= cutoff:
+            continue
+        try:
+            shutil.rmtree(child)
+            removed += 1
+            print(f"removed stale merged cache: {child}", flush=True)
+        except OSError as exc:
+            print(f"failed to remove {child}: {exc}", flush=True)
+    if removed:
+        print(
+            f"cleaned {removed} merged cache entr"
+            f"{'y' if removed == 1 else 'ies'} "
+            f"older than {retention_days:g} day(s)",
+            flush=True,
+        )
+
+
 def ensure_merged_model(base: Path, adapter: Path, cache_root: Path) -> Path:
     """Merge LoRA on CPU and cache the full weights for plain vLLM loading."""
     out = merged_model_dir(base, adapter, cache_root)
     marker = out / ".ok"
     if marker.is_file() and (out / "config.json").is_file():
+        # Refresh mtime so recently reused caches survive retention cleanup.
+        now = utc_now()
+        marker.write_text(now + "\n", encoding="utf-8")
         print(f"reusing merged model: {out}", flush=True)
         return out
 
@@ -292,8 +468,6 @@ def init_vllm(
     *,
     max_model_len: int,
     max_tokens: int,
-    temp: float,
-    top_p: float,
     seed: int,
     gpu_memory_utilization: float,
 ) -> tuple[LLM, SamplingParams]:
@@ -307,8 +481,8 @@ def init_vllm(
     )
     sampling_params = SamplingParams(
         max_tokens=max_tokens,
-        temperature=temp,
-        top_p=top_p,
+        temperature=0.0,
+        top_p=1.0,
         seed=seed,
     )
     return llm, sampling_params
@@ -318,6 +492,7 @@ def run_rollout(
     llm: LLM,
     sampling_params: SamplingParams,
     rows: list[dict[str, Any]],
+    score_sets: list[int],
     args: argparse.Namespace,
     rollout_index: int,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -330,19 +505,17 @@ def run_rollout(
         )
 
     predictions: list[dict[str, Any]] = []
+    allowed_scores = set(score_sets)
     started = time.perf_counter()
     for start in range(0, len(rows), args.batch_size):
         batch = rows[start : start + args.batch_size]
         texts = format_prompts(
             tokenizer, [row["prompt"] for row in batch], args.enable_thinking
         )
-        if args.temp > 0:
-            sampling_params.seed = args.seed + rollout_index * 100_000 + start
-
         completions = llm.generate(texts, sampling_params, use_tqdm=False)
         outputs = [completion.outputs[0].text for completion in completions]
         for row, output in zip(batch, outputs, strict=True):
-            prediction = extract_score(output)
+            prediction = extract_score(output, allowed_scores)
             predictions.append(
                 {
                     "id": row["id"],
@@ -358,7 +531,7 @@ def run_rollout(
         print(f"[rollout {rollout_index}] {done}/{len(rows)}", flush=True)
 
     elapsed = time.perf_counter() - started
-    metrics = classification_metrics(predictions)
+    metrics = classification_metrics(predictions, score_sets)
     metrics["elapsed_sec"] = round(elapsed, 3)
     metrics["samples_per_sec"] = round(len(rows) / max(elapsed, 1e-9), 3)
     return predictions, metrics
@@ -371,34 +544,46 @@ def main() -> None:
         raise SystemExit("--rollout must be >= 1")
     if args.batch_size < 1:
         raise SystemExit("--batch_size must be >= 1")
+    if args.temp != 0:
+        raise SystemExit("--temp must be 0 because rollout evaluation uses greedy decoding")
+    if args.top_p != 1:
+        raise SystemExit("--top_p must be 1.0 because rollout evaluation is greedy")
     if not 0 < args.gpu_memory_utilization <= 1:
         raise SystemExit("--gpu_memory_utilization must be in (0, 1]")
 
     model_name = resolve_path(args.model_name)
-    adapter = resolve_path(args.adapter)
+    adapter = normalize_adapter(args.adapter)
     dataset_file = resolve_path(args.dataset_file)
     merge_cache = resolve_path(args.merge_cache)
     out_dir = resolve_path(args.output_path) / args.exp_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    adapter_weight_file(adapter)
     set_seed(args.seed)
-    rows = load_rows(dataset_file)
-    merged_path = ensure_merged_model(model_name, adapter, merge_cache)
+    rows, score_sets = load_rows(dataset_file)
+    cleanup_merged_cache(merge_cache, args.merge_retention_days)
+    if adapter is None:
+        model_path = model_name
+        backend = "vllm-base"
+        print(
+            f"backend={backend} samples={len(rows)} base={model_name} adapter=None",
+            flush=True,
+        )
+    else:
+        adapter_weight_file(adapter)
+        model_path = ensure_merged_model(model_name, adapter, merge_cache)
+        backend = "vllm-merged"
+        print(
+            f"backend={backend} samples={len(rows)} base={model_name} "
+            f"adapter={adapter} merged={model_path}",
+            flush=True,
+        )
+
     llm, sampling_params = init_vllm(
-        merged_path,
+        model_path,
         max_model_len=args.max_model_len,
         max_tokens=args.max_tokens,
-        temp=args.temp,
-        top_p=args.top_p,
         seed=args.seed,
         gpu_memory_utilization=args.gpu_memory_utilization,
-    )
-
-    print(
-        f"backend=vllm-merged samples={len(rows)} base={model_name} "
-        f"adapter={adapter} merged={merged_path}",
-        flush=True,
     )
 
     rollout_metrics = []
@@ -408,6 +593,7 @@ def main() -> None:
             llm,
             sampling_params,
             rows,
+            score_sets,
             args,
             rollout_index=rollout_index,
         )
@@ -421,42 +607,45 @@ def main() -> None:
             flush=True,
         )
 
-    aggregate: list[dict[str, Any]] = []
+    prediction_records: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
         scores = [preds[index]["prediction"] for preds in rollout_predictions]
         outputs = [preds[index]["output"] for preds in rollout_predictions]
-        prediction = majority_vote(scores)
-        aggregate.append(
+        correct = [score == row["label"] for score in scores]
+        prediction_records.append(
             {
                 "id": row["id"],
                 "label": row["label"],
-                "prediction": prediction,
-                "correct": prediction == row["label"],
                 "rollout_predictions": scores,
+                "rollout_correct": correct,
+                "mean_correct": sum(correct) / len(correct),
                 "outputs": outputs,
                 "task": row.get("task"),
                 "aspect": row.get("aspect"),
             }
         )
-    aggregate_metrics = classification_metrics(aggregate)
+    aggregate_metrics = mean_rollout_metrics(rollout_metrics, score_sets)
 
     summary = {
         "exp_name": args.exp_name,
-        "backend": "vllm-merged",
+        "backend": backend,
         "model_name": str(model_name),
-        "adapter": str(adapter),
-        "merged_model": str(merged_path),
+        "adapter": str(adapter) if adapter is not None else None,
+        "merged_model": str(model_path) if adapter is not None else None,
         "dataset_file": str(dataset_file),
+        "score_sets": score_sets,
         "seed": args.seed,
         "rollout": args.rollout,
-        "temp": args.temp,
-        "top_p": args.top_p,
+        "decoding": "greedy",
+        "temp": 0.0,
+        "top_p": 1.0,
         "max_model_len": args.max_model_len,
         "max_tokens": args.max_tokens,
         "batch_size": args.batch_size,
         "gpu_memory_utilization": args.gpu_memory_utilization,
         "enable_thinking": args.enable_thinking,
         "finished_at_utc": utc_now(),
+        "aggregation": "mean_over_rollouts",
         "aggregate": aggregate_metrics,
         "rollouts": rollout_metrics,
     }
@@ -464,13 +653,16 @@ def main() -> None:
 
     prediction_path = out_dir / "predictions.jsonl"
     with prediction_path.open("w", encoding="utf-8") as handle:
-        for row in aggregate:
+        for row in prediction_records:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     print(
-        f"[done] acc={aggregate_metrics['accuracy']:.4f} "
-        f"macro_f1={aggregate_metrics['macro_f1']:.4f} "
+        f"[done] acc={aggregate_metrics['accuracy']:.4f}"
+        f"+/-{aggregate_metrics['accuracy_std']:.4f} "
+        f"macro_f1={aggregate_metrics['macro_f1']:.4f}"
+        f"+/-{aggregate_metrics['macro_f1_std']:.4f} "
         f"valid={aggregate_metrics['format_valid_rate']:.4f}"
+        f"+/-{aggregate_metrics['format_valid_rate_std']:.4f}"
     )
     print(f"wrote {out_dir / 'metrics.json'}")
     print(f"wrote {prediction_path}")

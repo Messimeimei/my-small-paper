@@ -17,6 +17,8 @@ GPU，不启动额外推理进程。
 ```
 
 首次运行会创建固定的 train/validation ID 划分。后续配置和训练 seed 共用该文件。
+`training/configs/rev_util_actionability.yaml` 使用同一入口训练 1–5 分五分类专家；
+训练脚本会从 LoRA 数据推断分值集合，并据此完成分层划分和生成式验证。
 
 ## 2. 从头训练
 

@@ -12,20 +12,28 @@ CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python
   --rollout 1 \
   --batch_size 64
 
+// 搜索命令
+CUDA_VISIBLE_DEVICES=2 \
+/data01/public/yangxin/.conda/envs/small-paper/bin/python \
+  MoDE/optimize_factor_mix.py \
+  --target grounding_specificity \
+  --shots-per-class 5
+
+
 // LoRA adapter / checkpoint 评测（vLLM + LoRA；多一个 --adapter）
-CUDA_VISIBLE_DEVICES=0 /data01/public/yangxin/.conda/envs/small-paper/bin/python \
+CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python \
   /data01/public/yangxin/small-paper/training/evaluate.py \
-  --exp_name rw_gen_coherence_glm-5.2_lora_ckp408 \
+  --exp_name actionability#finetune \
   --model_name /data01/public/yangxin/small-paper/model/Qwen3-4B \
-  --adapter /data01/public/yangxin/small-paper/train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_glm-5.2__seed42__20260720T131544Z/checkpoints/checkpoint-408 \
-  --dataset_file /data01/public/yangxin/small-paper/test_data/prompted_rw_gen_coherence_data.json \
-  --output_path /data01/public/yangxin/small-paper/eval_data/eval_outputs \
+  --adapter /data01/public/yangxin/small-paper/train_outputs/rev_util_actionability/rev_util_actionability#qwen3_4b#distill_deepseek-v4-pro__seed42__20260723T013245Z/adapter \
+  --dataset_file /data01/public/yangxin/small-paper/MoDE/data/actionability/clean_test1000.json \
+  --output_path /data01/public/yangxin/small-paper/MoDE/eval_outputs \
   --max_model_len 8192 \
   --max_tokens 512 \
   --temp 0 \
   --top_p 1.0 \
   --seed 42 \
-  --rollout 1 \
+  --rollout 5 \
   --batch_size 64 \
   --gpu_memory_utilization 0.9
 

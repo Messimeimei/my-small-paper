@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "schema_version": 1,
+    "purpose": "mode_unseen_task_api_teacher_calibration",
+    "task": "unseen_task",
+    "aspect": "revision_correctness",
+    "score_sets": [
+      0,
+      1
+    ],
+    "shots_per_class": 1,
+    "calibration_count": 2,
+    "calibration_label_counts": {
+      "0": 1,
+      "1": 1
+    },
+    "selected_ids_by_label": {
+      "0": [
+        "revision_correctness_2897"
+      ],
+      "1": [
+        "revision_correctness_3066"
+      ]
+    },
+    "selection_seed": 42,
+    "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",
+    "completion_source": "historical_eval_or_api_teacher_cot_gold_label_agreement",
+    "teacher_model": "deepseek-v4-pro",
+    "source_file": "test_data/prompted_revision_data.json",
+    "source_sha256": "b5970d0558c63930ce4a75e61535cf412e8a8cf2c758806c24e311a0fe2667e1",
+    "test_file": "data/revision_correctness/clean_test3026.json",
+    "test_sha256": "a917f9a296ce32effd6d566669e4746085fcef100809139e5c7413cbc46b1590",
+    "test_count": 3026
+  },
+  "train": [
+    {
+      "task": "unseen_task",
+      "aspect": "revision_correctness",
+      "labels": 0,
+      "score_sets": [
+        0,
+        1
+      ],
+      "prompt": [
+        {
+          "role": "system",
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else."
+        },
+        {
+          "role": "user",
+          "content": "[QUERY]: Your task is to revise a scientific text according to given an instruction. The revised text should be in a better state after applying the instructions.\n\n\n[CRITERIA]: The revised text should be a good quality revision proposition that should replace the original paragraph in the scientific article. Scoring rubric is as follows.\n0: The revision is not a better version that can replace the original paragraph in the scientific article.\n1: The revision is a better version that should replace the original paragraph in the scientific article.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nORIGINAL TEXT: SuperWeights, which are linear combination of templates which get reused by multiple layers . These SuperWeights capture a single operation on the input features ( e.g ., edge or texture detectors), and are themselves generated via a weighted combination of one or more templates of trainable parameters held by Weight Templates. Thus, to generate the weights for a single layer, we must first construct SuperWeights from the trainable parameters held by Weight Templates (discussed in Section 3.1), and then concatenate together all SuperWeights used by the layer to create its final weights (process illustrated in center-right column of Figure 2).\n\nINSTRUCTION: Make the first half of the paragraph shorter by merging the two sentences and removing the details about how superweights are generated.\n\nANSWER: SuperWeights, linear combinations of templates reused by multiple layers, capture a single operation on input features (e.g., edge or texture detectors). Generated via weighted combinations of trainable parameters held by Weight Templates, they are then concatenated to create a layer's final weights.\n\nEVALUATION:\n\n<reasoning>The instruction asks to make the first half shorter by merging the two sentences and *removing the details about how SuperWeights are generated*. The provided answer does merge the sentences and shortens the text, but it still includes the generation detail (“Generated via weighted combinations of trainable parameters held by Weight Templates”), which the instruction explicitly requests to remove. Because the revision does not fully follow the instruction and retains disallowed details, it is not an improved replacement for the scientific article. Therefore, the evaluation score should be 0.</reasoning>\n\n<score>0</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nORIGINAL TEXT: SuperWeights, which are linear combination of templates which get reused by multiple layers . These SuperWeights capture a single operation on the input features ( e.g ., edge or texture detectors), and are themselves generated via a weighted combination of one or more templates of trainable parameters held by Weight Templates. Thus, to generate the weights for a single layer, we must first construct SuperWeights from the trainable parameters held by Weight Templates (discussed in Section 3.1), and then concatenate together all SuperWeights used by the layer to create its final weights (process illustrated in center-right column of Figure 2).\n\nINSTRUCTION: Make the first half of the paragraph shorter by merging the two sentences and removing the details about how superweights are generated.\n\nANSWER: SuperWeights, which are linear combinations of templates, capture a single operation on the input features (e.g., edge or texture detectors). Thus, to generate the weights for a single layer, we must first construct SuperWeights from the trainable parameters held by Weight Templates (discussed in Section 3.1), and then concatenate together all SuperWeights used by the layer to create its final weights (process illustrated in center-right column of Figure 2).\n\nEVALUATION:\n\n<reasoning>The instruction requires merging the first two sentences and removing details about how SuperWeights are generated. The revision successfully merges the sentences into one concise sentence describing what SuperWeights are and what they capture. It also removes the explicit description of their generation process. The remainder of the paragraph is kept intact and coherent. Overall, the revision is cleaner, follows the instruction, and is suitable to replace the original scientific text. Therefore, the evaluation score should be 1.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 2>\n\n\n[ORIGINAL TEXT]: Figure 6 shows a schematic of the task. In experiment 1, we strictly set the starting position of the trial. In experiment 2, we did not set the starting position of the trial as a condition. The starting area was a rectangle, and the trials started by simply clicking an area once. Except for this change, the task was the same as  in experiment 1.\n\n[INSTRUCTION]: Make sentence 2 shorter.\n\n[ANSWER]: Except for this change, the task was the same as in experiment 1."
+        }
+      ],
+      "id": "revision_correctness_2897",
+      "source_task": "revision_eval",
+      "source_aspect": "correctness",
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>The instruction was to make sentence 2 shorter. The original sentence 2 is: \"In experiment 2, we did not set the starting position of the trial as a condition. The starting area was a rectangle, and the trials started by simply clicking an area once.\" The answer provided is: \"Except for this change, the task was the same as in experiment 1.\" This answer does not address the instruction to shorten sentence 2, but instead provides a separate sentence that is not part of the original text. Therefore, the revision does not properly follow the instruction and does not replace the original paragraph in a way that improves it. The evaluation score should be 0.</reasoning>\n\n<score>0</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "historical:revision_qwen3_4b",
+        "generated_at_utc": "2026-07-22T11:12:05.790437+00:00",
+        "response_id": null,
+        "trajectory_quality_status": "imported_eval_output_gold_label_match"
+      }
+    },
+    {
+      "task": "unseen_task",
+      "aspect": "revision_correctness",
+      "labels": 1,
+      "score_sets": [
+        0,
+        1
+      ],
+      "prompt": [
+        {
+          "role": "system",
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else."
+        },
+        {
+          "role": "user",
+          "content": "[QUERY]: Your task is to revise a scientific text according to given an instruction. The revised text should be in a better state after applying the instructions.\n\n\n[CRITERIA]: The revised text should be a good quality revision proposition that should replace the original paragraph in the scientific article. Scoring rubric is as follows.\n0: The revision is not a better version that can replace the original paragraph in the scientific article.\n1: The revision is a better version that should replace the original paragraph in the scientific article.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nORIGINAL TEXT: SuperWeights, which are linear combination of templates which get reused by multiple layers . These SuperWeights capture a single operation on the input features ( e.g ., edge or texture detectors), and are themselves generated via a weighted combination of one or more templates of trainable parameters held by Weight Templates. Thus, to generate the weights for a single layer, we must first construct SuperWeights from the trainable parameters held by Weight Templates (discussed in Section 3.1), and then concatenate together all SuperWeights used by the layer to create its final weights (process illustrated in center-right column of Figure 2).\n\nINSTRUCTION: Make the first half of the paragraph shorter by merging the two sentences and removing the details about how superweights are generated.\n\nANSWER: SuperWeights, linear combinations of templates reused by multiple layers, capture a single operation on input features (e.g., edge or texture detectors). Generated via weighted combinations of trainable parameters held by Weight Templates, they are then concatenated to create a layer's final weights.\n\nEVALUATION:\n\n<reasoning>The instruction asks to make the first half shorter by merging the two sentences and *removing the details about how SuperWeights are generated*. The provided answer does merge the sentences and shortens the text, but it still includes the generation detail (“Generated via weighted combinations of trainable parameters held by Weight Templates”), which the instruction explicitly requests to remove. Because the revision does not fully follow the instruction and retains disallowed details, it is not an improved replacement for the scientific article. Therefore, the evaluation score should be 0.</reasoning>\n\n<score>0</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nORIGINAL TEXT: SuperWeights, which are linear combination of templates which get reused by multiple layers . These SuperWeights capture a single operation on the input features ( e.g ., edge or texture detectors), and are themselves generated via a weighted combination of one or more templates of trainable parameters held by Weight Templates. Thus, to generate the weights for a single layer, we must first construct SuperWeights from the trainable parameters held by Weight Templates (discussed in Section 3.1), and then concatenate together all SuperWeights used by the layer to create its final weights (process illustrated in center-right column of Figure 2).\n\nINSTRUCTION: Make the first half of the paragraph shorter by merging the two sentences and removing the details about how superweights are generated.\n\nANSWER: SuperWeights, which are linear combinations of templates, capture a single operation on the input features (e.g., edge or texture detectors). Thus, to generate the weights for a single layer, we must first construct SuperWeights from the trainable parameters held by Weight Templates (discussed in Section 3.1), and then concatenate together all SuperWeights used by the layer to create its final weights (process illustrated in center-right column of Figure 2).\n\nEVALUATION:\n\n<reasoning>The instruction requires merging the first two sentences and removing details about how SuperWeights are generated. The revision successfully merges the sentences into one concise sentence describing what SuperWeights are and what they capture. It also removes the explicit description of their generation process. The remainder of the paragraph is kept intact and coherent. Overall, the revision is cleaner, follows the instruction, and is suitable to replace the original scientific text. Therefore, the evaluation score should be 1.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 2>\n\n\n[ORIGINAL TEXT]: This issue stems mainly from the mass preservation constraint. Specifically, units acting as outliers at a mini-batch level would be forced to be transported by this marginal constraint, as depicted in Figure 1. It hinders the transport of normal units andmakes the group discrepancy vulnerable to the sampling effect. Such issue would be exacerbated by the small batch size.\n\n[INSTRUCTION]: Rewrite this paragraph to make it more easily readable.\n\n[ANSWER]: This issue arises primarily from the mass preservation constraint. Specifically, units that act as outliers at the mini-batch level are forced to be transported by this marginal constraint, as illustrated in Figure 1. As a result, the transport of normal units is hindered, making the group discrepancy susceptible to the sampling effect. Furthermore, this issue is exacerbated by the small batch size."
+        }
+      ],
+      "id": "revision_correctness_3066",
+      "source_task": "revision_eval",
+      "source_aspect": "correctness",
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>The instruction asks to rewrite the paragraph to improve readability. The revised answer achieves this by replacing some complex phrasing with simpler alternatives (\"arises primarily\" instead of \"stems mainly,\" \"are forced to be transported\" instead of \"would be forced to be transported,\" \"susceptible to\" instead of \"vulnerable to\"). The sentence structure is also slightly improved for clarity. The revised paragraph is easier to understand and flows more smoothly than the original. Therefore, the evaluation score should be 1.</reasoning>\n<score>1</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "historical:revision_gemma3_4b_it",
+        "generated_at_utc": "2026-07-22T11:12:02.828874+00:00",
+        "response_id": null,
+        "trajectory_quality_status": "imported_eval_output_gold_label_match"
+      }
+    }
+  ]
+}

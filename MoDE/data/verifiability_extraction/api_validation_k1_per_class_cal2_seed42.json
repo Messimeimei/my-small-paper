@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "schema_version": 1,
+    "purpose": "mode_unseen_task_api_teacher_calibration",
+    "task": "rev_util",
+    "aspect": "verifiability_extraction",
+    "score_sets": [
+      0,
+      1
+    ],
+    "shots_per_class": 1,
+    "calibration_count": 2,
+    "calibration_label_counts": {
+      "0": 1,
+      "1": 1
+    },
+    "selected_ids_by_label": {
+      "0": [
+        "train_1271"
+      ],
+      "1": [
+        "train_4019"
+      ]
+    },
+    "selection_seed": 42,
+    "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",
+    "completion_source": "api_teacher_cot_gold_label_agreement",
+    "teacher_model": "deepseek-v4-pro",
+    "candidate_source_file": "train_data/cleaned_data/rev_util_verifiability_extraction_4800.json",
+    "candidate_source_sha256": "e09f1778158e8f037d7c3f52fa9be6b5e406f8575ad9441c9217ff08b9c1bbd1",
+    "test_file": "data/verifiability_extraction/clean_test1000.json",
+    "test_sha256": "72bdde0b2ce8ea6e3664161276ddf20d6f908eb0da8ee7626fb18602f21349bd",
+    "test_count": 1000
+  },
+  "train": [
+    {
+      "id": "train_1271",
+      "task": "rev_util",
+      "aspect": "verifiability_extraction",
+      "labels": 0,
+      "score_sets": [
+        0,
+        1
+      ],
+      "prompt": [
+        {
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else.",
+          "role": "system"
+        },
+        {
+          "content": "[QUERY]: Your task is to write a review comment for a scientific paper. The comment should contain claims, opinions, or suggestions that require justification.\n\n\n[CRITERIA]: A statement is considered a claim if it includes any of the following: subjective statements, suggestions or requests for changes, judgments about sections of the paper, deductions or inferred observations, and any statement where evidence or justification is required to support the claim. A statement is considered a normal (non-claim) statement if it meets these criteria: It does not contain an opinion, claim, or suggestion but consists solely of factual, descriptive content, it indicates the existence or absence of something without suggesting changes, it makes general statements about the paper that do not express an opinion, it consists of objective, factual statements that do not require verification, it includes requests for clarification or general questions, it presents logical statements or directly inferable information. Scoring rubric is as follows:\n0: If the text consists solely of normal statements.\n1: If the text contains claims, opinions.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nANSWER: You mention that dataset X is used frequently in this domain, but there is no reference supporting this statement. Could you add one?\n\nEVALUATION:\n\n<reasoning>The comment points out the lack of a reference and suggests adding one but does not assert a subjective claim requiring verification. Since it is a factual observation with a request, the evaluation score should be 0.</reasoning>\n\n<score>0</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nANSWER: Lack of novelty:- Adversarial attacks by perturbing text has been done on many NLP models and image-text models. It is nicely summarized in related work of this paper. The only new effort is to take similar ideas and apply it on video-text models.\n\nEVALUATION:\n\n<reasoning>The comment claims a \"lack of novelty\" regarding adversarial attacks, referencing the related work section. While it provides a logical basis, additional references would strengthen it, making the claim mostly verifiable. As it is a claim, it evaluation score should be 1.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 2>\n\n\n[ANSWER]: * If the benefit is actually prioritizing learning on examples with less irreducible uncertainty, might other frameworks besides PU be appropriate as baselines? (e.g., noise-aware losses) * How does the use of the PU loss impact calibration? Uncertainty estimation is important for downstream use cases of AI text detectors.",
+          "role": "user"
+        }
+      ],
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>\nThe answer consists of two questions: one proposing consideration of alternative baselines under a condition, and another asking about the impact on calibration, followed by a factual observation about uncertainty estimation. These are requests for clarification or general questions, not subjective claims, suggestions for changes, or judgments requiring verification. The text is entirely normal statements.\n</reasoning>\n<score>0</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "deepseek-v4-pro",
+        "generated_at_utc": "2026-07-22T09:48:56.507877+00:00",
+        "response_id": "cdbf5bad-36c0-4e7c-a3bb-c88da48177b6",
+        "trajectory_quality_status": "auto_accepted_label_match"
+      }
+    },
+    {
+      "id": "train_4019",
+      "task": "rev_util",
+      "aspect": "verifiability_extraction",
+      "labels": 1,
+      "score_sets": [
+        0,
+        1
+      ],
+      "prompt": [
+        {
+          "content": "You are an evaluator of expert-domain scientific writing. You will get a query-answer pair along with criteria explaining the specific evaluation aspect and the scoring rubric. You should evaluate whether the answer satisfy the query based on the given criteria. In addition, examples demonstrating how the evaluation should be performed will be provided. First output your reasoning enclosed between <reasoning> and </reasoning>. Then, output your score enclosed between <score> and </score>. Inside <score> provide only the numeric score and nothing else.",
+          "role": "system"
+        },
+        {
+          "content": "[QUERY]: Your task is to write a review comment for a scientific paper. The comment should contain claims, opinions, or suggestions that require justification.\n\n\n[CRITERIA]: A statement is considered a claim if it includes any of the following: subjective statements, suggestions or requests for changes, judgments about sections of the paper, deductions or inferred observations, and any statement where evidence or justification is required to support the claim. A statement is considered a normal (non-claim) statement if it meets these criteria: It does not contain an opinion, claim, or suggestion but consists solely of factual, descriptive content, it indicates the existence or absence of something without suggesting changes, it makes general statements about the paper that do not express an opinion, it consists of objective, factual statements that do not require verification, it includes requests for clarification or general questions, it presents logical statements or directly inferable information. Scoring rubric is as follows:\n0: If the text consists solely of normal statements.\n1: If the text contains claims, opinions.\n\n\n[EXAMPLES]:\n\n<START OF EXAMPLE 1>\n\nANSWER: You mention that dataset X is used frequently in this domain, but there is no reference supporting this statement. Could you add one?\n\nEVALUATION:\n\n<reasoning>The comment points out the lack of a reference and suggests adding one but does not assert a subjective claim requiring verification. Since it is a factual observation with a request, the evaluation score should be 0.</reasoning>\n\n<score>0</score>\n\n<END OF EXAMPLE 1>\n\n\n<START OF EXAMPLE 2>\n\nANSWER: Lack of novelty:- Adversarial attacks by perturbing text has been done on many NLP models and image-text models. It is nicely summarized in related work of this paper. The only new effort is to take similar ideas and apply it on video-text models.\n\nEVALUATION:\n\n<reasoning>The comment claims a \"lack of novelty\" regarding adversarial attacks, referencing the related work section. While it provides a logical basis, additional references would strengthen it, making the claim mostly verifiable. As it is a claim, it evaluation score should be 1.</reasoning>\n\n<score>1</score>\n\n<END OF EXAMPLE 2>\n\n\n[ANSWER]: 1) training a model without HCM with the same level of corruption introduced as the other models.",
+          "role": "user"
+        }
+      ],
+      "completion": [
+        {
+          "role": "assistant",
+          "content": "<reasoning>\nThe answer suggests a specific action (\"training a model without HCM...\") which is a request for a change. This constitutes a claim requiring justification, as it implies a recommendation that the paper's methodology should be extended or compared differently.\n</reasoning>\n<score>1</score>"
+        }
+      ],
+      "mode_teacher": {
+        "model": "deepseek-v4-pro",
+        "generated_at_utc": "2026-07-22T09:49:34.691374+00:00",
+        "response_id": "2a441a20-2691-4e99-92bb-0b60e6ebbbd9",
+        "trajectory_quality_status": "auto_accepted_label_match"
+      }
+    }
+  ]
+}

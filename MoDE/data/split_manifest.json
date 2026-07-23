@@ -1,6 +1,7 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "selection": {
+    "source": "lora_training_validation_split",
     "strategy": "nested_sha256_rank_per_class",
     "seed": 42,
     "shots_per_class": [
@@ -8,347 +9,1339 @@
       3,
       5
     ],
-    "duplicate_prompt_policy": "exclude_duplicate_groups_from_calibration_and_keep_first_in_test",
-    "training_overlap_policy": "remove_all_exact_prompt_matches"
+    "calibration_policy": "exclude exact prompt overlaps with gradient-train and final-test",
+    "test_policy": "independent of k; remove gradient-train overlaps and duplicate prompts"
   },
   "tasks": {
     "coherence": {
-      "source_file": "test_data/prompted_rw_gen_coherence_data.json",
-      "source_sha256": "0c5597e29f128382036b09abbb1c08c5cc99144cb0f2b3175e7db93ace2cbff2",
-      "source_train_count": 0,
-      "source_test_count": 1048,
-      "source_test_label_counts": {
-        "0": 524,
-        "1": 524
-      },
-      "training_source_file": "train_data/lora_data/rw_gen_coherence_3629_distill_deepseek-v4-pro.jsonl",
-      "training_source_sha256": "c47de930c4420aa492ec75d77ef8a54408746e9d7d43b66ad8877654176e3221",
-      "training_source_count": 3629,
-      "excluded_duplicate_prompt_groups": [
-        [
-          "coherence_0177",
-          "coherence_0350"
+      "task": "rw_gen",
+      "aspect": "coherence",
+      "score_sets": [
+        0,
+        1
+      ],
+      "calibration_source_kind": "lora_training_validation_split",
+      "selection": {
+        "strategy": "nested_sha256_rank_per_class",
+        "seed": 42,
+        "shots_per_class": [
+          1,
+          3,
+          5
         ],
-        [
-          "coherence_0300",
+        "calibration_policy": "exclude exact prompt overlaps with gradient-train and final-test",
+        "test_policy": "independent of k; remove gradient-train overlaps and duplicate prompts"
+      },
+      "dataset_file": "train_data/lora_data/rw_gen_coherence_3629_distill_deepseek-v4-pro.jsonl",
+      "dataset_sha256": "c47de930c4420aa492ec75d77ef8a54408746e9d7d43b66ad8877654176e3221",
+      "dataset_count": 3629,
+      "split_file": "train_data/lora_data/splits/rw_gen_coherence_deepseek-v4-pro_seed20260720.json",
+      "split_sha256": "157f9ffa875a4baf977e051aed6d5fdf97f1e57786835aab598967605f17594a",
+      "split_seed": 20260720,
+      "validation_ratio": 0.1,
+      "gradient_train_count": 3266,
+      "validation_count": 363,
+      "validation_label_counts": {
+        "0": 197,
+        "1": 166
+      },
+      "eligible_validation_count": 363,
+      "eligible_validation_label_counts": {
+        "0": 197,
+        "1": 166
+      },
+      "validation_train_overlap_groups": [],
+      "validation_test_overlap_groups": [],
+      "validation_duplicate_prompt_groups": [],
+      "excluded_validation_ids": [],
+      "test_source_file": "test_data/prompted_rw_gen_coherence_data.json",
+      "test_source_sha256": "0c5597e29f128382036b09abbb1c08c5cc99144cb0f2b3175e7db93ace2cbff2",
+      "source_test_count": 1048,
+      "clean_test": {
+        "file": "data/coherence/clean_test1046.json",
+        "sha256": "badc778b3f31a9e0142f4c06faed954c78e9d26f3a8bb2f21e08e5e60be218a7",
+        "test_count": 1046,
+        "test_label_counts": {
+          "0": 523,
+          "1": 523
+        },
+        "reused_existing_file": false,
+        "removed_training_overlap_ids": [],
+        "removed_duplicate_test_ids": [
+          "coherence_0350",
           "coherence_0762"
         ]
-      ],
-      "training_overlap_groups": [],
-      "removed_training_overlap_ids": [],
-      "removed_duplicate_test_ids": [
-        "coherence_0350",
-        "coherence_0762"
-      ],
-      "clean_pool_count": 1046,
-      "clean_pool_label_counts": {
-        "0": 523,
-        "1": 523
       },
       "splits": {
         "1": {
-          "file": "data/rw_gen_coherence_k1_per_class_cal2_test1044_seed42.json",
-          "sha256": "49de29d9e043c4799f627984c20efc6597d73fa24903f578c5dcad920d432449",
+          "file": "data/coherence/validation_k1_per_class_cal2_seed42.json",
+          "sha256": "e2a644a8f0d6c6a0dd975eb5e46973bee9375272369f7f1d5fcff364b6a1b249",
           "calibration_count": 2,
           "calibration_label_counts": {
             "0": 1,
             "1": 1
           },
-          "test_count": 1044,
-          "test_label_counts": {
-            "0": 522,
-            "1": 522
-          },
           "selected_ids_by_label": {
             "0": [
-              "coherence_0407"
+              "train_1902"
             ],
             "1": [
-              "coherence_0439"
+              "train_0172"
             ]
-          }
+          },
+          "test_file": "data/coherence/clean_test1046.json",
+          "test_sha256": "badc778b3f31a9e0142f4c06faed954c78e9d26f3a8bb2f21e08e5e60be218a7",
+          "test_count": 1046
         },
         "3": {
-          "file": "data/rw_gen_coherence_k3_per_class_cal6_test1040_seed42.json",
-          "sha256": "452c4eb40e1130d1f8133f91e3259f0838482207afaa32b178704d5592a17a99",
+          "file": "data/coherence/validation_k3_per_class_cal6_seed42.json",
+          "sha256": "e337152142ac6f5b08b11a36f61919d46947cb24e47cc20f1d8b09a4f54947b3",
           "calibration_count": 6,
           "calibration_label_counts": {
             "0": 3,
             "1": 3
           },
-          "test_count": 1040,
-          "test_label_counts": {
-            "0": 520,
-            "1": 520
-          },
           "selected_ids_by_label": {
             "0": [
-              "coherence_0407",
-              "coherence_0949",
-              "coherence_0899"
+              "train_1902",
+              "train_0982",
+              "train_0030"
             ],
             "1": [
-              "coherence_0439",
-              "coherence_0079",
-              "coherence_0685"
+              "train_0172",
+              "train_4760",
+              "train_1317"
             ]
-          }
+          },
+          "test_file": "data/coherence/clean_test1046.json",
+          "test_sha256": "badc778b3f31a9e0142f4c06faed954c78e9d26f3a8bb2f21e08e5e60be218a7",
+          "test_count": 1046
         },
         "5": {
-          "file": "data/rw_gen_coherence_k5_per_class_cal10_test1036_seed42.json",
-          "sha256": "a2ca5b193d7811916c7894fe2105e945e6411eb63c86dc95af8bcedfc68aabb5",
+          "file": "data/coherence/validation_k5_per_class_cal10_seed42.json",
+          "sha256": "a433664965dc3e9bd6b179cfcba715ae9bfee8fd9f200c63f01605440e1a4d39",
           "calibration_count": 10,
           "calibration_label_counts": {
             "0": 5,
             "1": 5
           },
-          "test_count": 1036,
-          "test_label_counts": {
-            "0": 518,
-            "1": 518
-          },
           "selected_ids_by_label": {
             "0": [
-              "coherence_0407",
-              "coherence_0949",
-              "coherence_0899",
-              "coherence_0990",
-              "coherence_0527"
+              "train_1902",
+              "train_0982",
+              "train_0030",
+              "train_0564",
+              "train_2190"
             ],
             "1": [
-              "coherence_0439",
-              "coherence_0079",
-              "coherence_0685",
-              "coherence_0650",
-              "coherence_0999"
+              "train_0172",
+              "train_4760",
+              "train_1317",
+              "train_1984",
+              "train_0220"
             ]
-          }
+          },
+          "test_file": "data/coherence/clean_test1046.json",
+          "test_sha256": "badc778b3f31a9e0142f4c06faed954c78e9d26f3a8bb2f21e08e5e60be218a7",
+          "test_count": 1046
         }
       }
     },
     "positioning_check": {
-      "source_file": "test_data/prompted_rw_gen_positioning_check_data.json",
-      "source_sha256": "3fb9cd08a42d19f454a6fac50de11c3a7ac82a13495fbba16dc812e894fb2c45",
-      "source_train_count": 0,
-      "source_test_count": 605,
-      "source_test_label_counts": {
-        "0": 343,
-        "1": 262
-      },
-      "training_source_file": "train_data/lora_data/rw_gen_positioning_check_2666_distill_deepseek-v4-pro.jsonl",
-      "training_source_sha256": "0c94fa1ce189c0eb7420fb44bc932eb7c1a81fafca448b994dd50d443ba1f822",
-      "training_source_count": 2666,
-      "excluded_duplicate_prompt_groups": [
-        [
-          "positioning_check_0178",
-          "positioning_check_0602"
-        ]
+      "task": "rw_gen",
+      "aspect": "positioning_check",
+      "score_sets": [
+        0,
+        1
       ],
-      "training_overlap_groups": [
+      "calibration_source_kind": "lora_training_validation_split",
+      "selection": {
+        "strategy": "nested_sha256_rank_per_class",
+        "seed": 42,
+        "shots_per_class": [
+          1,
+          3,
+          5
+        ],
+        "calibration_policy": "exclude exact prompt overlaps with gradient-train and final-test",
+        "test_policy": "independent of k; remove gradient-train overlaps and duplicate prompts"
+      },
+      "dataset_file": "train_data/lora_data/rw_gen_positioning_check_2666_distill_deepseek-v4-pro.jsonl",
+      "dataset_sha256": "0c94fa1ce189c0eb7420fb44bc932eb7c1a81fafca448b994dd50d443ba1f822",
+      "dataset_count": 2666,
+      "split_file": "train_data/lora_data/splits/rw_gen_positioning_check_deepseek-v4-pro_seed20260720.json",
+      "split_sha256": "c1f3ff3a393ead5ff8fafdb3aca4ad69e007e8584c0bd0661336477cc89403c4",
+      "split_seed": 20260720,
+      "validation_ratio": 0.1,
+      "gradient_train_count": 2399,
+      "validation_count": 267,
+      "validation_label_counts": {
+        "0": 150,
+        "1": 117
+      },
+      "eligible_validation_count": 264,
+      "eligible_validation_label_counts": {
+        "0": 147,
+        "1": 117
+      },
+      "validation_train_overlap_groups": [
+        {
+          "prompt_sha256": "a0eac42428f299461e69a7a76651c8e26ea8638e7c48dd8ed620903506fe9fae",
+          "left_ids": [
+            "train_0675"
+          ],
+          "right_ids": [
+            "train_2295",
+            "train_2397",
+            "train_2501"
+          ]
+        },
         {
           "prompt_sha256": "b7dce31453b4e21b6327e7f26e875903f36aed1cb0d6e3478a445fa5e69853de",
-          "test_ids": [
-            "positioning_check_0178",
-            "positioning_check_0602"
-          ],
-          "training_ids": [
-            "train_0715",
+          "left_ids": [
             "train_0752"
+          ],
+          "right_ids": [
+            "train_0715"
+          ]
+        },
+        {
+          "prompt_sha256": "0c49e8028e7d5268dee470c9c22fc5a046e9edd35f70aab8468dc67972638877",
+          "left_ids": [
+            "train_2449"
+          ],
+          "right_ids": [
+            "train_0856",
+            "train_1913",
+            "train_1943"
           ]
         }
       ],
-      "removed_training_overlap_ids": [
-        "positioning_check_0178",
-        "positioning_check_0602"
+      "validation_test_overlap_groups": [
+        {
+          "prompt_sha256": "b7dce31453b4e21b6327e7f26e875903f36aed1cb0d6e3478a445fa5e69853de",
+          "left_ids": [
+            "train_0752"
+          ],
+          "right_ids": [
+            "positioning_check_0178",
+            "positioning_check_0602"
+          ]
+        }
       ],
-      "removed_duplicate_test_ids": [],
-      "clean_pool_count": 603,
-      "clean_pool_label_counts": {
-        "0": 341,
-        "1": 262
+      "validation_duplicate_prompt_groups": [],
+      "excluded_validation_ids": [
+        "train_0675",
+        "train_0752",
+        "train_2449"
+      ],
+      "test_source_file": "test_data/prompted_rw_gen_positioning_check_data.json",
+      "test_source_sha256": "3fb9cd08a42d19f454a6fac50de11c3a7ac82a13495fbba16dc812e894fb2c45",
+      "source_test_count": 605,
+      "clean_test": {
+        "file": "data/positioning_check/clean_test603.json",
+        "sha256": "b05544aa6a803ebb02ca13cdd081a5121bc765f29404040baa5fb0434a8524e2",
+        "test_count": 603,
+        "test_label_counts": {
+          "0": 341,
+          "1": 262
+        },
+        "reused_existing_file": false,
+        "removed_training_overlap_ids": [
+          "positioning_check_0178",
+          "positioning_check_0602"
+        ],
+        "removed_duplicate_test_ids": []
       },
       "splits": {
         "1": {
-          "file": "data/rw_gen_positioning_check_k1_per_class_cal2_test601_seed42.json",
-          "sha256": "608606eb1d04869343b3283373ba120336adf6e140cb432bc6efe7f9888e4a25",
+          "file": "data/positioning_check/validation_k1_per_class_cal2_seed42.json",
+          "sha256": "9e764859aef898270aec712e7093529bbbef59b0fa7118cfc9ff06e907a42ad3",
           "calibration_count": 2,
           "calibration_label_counts": {
             "0": 1,
             "1": 1
           },
-          "test_count": 601,
-          "test_label_counts": {
-            "0": 340,
-            "1": 261
-          },
           "selected_ids_by_label": {
             "0": [
-              "positioning_check_0086"
+              "train_2273"
             ],
             "1": [
-              "positioning_check_0526"
+              "train_0954"
             ]
-          }
+          },
+          "test_file": "data/positioning_check/clean_test603.json",
+          "test_sha256": "b05544aa6a803ebb02ca13cdd081a5121bc765f29404040baa5fb0434a8524e2",
+          "test_count": 603
         },
         "3": {
-          "file": "data/rw_gen_positioning_check_k3_per_class_cal6_test597_seed42.json",
-          "sha256": "3c164b0c11d57dcef66e26f56b59ff38f733d558096897272bf0266a1e7bcb10",
+          "file": "data/positioning_check/validation_k3_per_class_cal6_seed42.json",
+          "sha256": "008c95f9c80f76691e6c6098d137593a75a42f01372022c962294630449d9e61",
           "calibration_count": 6,
           "calibration_label_counts": {
             "0": 3,
             "1": 3
           },
-          "test_count": 597,
-          "test_label_counts": {
-            "0": 338,
-            "1": 259
-          },
           "selected_ids_by_label": {
             "0": [
-              "positioning_check_0086",
-              "positioning_check_0506",
-              "positioning_check_0349"
+              "train_2273",
+              "train_0700",
+              "train_2798"
             ],
             "1": [
-              "positioning_check_0526",
-              "positioning_check_0396",
-              "positioning_check_0563"
+              "train_0954",
+              "train_1592",
+              "train_0373"
             ]
-          }
+          },
+          "test_file": "data/positioning_check/clean_test603.json",
+          "test_sha256": "b05544aa6a803ebb02ca13cdd081a5121bc765f29404040baa5fb0434a8524e2",
+          "test_count": 603
         },
         "5": {
-          "file": "data/rw_gen_positioning_check_k5_per_class_cal10_test593_seed42.json",
-          "sha256": "d47b940248b047fbec0cf8df5ba85bf0b1c95295f542125ded667b65548ce0ab",
+          "file": "data/positioning_check/validation_k5_per_class_cal10_seed42.json",
+          "sha256": "8395946c3c91b307f289e78561266bdf5a9f64bbae10eab1d63ed34062889788",
           "calibration_count": 10,
           "calibration_label_counts": {
             "0": 5,
             "1": 5
           },
-          "test_count": 593,
-          "test_label_counts": {
-            "0": 336,
-            "1": 257
-          },
           "selected_ids_by_label": {
             "0": [
-              "positioning_check_0086",
-              "positioning_check_0506",
-              "positioning_check_0349",
-              "positioning_check_0120",
-              "positioning_check_0051"
+              "train_2273",
+              "train_0700",
+              "train_2798",
+              "train_2748",
+              "train_2811"
             ],
             "1": [
-              "positioning_check_0526",
-              "positioning_check_0396",
-              "positioning_check_0563",
-              "positioning_check_0533",
-              "positioning_check_0492"
+              "train_0954",
+              "train_1592",
+              "train_0373",
+              "train_1393",
+              "train_2434"
             ]
-          }
+          },
+          "test_file": "data/positioning_check/clean_test603.json",
+          "test_sha256": "b05544aa6a803ebb02ca13cdd081a5121bc765f29404040baa5fb0434a8524e2",
+          "test_count": 603
         }
       }
     },
     "positioning_type": {
-      "source_file": "test_data/prompted_rw_gen_positioning_type_data.json",
-      "source_sha256": "30349a772279da01101c6483cc8df090bdd020990163c56f97bc2ac8c1dada0f",
-      "source_train_count": 0,
-      "source_test_count": 204,
-      "source_test_label_counts": {
-        "0": 136,
-        "1": 68
+      "task": "rw_gen",
+      "aspect": "positioning_type",
+      "score_sets": [
+        0,
+        1
+      ],
+      "calibration_source_kind": "lora_training_validation_split",
+      "selection": {
+        "strategy": "nested_sha256_rank_per_class",
+        "seed": 42,
+        "shots_per_class": [
+          1,
+          3,
+          5
+        ],
+        "calibration_policy": "exclude exact prompt overlaps with gradient-train and final-test",
+        "test_policy": "independent of k; remove gradient-train overlaps and duplicate prompts"
       },
-      "training_source_file": "train_data/lora_data/rw_gen_positioning_type_953_distill_glm-5.2.jsonl",
-      "training_source_sha256": "7b3138c75ad36da698e537237728e23431d2c3d271f2ba32a33f3d500fc91a39",
-      "training_source_count": 953,
-      "excluded_duplicate_prompt_groups": [],
-      "training_overlap_groups": [],
-      "removed_training_overlap_ids": [],
-      "removed_duplicate_test_ids": [],
-      "clean_pool_count": 204,
-      "clean_pool_label_counts": {
-        "0": 136,
-        "1": 68
+      "dataset_file": "train_data/lora_data/rw_gen_positioning_type_953_distill_glm-5.2.jsonl",
+      "dataset_sha256": "7b3138c75ad36da698e537237728e23431d2c3d271f2ba32a33f3d500fc91a39",
+      "dataset_count": 953,
+      "split_file": "train_data/lora_data/splits/rw_gen_positioning_type_glm-5.2_seed20260720.json",
+      "split_sha256": "3331c1e232cf443dd4acee1e4514496a4de5d11db4fdc2b56a308a1db56d8c14",
+      "split_seed": 20260720,
+      "validation_ratio": 0.1,
+      "gradient_train_count": 858,
+      "validation_count": 95,
+      "validation_label_counts": {
+        "0": 63,
+        "1": 32
+      },
+      "eligible_validation_count": 95,
+      "eligible_validation_label_counts": {
+        "0": 63,
+        "1": 32
+      },
+      "validation_train_overlap_groups": [],
+      "validation_test_overlap_groups": [],
+      "validation_duplicate_prompt_groups": [],
+      "excluded_validation_ids": [],
+      "test_source_file": "test_data/prompted_rw_gen_positioning_type_data.json",
+      "test_source_sha256": "30349a772279da01101c6483cc8df090bdd020990163c56f97bc2ac8c1dada0f",
+      "source_test_count": 204,
+      "clean_test": {
+        "file": "data/positioning_type/clean_test204.json",
+        "sha256": "a0a9ba7fbde70742c158c838817c7d73702991ee613188fc52be8144a38f11a3",
+        "test_count": 204,
+        "test_label_counts": {
+          "0": 136,
+          "1": 68
+        },
+        "reused_existing_file": false,
+        "removed_training_overlap_ids": [],
+        "removed_duplicate_test_ids": []
       },
       "splits": {
         "1": {
-          "file": "data/rw_gen_positioning_type_k1_per_class_cal2_test202_seed42.json",
-          "sha256": "f8bfb4d7a747686f291e05ffa745168d9cb499921cede5e2739e3b4600c9b1ef",
+          "file": "data/positioning_type/validation_k1_per_class_cal2_seed42.json",
+          "sha256": "5c64c99f2f66b75aae621705eff04dcf79e7f4dae62521eade8a10f4491b2d3b",
           "calibration_count": 2,
           "calibration_label_counts": {
             "0": 1,
             "1": 1
           },
-          "test_count": 202,
-          "test_label_counts": {
-            "0": 135,
-            "1": 67
-          },
           "selected_ids_by_label": {
             "0": [
-              "positioning_type_0116"
+              "train_0325"
             ],
             "1": [
-              "positioning_type_0125"
+              "train_0657"
             ]
-          }
+          },
+          "test_file": "data/positioning_type/clean_test204.json",
+          "test_sha256": "a0a9ba7fbde70742c158c838817c7d73702991ee613188fc52be8144a38f11a3",
+          "test_count": 204
         },
         "3": {
-          "file": "data/rw_gen_positioning_type_k3_per_class_cal6_test198_seed42.json",
-          "sha256": "139f10a8cfe81c6798f3687275b8d293e9140024f373e09d36bed0708877a3bd",
+          "file": "data/positioning_type/validation_k3_per_class_cal6_seed42.json",
+          "sha256": "ef7971970092c840416fd6768dae7deac479eae5339535d338117d4559dee466",
           "calibration_count": 6,
           "calibration_label_counts": {
             "0": 3,
             "1": 3
           },
-          "test_count": 198,
-          "test_label_counts": {
-            "0": 133,
-            "1": 65
-          },
           "selected_ids_by_label": {
             "0": [
-              "positioning_type_0116",
-              "positioning_type_0152",
-              "positioning_type_0065"
+              "train_0325",
+              "train_0116",
+              "train_0494"
             ],
             "1": [
-              "positioning_type_0125",
-              "positioning_type_0166",
-              "positioning_type_0114"
+              "train_0657",
+              "train_0020",
+              "train_0660"
             ]
-          }
+          },
+          "test_file": "data/positioning_type/clean_test204.json",
+          "test_sha256": "a0a9ba7fbde70742c158c838817c7d73702991ee613188fc52be8144a38f11a3",
+          "test_count": 204
         },
         "5": {
-          "file": "data/rw_gen_positioning_type_k5_per_class_cal10_test194_seed42.json",
-          "sha256": "81ae383a64f19d356db825b2f16ff6657b56f9e3a251fa1553c264facbd1124a",
+          "file": "data/positioning_type/validation_k5_per_class_cal10_seed42.json",
+          "sha256": "2010a7bb2810d5c70c01ef09bb63e0eb32351c13a3f891015a9560d10e68a1b1",
           "calibration_count": 10,
           "calibration_label_counts": {
             "0": 5,
             "1": 5
           },
-          "test_count": 194,
-          "test_label_counts": {
-            "0": 131,
-            "1": 63
+          "selected_ids_by_label": {
+            "0": [
+              "train_0325",
+              "train_0116",
+              "train_0494",
+              "train_0808",
+              "train_0230"
+            ],
+            "1": [
+              "train_0657",
+              "train_0020",
+              "train_0660",
+              "train_0772",
+              "train_0907"
+            ]
+          },
+          "test_file": "data/positioning_type/clean_test204.json",
+          "test_sha256": "a0a9ba7fbde70742c158c838817c7d73702991ee613188fc52be8144a38f11a3",
+          "test_count": 204
+        }
+      }
+    },
+    "actionability": {
+      "task": "rev_util",
+      "aspect": "actionability",
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "calibration_source_kind": "lora_training_validation_split",
+      "selection": {
+        "strategy": "nested_sha256_rank_per_class",
+        "seed": 42,
+        "shots_per_class": [
+          1,
+          3,
+          5
+        ],
+        "calibration_policy": "exclude exact prompt overlaps with gradient-train and final-test",
+        "test_policy": "independent of k; remove gradient-train overlaps and duplicate prompts"
+      },
+      "dataset_file": "train_data/lora_data/rev_util_actionability_1788_distill_deepseek-v4-pro.jsonl",
+      "dataset_sha256": "0ffa3616a9d8e8954e6c117fad44f90da53e95684de6ac8e723de8783b916c03",
+      "dataset_count": 1788,
+      "split_file": "train_data/lora_data/splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json",
+      "split_sha256": "111d1c2eb60df2e46deee969cf6ed4e97e155fbaa82dfc696a5855e82b09f1fb",
+      "split_seed": 20260720,
+      "validation_ratio": 0.1,
+      "gradient_train_count": 1609,
+      "validation_count": 179,
+      "validation_label_counts": {
+        "1": 15,
+        "2": 36,
+        "3": 52,
+        "4": 9,
+        "5": 67
+      },
+      "eligible_validation_count": 179,
+      "eligible_validation_label_counts": {
+        "1": 15,
+        "2": 36,
+        "3": 52,
+        "4": 9,
+        "5": 67
+      },
+      "validation_train_overlap_groups": [],
+      "validation_test_overlap_groups": [],
+      "validation_duplicate_prompt_groups": [],
+      "excluded_validation_ids": [],
+      "test_source_file": "MoDE/data/actionability/clean_test1000.json",
+      "test_source_sha256": "8edaf2a61137ccf420da81567bd083fb10de1bf2f9b5c708f4384b51c865c688",
+      "source_test_count": 1000,
+      "clean_test": {
+        "file": "data/actionability/clean_test1000.json",
+        "sha256": "8edaf2a61137ccf420da81567bd083fb10de1bf2f9b5c708f4384b51c865c688",
+        "test_count": 1000,
+        "test_label_counts": {
+          "1": 234,
+          "2": 164,
+          "3": 312,
+          "4": 95,
+          "5": 195
+        },
+        "reused_existing_file": true,
+        "removed_training_overlap_ids": [],
+        "removed_duplicate_test_ids": []
+      },
+      "splits": {
+        "1": {
+          "file": "data/actionability/validation_k1_per_class_cal5_seed42.json",
+          "sha256": "f3a23fa81757181d1eaf5bd8f79218cbe09ca48362bc32f3bb4bda0186fb6d7e",
+          "calibration_count": 5,
+          "calibration_label_counts": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_0546"
+            ],
+            "2": [
+              "train_2483"
+            ],
+            "3": [
+              "train_4171"
+            ],
+            "4": [
+              "train_1422"
+            ],
+            "5": [
+              "train_0498"
+            ]
+          },
+          "test_file": "data/actionability/clean_test1000.json",
+          "test_sha256": "8edaf2a61137ccf420da81567bd083fb10de1bf2f9b5c708f4384b51c865c688",
+          "test_count": 1000
+        },
+        "3": {
+          "file": "data/actionability/validation_k3_per_class_cal15_seed42.json",
+          "sha256": "943f7056348b74c2f93a354f5ea83b82bb518a200e09550e5446e19d27aa57c6",
+          "calibration_count": 15,
+          "calibration_label_counts": {
+            "1": 3,
+            "2": 3,
+            "3": 3,
+            "4": 3,
+            "5": 3
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_0546",
+              "train_3693",
+              "train_1442"
+            ],
+            "2": [
+              "train_2483",
+              "train_0041",
+              "train_0212"
+            ],
+            "3": [
+              "train_4171",
+              "train_1739",
+              "train_4555"
+            ],
+            "4": [
+              "train_1422",
+              "train_0506",
+              "train_3327"
+            ],
+            "5": [
+              "train_0498",
+              "train_1601",
+              "train_4153"
+            ]
+          },
+          "test_file": "data/actionability/clean_test1000.json",
+          "test_sha256": "8edaf2a61137ccf420da81567bd083fb10de1bf2f9b5c708f4384b51c865c688",
+          "test_count": 1000
+        },
+        "5": {
+          "file": "data/actionability/validation_k5_per_class_cal25_seed42.json",
+          "sha256": "634e2b8fb85e5b052d17159147bbf089383133dfadcd09e8b69a18e0a2dd1d32",
+          "calibration_count": 25,
+          "calibration_label_counts": {
+            "1": 5,
+            "2": 5,
+            "3": 5,
+            "4": 5,
+            "5": 5
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_0546",
+              "train_3693",
+              "train_1442",
+              "train_3620",
+              "train_0512"
+            ],
+            "2": [
+              "train_2483",
+              "train_0041",
+              "train_0212",
+              "train_0698",
+              "train_1231"
+            ],
+            "3": [
+              "train_4171",
+              "train_1739",
+              "train_4555",
+              "train_1195",
+              "train_0823"
+            ],
+            "4": [
+              "train_1422",
+              "train_0506",
+              "train_3327",
+              "train_2912",
+              "train_0607"
+            ],
+            "5": [
+              "train_0498",
+              "train_1601",
+              "train_4153",
+              "train_3162",
+              "train_2328"
+            ]
+          },
+          "test_file": "data/actionability/clean_test1000.json",
+          "test_sha256": "8edaf2a61137ccf420da81567bd083fb10de1bf2f9b5c708f4384b51c865c688",
+          "test_count": 1000
+        }
+      }
+    },
+    "grounding_specificity": {
+      "task": "rev_util",
+      "aspect": "grounding_specificity",
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "calibration_source_kind": "cleaned_human_labeled_data_with_api_teacher_cot",
+      "candidate_source_file": "train_data/cleaned_data/rev_util_grounding_specificity_4800.json",
+      "candidate_source_sha256": "f5aba9f4a645ed663e78cd95dbb1726bae5bc75168cffbe95f3e46e5f9038533",
+      "candidate_source_count": 4800,
+      "eligible_candidate_count": 4800,
+      "eligible_candidate_label_counts": {
+        "1": 549,
+        "2": 367,
+        "3": 1914,
+        "4": 222,
+        "5": 1748
+      },
+      "candidate_audit": {
+        "excluded_test_overlap_ids": [],
+        "excluded_duplicate_source_ids": []
+      },
+      "teacher_model": "deepseek-v4-pro",
+      "api_base_url": "https://api.openbitfun.com/v1",
+      "trajectory_file": "data/grounding_specificity/api_trajectories.jsonl",
+      "trajectory_sha256": "0251518e14cbe9ee56906ba6be6a656ad38927afc3b082adb4409db9e136c776",
+      "selection_seed": 42,
+      "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",
+      "selection_audit": {
+        "reused_trajectory_count": 67,
+        "new_api_call_count": 0,
+        "considered_by_label": {
+          "1": 21,
+          "2": 23,
+          "3": 8,
+          "4": 10,
+          "5": 5
+        }
+      },
+      "clean_test": {
+        "file": "data/grounding_specificity/clean_test1000.json",
+        "sha256": "87b3dc909cfb4acd7cbe8e5b7e38d195b41eb0ceda6e863d1194060ac40e13ac",
+        "test_count": 1000,
+        "test_label_counts": {
+          "1": 123,
+          "2": 64,
+          "3": 389,
+          "4": 41,
+          "5": 383
+        },
+        "removed_duplicate_test_ids": []
+      },
+      "splits": {
+        "1": {
+          "file": "data/grounding_specificity/api_validation_k1_per_class_cal5_seed42.json",
+          "sha256": "d71d23593a7d9f64a50f632ddb1687be19992ba92b287138c7a9a0e8b2390048",
+          "calibration_count": 5,
+          "calibration_label_counts": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_0237"
+            ],
+            "2": [
+              "train_3516"
+            ],
+            "3": [
+              "train_4129"
+            ],
+            "4": [
+              "train_2938"
+            ],
+            "5": [
+              "train_0575"
+            ]
+          },
+          "test_file": "data/grounding_specificity/clean_test1000.json",
+          "test_sha256": "87b3dc909cfb4acd7cbe8e5b7e38d195b41eb0ceda6e863d1194060ac40e13ac",
+          "test_count": 1000
+        },
+        "3": {
+          "file": "data/grounding_specificity/api_validation_k3_per_class_cal15_seed42.json",
+          "sha256": "758314af6a85e094f82ddc80b83c2cdb603d43eef83487ae02d9b7529288c820",
+          "calibration_count": 15,
+          "calibration_label_counts": {
+            "1": 3,
+            "2": 3,
+            "3": 3,
+            "4": 3,
+            "5": 3
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_0237",
+              "train_2788",
+              "train_4704"
+            ],
+            "2": [
+              "train_3516",
+              "train_4316",
+              "train_3344"
+            ],
+            "3": [
+              "train_4129",
+              "train_4450",
+              "train_3240"
+            ],
+            "4": [
+              "train_2938",
+              "train_0260",
+              "train_0142"
+            ],
+            "5": [
+              "train_0575",
+              "train_1501",
+              "train_0324"
+            ]
+          },
+          "test_file": "data/grounding_specificity/clean_test1000.json",
+          "test_sha256": "87b3dc909cfb4acd7cbe8e5b7e38d195b41eb0ceda6e863d1194060ac40e13ac",
+          "test_count": 1000
+        },
+        "5": {
+          "file": "data/grounding_specificity/api_validation_k5_per_class_cal25_seed42.json",
+          "sha256": "32bffc82d76e79f3dd12f2b566a895eef53d353a7fb9d33737f110bf05b986e9",
+          "calibration_count": 25,
+          "calibration_label_counts": {
+            "1": 5,
+            "2": 5,
+            "3": 5,
+            "4": 5,
+            "5": 5
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_0237",
+              "train_2788",
+              "train_4704",
+              "train_3443",
+              "train_1502"
+            ],
+            "2": [
+              "train_3516",
+              "train_4316",
+              "train_3344",
+              "train_1602",
+              "train_1714"
+            ],
+            "3": [
+              "train_4129",
+              "train_4450",
+              "train_3240",
+              "train_0031",
+              "train_2592"
+            ],
+            "4": [
+              "train_2938",
+              "train_0260",
+              "train_0142",
+              "train_4345",
+              "train_3518"
+            ],
+            "5": [
+              "train_0575",
+              "train_1501",
+              "train_0324",
+              "train_0442",
+              "train_0869"
+            ]
+          },
+          "test_file": "data/grounding_specificity/clean_test1000.json",
+          "test_sha256": "87b3dc909cfb4acd7cbe8e5b7e38d195b41eb0ceda6e863d1194060ac40e13ac",
+          "test_count": 1000
+        }
+      }
+    },
+    "helpfulness": {
+      "task": "rev_util",
+      "aspect": "helpfulness",
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "calibration_source_kind": "cleaned_human_labeled_data_with_api_teacher_cot",
+      "candidate_source_file": "train_data/cleaned_data/rev_util_helpfulness_4800.json",
+      "candidate_source_sha256": "a97757bc7c72d8c9ea9f380075a8931129bb1dfc7110525259aae2212feac01d",
+      "candidate_source_count": 4800,
+      "eligible_candidate_count": 4800,
+      "eligible_candidate_label_counts": {
+        "1": 195,
+        "2": 539,
+        "3": 2157,
+        "4": 1521,
+        "5": 388
+      },
+      "candidate_audit": {
+        "excluded_test_overlap_ids": [],
+        "excluded_duplicate_source_ids": []
+      },
+      "teacher_model": "deepseek-v4-pro",
+      "api_base_url": "https://api.openbitfun.com/v1",
+      "trajectory_file": "data/helpfulness/api_trajectories.jsonl",
+      "trajectory_sha256": "72d5675c89742f69aeae90e66453f950e05110d5c657e4f45ed362fa0eea9767",
+      "selection_seed": 42,
+      "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",
+      "selection_audit": {
+        "reused_trajectory_count": 49,
+        "new_api_call_count": 0,
+        "considered_by_label": {
+          "1": 10,
+          "2": 8,
+          "3": 9,
+          "4": 13,
+          "5": 9
+        }
+      },
+      "clean_test": {
+        "file": "data/helpfulness/clean_test1000.json",
+        "sha256": "9ec48c3205fe5fce16c878bac88d0a4c3c6067951670d59d101075ef769a8a04",
+        "test_count": 1000,
+        "test_label_counts": {
+          "1": 34,
+          "2": 107,
+          "3": 462,
+          "4": 311,
+          "5": 86
+        },
+        "removed_duplicate_test_ids": []
+      },
+      "splits": {
+        "1": {
+          "file": "data/helpfulness/api_validation_k1_per_class_cal5_seed42.json",
+          "sha256": "10b91c3da6782e6ca0ae2cb77e216df1c25b060b495324b844ba282fcfb795ef",
+          "calibration_count": 5,
+          "calibration_label_counts": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_3681"
+            ],
+            "2": [
+              "train_2002"
+            ],
+            "3": [
+              "train_0165"
+            ],
+            "4": [
+              "train_4605"
+            ],
+            "5": [
+              "train_4546"
+            ]
+          },
+          "test_file": "data/helpfulness/clean_test1000.json",
+          "test_sha256": "9ec48c3205fe5fce16c878bac88d0a4c3c6067951670d59d101075ef769a8a04",
+          "test_count": 1000
+        },
+        "3": {
+          "file": "data/helpfulness/api_validation_k3_per_class_cal15_seed42.json",
+          "sha256": "1c5ced1f56d60d23a0c4710e1ffa788fa668be5d8b7a06cb29dabbdadc9aa79c",
+          "calibration_count": 15,
+          "calibration_label_counts": {
+            "1": 3,
+            "2": 3,
+            "3": 3,
+            "4": 3,
+            "5": 3
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_3681",
+              "train_2726",
+              "train_1375"
+            ],
+            "2": [
+              "train_2002",
+              "train_0391",
+              "train_3791"
+            ],
+            "3": [
+              "train_0165",
+              "train_0581",
+              "train_0060"
+            ],
+            "4": [
+              "train_4605",
+              "train_2335",
+              "train_1567"
+            ],
+            "5": [
+              "train_4546",
+              "train_1455",
+              "train_2411"
+            ]
+          },
+          "test_file": "data/helpfulness/clean_test1000.json",
+          "test_sha256": "9ec48c3205fe5fce16c878bac88d0a4c3c6067951670d59d101075ef769a8a04",
+          "test_count": 1000
+        },
+        "5": {
+          "file": "data/helpfulness/api_validation_k5_per_class_cal25_seed42.json",
+          "sha256": "92d81f803c990901f77ccc6f3b5f710294c3ab92cb52155d6c8ea75f0d0890af",
+          "calibration_count": 25,
+          "calibration_label_counts": {
+            "1": 5,
+            "2": 5,
+            "3": 5,
+            "4": 5,
+            "5": 5
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_3681",
+              "train_2726",
+              "train_1375",
+              "train_2013",
+              "train_0120"
+            ],
+            "2": [
+              "train_2002",
+              "train_0391",
+              "train_3791",
+              "train_1394",
+              "train_4495"
+            ],
+            "3": [
+              "train_0165",
+              "train_0581",
+              "train_0060",
+              "train_1298",
+              "train_4734"
+            ],
+            "4": [
+              "train_4605",
+              "train_2335",
+              "train_1567",
+              "train_3952",
+              "train_0997"
+            ],
+            "5": [
+              "train_4546",
+              "train_1455",
+              "train_2411",
+              "train_3080",
+              "train_2356"
+            ]
+          },
+          "test_file": "data/helpfulness/clean_test1000.json",
+          "test_sha256": "9ec48c3205fe5fce16c878bac88d0a4c3c6067951670d59d101075ef769a8a04",
+          "test_count": 1000
+        }
+      }
+    },
+    "verifiability": {
+      "task": "rev_util",
+      "aspect": "verifiability",
+      "score_sets": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "calibration_source_kind": "cleaned_human_labeled_data_with_api_teacher_cot",
+      "candidate_source_file": "train_data/cleaned_data/rev_util_verifiability_4800.json",
+      "candidate_source_sha256": "bf5c1b5a7197c853623080cd9fac0cedf3a029adc977ce7d50ad224139136ed4",
+      "candidate_source_count": 4800,
+      "eligible_candidate_count": 4800,
+      "eligible_candidate_label_counts": {
+        "1": 1375,
+        "2": 549,
+        "3": 2114,
+        "4": 628,
+        "5": 134
+      },
+      "candidate_audit": {
+        "excluded_test_overlap_ids": [],
+        "excluded_duplicate_source_ids": []
+      },
+      "teacher_model": "deepseek-v4-pro",
+      "api_base_url": "https://api.openbitfun.com/v1",
+      "trajectory_file": "data/verifiability/api_trajectories.jsonl",
+      "trajectory_sha256": "56606ec925d834ee51aa273922ce75e36b1dbbc0256e60e7fbb9db04b8932e5f",
+      "selection_seed": 42,
+      "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",
+      "selection_audit": {
+        "reused_trajectory_count": 56,
+        "new_api_call_count": 0,
+        "considered_by_label": {
+          "1": 8,
+          "2": 7,
+          "3": 10,
+          "4": 22,
+          "5": 9
+        }
+      },
+      "clean_test": {
+        "file": "data/verifiability/clean_test788.json",
+        "sha256": "938b520b8cd9cd4f54a107b8d48d916a092f8876f98a1ba141bfbcf5c05cdbb0",
+        "test_count": 788,
+        "test_label_counts": {
+          "1": 221,
+          "2": 77,
+          "3": 346,
+          "4": 120,
+          "5": 24
+        },
+        "removed_duplicate_test_ids": []
+      },
+      "splits": {
+        "1": {
+          "file": "data/verifiability/api_validation_k1_per_class_cal5_seed42.json",
+          "sha256": "5fddd74f42f0cc5b25328affb714def6f494e5da435c3a2a367590de227caf52",
+          "calibration_count": 5,
+          "calibration_label_counts": {
+            "1": 1,
+            "2": 1,
+            "3": 1,
+            "4": 1,
+            "5": 1
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_2009"
+            ],
+            "2": [
+              "train_0165"
+            ],
+            "3": [
+              "train_4193"
+            ],
+            "4": [
+              "train_1212"
+            ],
+            "5": [
+              "train_2795"
+            ]
+          },
+          "test_file": "data/verifiability/clean_test788.json",
+          "test_sha256": "938b520b8cd9cd4f54a107b8d48d916a092f8876f98a1ba141bfbcf5c05cdbb0",
+          "test_count": 788
+        },
+        "3": {
+          "file": "data/verifiability/api_validation_k3_per_class_cal15_seed42.json",
+          "sha256": "c7aea65663dce5871ba2828cf2c017d87178b32020dbf25d3f33a307f99d7e42",
+          "calibration_count": 15,
+          "calibration_label_counts": {
+            "1": 3,
+            "2": 3,
+            "3": 3,
+            "4": 3,
+            "5": 3
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_2009",
+              "train_3435",
+              "train_3426"
+            ],
+            "2": [
+              "train_0165",
+              "train_3748",
+              "train_2453"
+            ],
+            "3": [
+              "train_4193",
+              "train_4034",
+              "train_4300"
+            ],
+            "4": [
+              "train_1212",
+              "train_3968",
+              "train_3671"
+            ],
+            "5": [
+              "train_2795",
+              "train_4361",
+              "train_1353"
+            ]
+          },
+          "test_file": "data/verifiability/clean_test788.json",
+          "test_sha256": "938b520b8cd9cd4f54a107b8d48d916a092f8876f98a1ba141bfbcf5c05cdbb0",
+          "test_count": 788
+        },
+        "5": {
+          "file": "data/verifiability/api_validation_k5_per_class_cal25_seed42.json",
+          "sha256": "ff78e442c9b93515dcfe8f2b6e27f166c255153e5279d4d81f520a80094022f5",
+          "calibration_count": 25,
+          "calibration_label_counts": {
+            "1": 5,
+            "2": 5,
+            "3": 5,
+            "4": 5,
+            "5": 5
+          },
+          "selected_ids_by_label": {
+            "1": [
+              "train_2009",
+              "train_3435",
+              "train_3426",
+              "train_0630",
+              "train_4301"
+            ],
+            "2": [
+              "train_0165",
+              "train_3748",
+              "train_2453",
+              "train_0099",
+              "train_3925"
+            ],
+            "3": [
+              "train_4193",
+              "train_4034",
+              "train_4300",
+              "train_1530",
+              "train_2931"
+            ],
+            "4": [
+              "train_1212",
+              "train_3968",
+              "train_3671",
+              "train_1503",
+              "train_1668"
+            ],
+            "5": [
+              "train_2795",
+              "train_4361",
+              "train_1353",
+              "train_4353",
+              "train_1722"
+            ]
+          },
+          "test_file": "data/verifiability/clean_test788.json",
+          "test_sha256": "938b520b8cd9cd4f54a107b8d48d916a092f8876f98a1ba141bfbcf5c05cdbb0",
+          "test_count": 788
+        }
+      }
+    },
+    "verifiability_extraction": {
+      "task": "rev_util",
+      "aspect": "verifiability_extraction",
+      "score_sets": [
+        0,
+        1
+      ],
+      "calibration_source_kind": "cleaned_human_labeled_data_with_api_teacher_cot",
+      "candidate_source_file": "train_data/cleaned_data/rev_util_verifiability_extraction_4800.json",
+      "candidate_source_sha256": "e09f1778158e8f037d7c3f52fa9be6b5e406f8575ad9441c9217ff08b9c1bbd1",
+      "candidate_source_count": 4800,
+      "eligible_candidate_count": 4800,
+      "eligible_candidate_label_counts": {
+        "0": 934,
+        "1": 3866
+      },
+      "candidate_audit": {
+        "excluded_test_overlap_ids": [],
+        "excluded_duplicate_source_ids": []
+      },
+      "teacher_model": "deepseek-v4-pro",
+      "api_base_url": "https://api.openbitfun.com/v1",
+      "trajectory_file": "data/verifiability_extraction/api_trajectories.jsonl",
+      "trajectory_sha256": "0426731061ef85d43edcada1bbd097f265ed6ba42b06be63ecdd431a3588d073",
+      "selection_seed": 42,
+      "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",
+      "selection_audit": {
+        "reused_trajectory_count": 14,
+        "new_api_call_count": 0,
+        "considered_by_label": {
+          "0": 8,
+          "1": 6
+        }
+      },
+      "clean_test": {
+        "file": "data/verifiability_extraction/clean_test1000.json",
+        "sha256": "72bdde0b2ce8ea6e3664161276ddf20d6f908eb0da8ee7626fb18602f21349bd",
+        "test_count": 1000,
+        "test_label_counts": {
+          "0": 212,
+          "1": 788
+        },
+        "removed_duplicate_test_ids": []
+      },
+      "splits": {
+        "1": {
+          "file": "data/verifiability_extraction/api_validation_k1_per_class_cal2_seed42.json",
+          "sha256": "4b53c173abd41687d75315f37b65aa1941a26d631ede6b59c30f84e18569d1a9",
+          "calibration_count": 2,
+          "calibration_label_counts": {
+            "0": 1,
+            "1": 1
           },
           "selected_ids_by_label": {
             "0": [
-              "positioning_type_0116",
-              "positioning_type_0152",
-              "positioning_type_0065",
-              "positioning_type_0043",
-              "positioning_type_0074"
+              "train_1271"
             ],
             "1": [
-              "positioning_type_0125",
-              "positioning_type_0166",
-              "positioning_type_0114",
-              "positioning_type_0141",
-              "positioning_type_0197"
+              "train_4019"
             ]
-          }
+          },
+          "test_file": "data/verifiability_extraction/clean_test1000.json",
+          "test_sha256": "72bdde0b2ce8ea6e3664161276ddf20d6f908eb0da8ee7626fb18602f21349bd",
+          "test_count": 1000
+        },
+        "3": {
+          "file": "data/verifiability_extraction/api_validation_k3_per_class_cal6_seed42.json",
+          "sha256": "b726c6218c086ef8d0c341840fbdd697732ac19c6f7514f64a30e05efe893e0e",
+          "calibration_count": 6,
+          "calibration_label_counts": {
+            "0": 3,
+            "1": 3
+          },
+          "selected_ids_by_label": {
+            "0": [
+              "train_1271",
+              "train_3667",
+              "train_4164"
+            ],
+            "1": [
+              "train_4019",
+              "train_0294",
+              "train_2819"
+            ]
+          },
+          "test_file": "data/verifiability_extraction/clean_test1000.json",
+          "test_sha256": "72bdde0b2ce8ea6e3664161276ddf20d6f908eb0da8ee7626fb18602f21349bd",
+          "test_count": 1000
+        },
+        "5": {
+          "file": "data/verifiability_extraction/api_validation_k5_per_class_cal10_seed42.json",
+          "sha256": "cf71340c0979f82ac1cf92a4a634d1ff39c877a6a29fa9ce2241e1cf9453ebf0",
+          "calibration_count": 10,
+          "calibration_label_counts": {
+            "0": 5,
+            "1": 5
+          },
+          "selected_ids_by_label": {
+            "0": [
+              "train_1271",
+              "train_3667",
+              "train_4164",
+              "train_3495",
+              "train_0321"
+            ],
+            "1": [
+              "train_4019",
+              "train_0294",
+              "train_2819",
+              "train_3916",
+              "train_1448"
+            ]
+          },
+          "test_file": "data/verifiability_extraction/clean_test1000.json",
+          "test_sha256": "72bdde0b2ce8ea6e3664161276ddf20d6f908eb0da8ee7626fb18602f21349bd",
+          "test_count": 1000
         }
       }
+    }
+  },
+  "extensions": {
+    "rev_util_api_calibration": {
+      "schema_version": 1,
+      "task": "rev_util",
+      "aspects": [
+        "grounding_specificity",
+        "helpfulness",
+        "verifiability",
+        "verifiability_extraction"
+      ],
+      "policy": "nested SHA256-ranked samples per class from cleaned human-labeled data; only strict teacher CoT outputs whose score matches the human label are eligible"
     }
   }
 }
