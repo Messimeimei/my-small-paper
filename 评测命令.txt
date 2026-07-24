@@ -16,17 +16,17 @@ CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python
 CUDA_VISIBLE_DEVICES=2 \
 /data01/public/yangxin/.conda/envs/small-paper/bin/python \
   MoDE/optimize_factor_mix.py \
-  --target grounding_specificity \
+  --target meta_reviewer \
   --shots-per-class 5
 
 
 // LoRA adapter / checkpoint 评测（vLLM + LoRA；多一个 --adapter）
 CUDA_VISIBLE_DEVICES=2 /data01/public/yangxin/.conda/envs/small-paper/bin/python \
   /data01/public/yangxin/small-paper/training/evaluate.py \
-  --exp_name actionability#finetune \
+  --exp_name meta_reviewer#base#qwen3_4b \
   --model_name /data01/public/yangxin/small-paper/model/Qwen3-4B \
-  --adapter /data01/public/yangxin/small-paper/train_outputs/rev_util_actionability/rev_util_actionability#qwen3_4b#distill_deepseek-v4-pro__seed42__20260723T013245Z/adapter \
-  --dataset_file /data01/public/yangxin/small-paper/MoDE/data/actionability/clean_test1000.json \
+  --adapter none \
+  --dataset_file /data01/public/yangxin/small-paper/MoDE/data/meta_reviewer/clean_test732.json \
   --output_path /data01/public/yangxin/small-paper/MoDE/eval_outputs \
   --max_model_len 8192 \
   --max_tokens 512 \

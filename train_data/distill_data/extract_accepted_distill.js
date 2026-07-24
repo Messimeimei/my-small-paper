@@ -16,6 +16,10 @@ const singleTeacherSources = [
     filename: "rev_util_actionability_4800_distill.jsonl",
     teacher: "deepseek-v4-pro",
   },
+  {
+    filename: "rev_util_grounding_specificity_4800_distill.jsonl",
+    teacher: "deepseek-v4-pro",
+  },
 ];
 
 function derivedFilename(sourceFilename, suffix, sampleCount) {

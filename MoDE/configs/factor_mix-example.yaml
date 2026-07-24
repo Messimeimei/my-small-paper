@@ -3,8 +3,10 @@ model_name_or_path: model/Qwen3-4B
 
 # 先统一用 deepseek 蒸馏得到的专家，并排除 coherence 专家
 experts:
-  # - name: coherence_deepseek
-  #   adapter: "train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_deepseek-v4-pro__seed42__20260720T072305Z/adapter"
+  - name: coherence_deepseek
+    adapter: "train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_deepseek-v4-pro__seed42__20260720T072305Z/adapter"
+  - name: actionability_deepseek
+    adapter: "train_outputs/rev_util_actionability/rev_util_actionability#qwen3_4b#distill_deepseek-v4-pro__seed42__20260723T013245Z/adapter"
   - name: positioning_check_deepseek
     adapter: "train_outputs/rw_gen_positioning_check/rw_gen_positioning_check#qwen3_4b#distill_deepseek-v4-pro__seed42__20260721T135753Z/adapter"
   - name: positioning_type_deepseek
@@ -87,10 +89,12 @@ datasets:
       5: data/revision_correctness/api_validation_k5_per_class_cal10_seed42.json
     test_file: data/revision_correctness/clean_test3026.json
   meta_reviewer:
-    # 10-way labels; classes 2/5 are too rare for k>1 without duplication.
+    # Rare labels are capped: label2<=2, label5<=3. k=3/5 use min(k, available).
     calibration_files:
       1: data/meta_reviewer/api_validation_k1_per_class_cal10_seed42.json
-    test_file: data/meta_reviewer/clean_test767.json
+      3: data/meta_reviewer/api_validation_k3_per_class_cal29_seed42.json
+      5: data/meta_reviewer/api_validation_k5_per_class_cal45_seed42.json
+    test_file: data/meta_reviewer/clean_test732.json
     objective_max_length: 32768
 
 method:

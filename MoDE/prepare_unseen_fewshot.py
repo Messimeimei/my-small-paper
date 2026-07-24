@@ -57,8 +57,9 @@ TARGETS: dict[str, dict[str, Any]] = {
         "source": PROJECT_ROOT / "test_data" / "prompted_meta_reviewer_data.json",
         "source_task": "meta_reviewer_eval",
         "source_aspect": "cascade_10way",
-        # Labels 2 and 5 only have 2 and 3 unique source rows respectively.
-        "shots": [1],
+        # Rare labels have few unique rows (2 has 2, 5 has 3); each shot file uses
+        # min(k, available_per_label) so k=3/5 remain nested and valid.
+        "shots": [1, 3, 5],
         "historical_outputs": "test_data/eval_outputs/meta_reviewer_*/meta_reviewer_eval_outputs.parquet",
     },
 }
@@ -506,10 +507,15 @@ def select_calibration(
                     row["id"],
                 )
             )
+            # Cap by unique source rows so rare classes can still participate in k=3/5.
+            label_required = min(required, len(candidates))
             accepted = []
             considered = 0
             for source_index, row in enumerate(candidates):
-                if considered >= args.max_candidates_per_label or len(accepted) >= required:
+                if (
+                    considered >= args.max_candidates_per_label
+                    or len(accepted) >= label_required
+                ):
                     break
                 considered += 1
                 record = known.get(row["id"])
@@ -543,7 +549,9 @@ def select_calibration(
                         )
                         top_p = 1.0 if attempt_index == 1 else 0.95
                         print(
-                            f"[{target}] label={label} accepted={len(accepted)}/{required} "
+                            f"[{target}] label={label} "
+                            f"accepted={len(accepted)}/{label_required} "
+                            f"(global_k={required}) "
                             f"calling {teacher_model} for {row['id']} "
                             f"(attempt {attempt_index}/{attempts}, temp={temperature})",
                             flush=True,
@@ -596,15 +604,15 @@ def select_calibration(
                 if record.get("accepted"):
                     accepted.append(calibration_row(row, record))
             considered_by_label[str(label)] = considered
-            if len(accepted) < required:
+            if len(accepted) < label_required:
                 if not args.allow_gold_score_fallback:
                     raise RuntimeError(
-                        f"{target} label {label}: only {len(accepted)}/{required} accepted "
-                        f"after {considered} unique candidates"
+                        f"{target} label {label}: only {len(accepted)}/{label_required} "
+                        f"accepted after {considered} unique candidates "
+                        f"(requested global_k={required})"
                     )
-                # Rare-label fallback: force gold-aligned completions from considered rows.
                 for row in candidates[:considered]:
-                    if len(accepted) >= required:
+                    if len(accepted) >= label_required:
                         break
                     if any(item["id"] == row["id"] for item in accepted):
                         continue
@@ -625,10 +633,10 @@ def select_calibration(
                         f"(original_teacher_label={forced.get('original_teacher_label')})",
                         flush=True,
                     )
-                if len(accepted) < required:
+                if len(accepted) < label_required:
                     raise RuntimeError(
-                        f"{target} label {label}: only {len(accepted)}/{required} after "
-                        f"gold-score fallback over {considered} candidates"
+                        f"{target} label {label}: only {len(accepted)}/{label_required} "
+                        f"after gold-score fallback over {considered} candidates"
                     )
             selected[label] = accepted
     except BaseException as error:
@@ -741,11 +749,17 @@ def build_target(
             "aspect": target,
             "score_sets": score_sets,
             "shots_per_class": shot_count,
+            "shots_per_class_policy": (
+                "nested_min_k_and_available_unique_rows_per_label"
+            ),
             "calibration_count": calibration_count,
             "calibration_label_counts": label_counts(calibration, score_sets),
             "selected_ids_by_label": {
                 str(label): [row["id"] for row in selected[label][:shot_count]]
                 for label in score_sets
+            },
+            "available_per_label": {
+                str(label): len(selected[label]) for label in score_sets
             },
             "selection_seed": args.seed,
             "selection_strategy": "nested_sha256_rank_per_class_then_teacher_gold_agreement",

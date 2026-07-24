@@ -293,6 +293,13 @@ def load_calibration_rows(
                 f"Calibration row {sample_id} has no valid teacher completion"
             )
     expected_counts = {label: shots_per_class for label in score_sets}
+    policy = str(metadata.get("shots_per_class_policy") or "")
+    if policy == "nested_min_k_and_available_unique_rows_per_label":
+        available = metadata.get("available_per_label") or {}
+        expected_counts = {
+            label: min(shots_per_class, int(available.get(str(label), shots_per_class)))
+            for label in score_sets
+        }
     if counts != expected_counts:
         raise ValueError(
             f"Calibration must contain {shots_per_class} rows per class; got {counts}"

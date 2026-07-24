@@ -62,13 +62,15 @@ completion 来源由文件名最后的教师名以及 `export_manifest.json` 中
 | positioning_type | 双教师共识（DeepSeek） | 943 | `rw_gen_positioning_type_943_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl` |
 | positioning_type | 双教师共识（GLM） | 943 | `rw_gen_positioning_type_943_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl` |
 | actionability | DeepSeek | 1788 | `rev_util_actionability_1788_distill_deepseek-v4-pro.jsonl` |
+| grounding_specificity | DeepSeek | 2652 | `rev_util_grounding_specificity_2652_distill_deepseek-v4-pro.jsonl` |
 
 `positioning_check` 的两位教师蒸馏均已完成，表中 LoRA 数据已从完整的派生蒸馏
 数据刷新。
 
-`actionability` 是 1–5 分五分类任务，当前只导出已完成的 DeepSeek-v4-pro
-单教师版本；固定划分为
-`splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json`。
+`actionability` 与 `grounding_specificity` 都是 1–5 分五分类任务，当前只导出已完成的
+DeepSeek-v4-pro 单教师版本；固定划分分别为
+`splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json` 和
+`splits/rev_util_grounding_specificity_deepseek-v4-pro_seed20260720.json`。
 
 coherence 两个共识版本使用相同的训练集/验证集 ID 划分，但数据哈希不同：
 

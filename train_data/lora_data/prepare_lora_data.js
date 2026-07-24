@@ -19,6 +19,12 @@ const singleTeacherDatasets = [
     teacherModels: ["deepseek-v4-pro"],
     trajectoryTeacher: "deepseek-v4-pro",
   },
+  {
+    prefix: "rev_util_grounding_specificity",
+    suffix: "deepseek-v4-pro",
+    teacherModels: ["deepseek-v4-pro"],
+    trajectoryTeacher: "deepseek-v4-pro",
+  },
 ];
 const variants = [
   {

@@ -62,10 +62,13 @@ node train_data/distill_data/extract_accepted_distill.js
 | positioning_check | 2666 | 2693 | 2613 |
 | positioning_type | 944 | 953 | 943 |
 | rev_util / actionability | 1788 | — | — |
+| rev_util / grounding_specificity | 2652 | — | — |
 
 `positioning_check` 的两位教师蒸馏均已完成，表中数据已从完整原始蒸馏文件刷新。
 `actionability` 当前只完成 DeepSeek-v4-pro：尝试 4,800 条，接受 1,788 条
 （37.25%）；拒绝包括标签不一致 2,859 条、格式错误 153 条。
+`grounding_specificity` 同样只完成 DeepSeek-v4-pro：尝试 4,800 条，接受 2,652 条
+（55.25%）；拒绝包括标签不一致 2,081 条、格式错误 67 条。
 
 ## 按模型续跑
 
