@@ -24,34 +24,34 @@ DEFAULT_TASK_SOURCES = {
     "coherence": {
         "task": "rw_gen",
         "dataset": PROJECT_ROOT
-        / "train_data/lora_data/rw_gen_coherence_3629_distill_deepseek-v4-pro.jsonl",
+        / "train_data/lora_data/rw_gen_coherence/rw_gen_coherence_3629_distill_deepseek-v4-pro.jsonl",
         "split": PROJECT_ROOT
-        / "train_data/lora_data/splits/rw_gen_coherence_deepseek-v4-pro_seed20260720.json",
+        / "train_data/lora_data/rw_gen_coherence/splits/rw_gen_coherence_deepseek-v4-pro_seed20260720.json",
         "test": PROJECT_ROOT / "test_data/prompted_rw_gen_coherence_data.json",
     },
     "positioning_check": {
         "task": "rw_gen",
         "dataset": PROJECT_ROOT
-        / "train_data/lora_data/rw_gen_positioning_check_2666_distill_deepseek-v4-pro.jsonl",
+        / "train_data/lora_data/rw_gen_positioning_check/rw_gen_positioning_check_2666_distill_deepseek-v4-pro.jsonl",
         "split": PROJECT_ROOT
-        / "train_data/lora_data/splits/rw_gen_positioning_check_deepseek-v4-pro_seed20260720.json",
+        / "train_data/lora_data/rw_gen_positioning_check/splits/rw_gen_positioning_check_deepseek-v4-pro_seed20260720.json",
         "test": PROJECT_ROOT
         / "test_data/prompted_rw_gen_positioning_check_data.json",
     },
     "positioning_type": {
         "task": "rw_gen",
         "dataset": PROJECT_ROOT
-        / "train_data/lora_data/rw_gen_positioning_type_953_distill_glm-5.2.jsonl",
+        / "train_data/lora_data/rw_gen_positioning_type/rw_gen_positioning_type_953_distill_glm-5.2.jsonl",
         "split": PROJECT_ROOT
-        / "train_data/lora_data/splits/rw_gen_positioning_type_glm-5.2_seed20260720.json",
+        / "train_data/lora_data/rw_gen_positioning_type/splits/rw_gen_positioning_type_glm-5.2_seed20260720.json",
         "test": PROJECT_ROOT / "test_data/prompted_rw_gen_positioning_type_data.json",
     },
     "actionability": {
         "task": "rev_util",
         "dataset": PROJECT_ROOT
-        / "train_data/lora_data/rev_util_actionability_1788_distill_deepseek-v4-pro.jsonl",
+        / "train_data/lora_data/rev_util_actionability/rev_util_actionability_1788_distill_deepseek-v4-pro.jsonl",
         "split": PROJECT_ROOT
-        / "train_data/lora_data/splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json",
+        / "train_data/lora_data/rev_util_actionability/splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json",
         # This file is already aspect-filtered, prompt-unique, and test-clean. Reuse it
         # byte-for-byte so changing calibration provenance cannot change the final test.
         "test": TEST_DATA_ROOT / "actionability/clean_test1000.json",

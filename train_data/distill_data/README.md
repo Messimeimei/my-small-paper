@@ -4,17 +4,19 @@
 
 ## 单文件格式
 
-[`generate_mode_cot.py`](generate_mode_cot.py) 对每个输入只维护一个追加式 JSONL 文件：
+[`generate_mode_cot.py`](generate_mode_cot.py) 对每个输入只维护一个追加式 JSONL 文件，并按任务分目录存放：
 
 ```text
-任务_维度_输入数量_distill.jsonl
+<task_aspect>/<task_aspect>_输入数量_distill.jsonl
 ```
 
 例如全量 RW coherence 数据输出为：
 
 ```text
-rw_gen_coherence_4811_distill.jsonl
+rw_gen_coherence/rw_gen_coherence_4811_distill.jsonl
 ```
+
+冒烟 preview 默认写到 `preview/<task_aspect>/`。
 
 文件中包含三类记录：
 
@@ -108,5 +110,8 @@ python train_data/distill_data/generate_mode_cot.py \
   --output-dir train_data/distill_data \
   --model deepseek-v4-pro
 ```
+
+输出文件路径为
+`train_data/distill_data/rw_gen_coherence/rw_gen_coherence_4811_distill.jsonl`。
 
 API 配置从本目录 `.env` 读取 `OPENBITFUN_API_KEY` 和 `OPENBITFUN_BASE_URL`。也可以配置 `OPENBITFUN_MODEL` 作为默认教师，但显式使用 `--model` 更适合多教师蒸馏。

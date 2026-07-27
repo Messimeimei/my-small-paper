@@ -58,8 +58,9 @@ const exportRecords = [];
 
 function findSourceFilename(prefix, variant) {
   const suffix = `_distill_${variant.suffix}.jsonl`;
+  const taskDirectory = path.join(distillDirectory, prefix);
   const matches = fs
-    .readdirSync(distillDirectory)
+    .readdirSync(taskDirectory)
     .filter((filename) => filename.startsWith(`${prefix}_`) && filename.endsWith(suffix));
   if (matches.length !== 1) {
     throw new Error(
@@ -110,11 +111,14 @@ function convertRow(row, filename, lineNumber, variant) {
   };
 }
 
-function writeRows(filename, rows, sourceFilename, sourceBytes, variant) {
+function writeRows(taskPrefix, filename, rows, sourceFilename, sourceBytes, variant) {
   if (new Set(rows.map((row) => row.id)).size !== rows.length) {
     throw new Error(`${filename} contains duplicate sample IDs`);
   }
-  const outputPath = path.join(outputDirectory, filename);
+  const relativeFile = path.join(taskPrefix, filename);
+  const taskDirectory = path.join(outputDirectory, taskPrefix);
+  fs.mkdirSync(taskDirectory, { recursive: true });
+  const outputPath = path.join(taskDirectory, filename);
   const temporaryPath = `${outputPath}.tmp`;
   fs.writeFileSync(temporaryPath, `${rows.map(JSON.stringify).join("\n")}\n`);
   fs.renameSync(temporaryPath, outputPath);
@@ -122,7 +126,7 @@ function writeRows(filename, rows, sourceFilename, sourceBytes, variant) {
   const labelCounts = {};
   for (const row of rows) labelCounts[row.label] = (labelCounts[row.label] || 0) + 1;
   exportRecords.push({
-    file: filename,
+    file: relativeFile.replace(/\\/g, "/"),
     source_file: sourceFilename,
     source_bytes_read: sourceBytes,
     samples: rows.length,
@@ -130,13 +134,14 @@ function writeRows(filename, rows, sourceFilename, sourceBytes, variant) {
     teacher_models: variant.teacherModels,
     trajectory_teacher: variant.trajectoryTeacher,
   });
-  console.log(`${filename}: ${rows.length}`);
+  console.log(`${relativeFile}: ${rows.length}`);
 }
 
 for (const prefix of datasetPrefixes) {
   for (const variant of variants) {
     const filename = findSourceFilename(prefix, variant);
-    const sourcePath = path.join(distillDirectory, filename);
+    const sourceRelative = path.join(prefix, filename).replace(/\\/g, "/");
+    const sourcePath = path.join(distillDirectory, prefix, filename);
     const content = fs.readFileSync(sourcePath, "utf8");
     const rows = content
       .trimEnd()
@@ -150,14 +155,15 @@ for (const prefix of datasetPrefixes) {
         `${filename} declares ${sampleCount} samples but contains ${rows.length}`,
       );
     }
-    writeRows(filename, rows, filename, Buffer.byteLength(content), variant);
+    writeRows(prefix, filename, rows, sourceRelative, Buffer.byteLength(content), variant);
   }
 }
 
 for (const dataset of singleTeacherDatasets) {
   const variant = dataset;
   const filename = findSourceFilename(dataset.prefix, variant);
-  const sourcePath = path.join(distillDirectory, filename);
+  const sourceRelative = path.join(dataset.prefix, filename).replace(/\\/g, "/");
+  const sourcePath = path.join(distillDirectory, dataset.prefix, filename);
   const content = fs.readFileSync(sourcePath, "utf8");
   const rows = content
     .trimEnd()
@@ -171,7 +177,14 @@ for (const dataset of singleTeacherDatasets) {
       `${filename} declares ${sampleCount} samples but contains ${rows.length}`,
     );
   }
-  writeRows(filename, rows, filename, Buffer.byteLength(content), variant);
+  writeRows(
+    dataset.prefix,
+    filename,
+    rows,
+    sourceRelative,
+    Buffer.byteLength(content),
+    variant,
+  );
 }
 
 const manifestPath = path.join(outputDirectory, "export_manifest.json");

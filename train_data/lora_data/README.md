@@ -47,47 +47,50 @@ completion 来源由文件名最后的教师名以及 `export_manifest.json` 中
 
 ## 当前输出
 
+数据按任务分目录存放：`lora_data/<task>/*.jsonl`，对应划分在
+`lora_data/<task>/splits/`。
+
 | aspect | 版本（轨迹来源） | 样本数 | 文件 |
 |---|---|---:|---|
-| coherence | DeepSeek | 3629 | `rw_gen_coherence_3629_distill_deepseek-v4-pro.jsonl` |
-| coherence | GLM | 3625 | `rw_gen_coherence_3625_distill_glm-5.2.jsonl` |
-| coherence | 双教师共识（DeepSeek） | 3247 | `rw_gen_coherence_3247_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl` |
-| coherence | 双教师共识（GLM） | 3247 | `rw_gen_coherence_3247_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl` |
-| positioning_check | DeepSeek | 2666 | `rw_gen_positioning_check_2666_distill_deepseek-v4-pro.jsonl` |
-| positioning_check | GLM | 2693 | `rw_gen_positioning_check_2693_distill_glm-5.2.jsonl` |
-| positioning_check | 双教师共识（DeepSeek） | 2613 | `rw_gen_positioning_check_2613_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl` |
-| positioning_check | 双教师共识（GLM） | 2613 | `rw_gen_positioning_check_2613_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl` |
-| positioning_type | DeepSeek | 944 | `rw_gen_positioning_type_944_distill_deepseek-v4-pro.jsonl` |
-| positioning_type | GLM | 953 | `rw_gen_positioning_type_953_distill_glm-5.2.jsonl` |
-| positioning_type | 双教师共识（DeepSeek） | 943 | `rw_gen_positioning_type_943_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl` |
-| positioning_type | 双教师共识（GLM） | 943 | `rw_gen_positioning_type_943_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl` |
-| actionability | DeepSeek | 1788 | `rev_util_actionability_1788_distill_deepseek-v4-pro.jsonl` |
-| grounding_specificity | DeepSeek | 2652 | `rev_util_grounding_specificity_2652_distill_deepseek-v4-pro.jsonl` |
-| helpfulness | DeepSeek | 2279 | `rev_util_helpfulness_2279_distill_deepseek-v4-pro.jsonl` |
+| coherence | DeepSeek | 3629 | `rw_gen_coherence/rw_gen_coherence_3629_distill_deepseek-v4-pro.jsonl` |
+| coherence | GLM | 3625 | `rw_gen_coherence/rw_gen_coherence_3625_distill_glm-5.2.jsonl` |
+| coherence | 双教师共识（DeepSeek） | 3247 | `rw_gen_coherence/rw_gen_coherence_3247_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl` |
+| coherence | 双教师共识（GLM） | 3247 | `rw_gen_coherence/rw_gen_coherence_3247_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl` |
+| positioning_check | DeepSeek | 2666 | `rw_gen_positioning_check/rw_gen_positioning_check_2666_distill_deepseek-v4-pro.jsonl` |
+| positioning_check | GLM | 2693 | `rw_gen_positioning_check/rw_gen_positioning_check_2693_distill_glm-5.2.jsonl` |
+| positioning_check | 双教师共识（DeepSeek） | 2613 | `rw_gen_positioning_check/rw_gen_positioning_check_2613_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl` |
+| positioning_check | 双教师共识（GLM） | 2613 | `rw_gen_positioning_check/rw_gen_positioning_check_2613_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl` |
+| positioning_type | DeepSeek | 944 | `rw_gen_positioning_type/rw_gen_positioning_type_944_distill_deepseek-v4-pro.jsonl` |
+| positioning_type | GLM | 953 | `rw_gen_positioning_type/rw_gen_positioning_type_953_distill_glm-5.2.jsonl` |
+| positioning_type | 双教师共识（DeepSeek） | 943 | `rw_gen_positioning_type/rw_gen_positioning_type_943_distill_deepseek-v4-pro_glm-5.2_consensus_deepseek-v4-pro.jsonl` |
+| positioning_type | 双教师共识（GLM） | 943 | `rw_gen_positioning_type/rw_gen_positioning_type_943_distill_deepseek-v4-pro_glm-5.2_consensus_glm-5.2.jsonl` |
+| actionability | DeepSeek | 1788 | `rev_util_actionability/rev_util_actionability_1788_distill_deepseek-v4-pro.jsonl` |
+| grounding_specificity | DeepSeek | 2652 | `rev_util_grounding_specificity/rev_util_grounding_specificity_2652_distill_deepseek-v4-pro.jsonl` |
+| helpfulness | DeepSeek | 2279 | `rev_util_helpfulness/rev_util_helpfulness_2279_distill_deepseek-v4-pro.jsonl` |
 
 `positioning_check` 的两位教师蒸馏均已完成，表中 LoRA 数据已从完整的派生蒸馏
 数据刷新。
 
 `actionability`、`grounding_specificity` 与 `helpfulness` 都是 1–5 分五分类任务，
 当前只导出已完成的 DeepSeek-v4-pro 单教师版本；固定划分分别为
-`splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json` 和
-`splits/rev_util_grounding_specificity_deepseek-v4-pro_seed20260720.json`、
-`splits/rev_util_helpfulness_deepseek-v4-pro_seed20260720.json`。
+`rev_util_actionability/splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json` 和
+`rev_util_grounding_specificity/splits/rev_util_grounding_specificity_deepseek-v4-pro_seed20260720.json`、
+`rev_util_helpfulness/splits/rev_util_helpfulness_deepseek-v4-pro_seed20260720.json`。
 
 coherence 两个共识版本使用相同的训练集/验证集 ID 划分，但数据哈希不同：
 
-- DeepSeek 轨迹：`splits/rw_gen_coherence_consensus_deepseek-v4-pro_seed20260720.json`；
-- GLM 轨迹：`splits/rw_gen_coherence_consensus_glm-5.2_seed20260720.json`。
+- DeepSeek 轨迹：`rw_gen_coherence/splits/rw_gen_coherence_consensus_deepseek-v4-pro_seed20260720.json`；
+- GLM 轨迹：`rw_gen_coherence/splits/rw_gen_coherence_consensus_glm-5.2_seed20260720.json`。
 
-原 `splits/rw_gen_coherence_consensus_seed20260720.json` 保留为 DeepSeek 轨迹版本
+原 `rw_gen_coherence/splits/rw_gen_coherence_consensus_seed20260720.json` 保留为 DeepSeek 轨迹版本
 的兼容别名。
 
 无需加载训练依赖即可生成与 `training/train.py` 相同的固定分层划分：
 
 ```bash
 python train_data/lora_data/make_split.py \
-  --input train_data/lora_data/rev_util_helpfulness_2279_distill_deepseek-v4-pro.jsonl \
-  --output train_data/lora_data/splits/rev_util_helpfulness_deepseek-v4-pro_seed20260720.json
+  --input train_data/lora_data/rev_util_helpfulness/rev_util_helpfulness_2279_distill_deepseek-v4-pro.jsonl \
+  --output train_data/lora_data/rev_util_helpfulness/splits/rev_util_helpfulness_deepseek-v4-pro_seed20260720.json
 ```
 
 score-only 数据及其同 ID 划分由 `make_score_only.js` 从 full-CoT 版本派生。

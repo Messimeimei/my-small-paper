@@ -328,7 +328,8 @@ def output_path(rows: list[dict[str, Any]], output_dir: Path) -> Path:
         raise ValueError("All input rows must have the same task and aspect.")
     task = safe_filename_part(next(iter(tasks)), "task")
     aspect = safe_filename_part(next(iter(aspects)), "aspect")
-    return output_dir / f"{task}_{aspect}_{len(rows)}_distill.jsonl"
+    task_key = f"{task}_{aspect}"
+    return output_dir / task_key / f"{task_key}_{len(rows)}_distill.jsonl"
 
 
 def append_jsonl(path: Path, record: dict[str, Any]) -> None:
