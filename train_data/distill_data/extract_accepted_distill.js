@@ -7,21 +7,21 @@ const path = require("path");
 const directory = __dirname;
 const teachers = ["deepseek-v4-pro", "glm-5.2"];
 const sources = [
-  "rw_gen_coherence_4811_distill.jsonl",
-  "rw_gen_positioning_check_2822_distill.jsonl",
-  "rw_gen_positioning_type_954_distill.jsonl",
+  "rw_gen_coherence/rw_gen_coherence_4811_distill.jsonl",
+  "rw_gen_positioning_check/rw_gen_positioning_check_2822_distill.jsonl",
+  "rw_gen_positioning_type/rw_gen_positioning_type_954_distill.jsonl",
 ];
 const singleTeacherSources = [
   {
-    filename: "rev_util_actionability_4800_distill.jsonl",
+    filename: "rev_util_actionability/rev_util_actionability_4800_distill.jsonl",
     teacher: "deepseek-v4-pro",
   },
   {
-    filename: "rev_util_grounding_specificity_4800_distill.jsonl",
+    filename: "rev_util_grounding_specificity/rev_util_grounding_specificity_4800_distill.jsonl",
     teacher: "deepseek-v4-pro",
   },
   {
-    filename: "rev_util_helpfulness_4800_distill.jsonl",
+    filename: "rev_util_helpfulness/rev_util_helpfulness_4800_distill.jsonl",
     teacher: "deepseek-v4-pro",
   },
 ];
@@ -33,26 +33,29 @@ function derivedFilename(sourceFilename, suffix, sampleCount) {
   );
 }
 
-function writeRows(filename, rows) {
-  const outputPath = path.join(directory, filename);
+function writeRows(relativeFilename, rows) {
+  const outputPath = path.join(directory, relativeFilename);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   const temporaryPath = `${outputPath}.tmp`;
   fs.writeFileSync(temporaryPath, `${rows.map(JSON.stringify).join("\n")}\n`);
   fs.renameSync(temporaryPath, outputPath);
 
-  const parts = filename.match(/^(.*)_\d+(_distill_.*\.jsonl)$/);
-  if (parts === null) throw new Error(`Invalid derived filename: ${filename}`);
+  const basename = path.basename(relativeFilename);
+  const taskDirectory = path.dirname(outputPath);
+  const parts = basename.match(/^(.*)_\d+(_distill_.*\.jsonl)$/);
+  if (parts === null) throw new Error(`Invalid derived filename: ${basename}`);
   const [, prefix, suffix] = parts;
-  for (const candidate of fs.readdirSync(directory)) {
+  for (const candidate of fs.readdirSync(taskDirectory)) {
     if (
-      candidate !== filename &&
+      candidate !== basename &&
       candidate.startsWith(`${prefix}_`) &&
       candidate.endsWith(suffix) &&
       /^\d+$/.test(candidate.slice(prefix.length + 1, -suffix.length))
     ) {
-      fs.unlinkSync(path.join(directory, candidate));
+      fs.unlinkSync(path.join(taskDirectory, candidate));
     }
   }
-  console.log(`${filename}: ${rows.length}`);
+  console.log(`${relativeFilename}: ${rows.length}`);
 }
 
 function validatePair(deepseek, glm, sourceFilename) {
@@ -83,6 +86,10 @@ function addConsensusMetadata(row, deepseek, glm) {
 
 for (const sourceFilename of sources) {
   const sourcePath = path.join(directory, sourceFilename);
+  if (!fs.existsSync(sourcePath)) {
+    console.warn(`skip missing source: ${sourceFilename}`);
+    continue;
+  }
   const rowsByTeacher = new Map(teachers.map((teacher) => [teacher, new Map()]));
   const lines = fs.readFileSync(sourcePath, "utf8").trimEnd().split("\n");
 

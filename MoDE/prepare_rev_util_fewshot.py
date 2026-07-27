@@ -261,7 +261,9 @@ def load_known_trajectories(
 ) -> dict[str, dict[str, Any]]:
     records: dict[str, dict[str, Any]] = {}
     if reuse_project_distill:
-        project_path = DISTILL_DIR / f"rev_util_{aspect}_4800_distill.jsonl"
+        project_path = (
+            DISTILL_DIR / f"rev_util_{aspect}" / f"rev_util_{aspect}_4800_distill.jsonl"
+        )
         records.update(
             scan_trajectory_file(
                 project_path, aspect=aspect, teacher_model=teacher_model
