@@ -109,6 +109,39 @@ def write_json(path: Path, payload: Any) -> None:
     temporary.replace(path)
 
 
+def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    temporary.replace(path)
+
+
+def load_rows_payload(path: Path) -> list[dict[str, Any]]:
+    """Load rows from JSONL or legacy JSON `{test|train: [...]}` wrappers."""
+    if path.suffix.lower() == ".jsonl":
+        rows: list[dict[str, Any]] = []
+        with path.open(encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if not isinstance(row, dict):
+                    raise ValueError(f"{path}:{line_number} must be a JSON object")
+                rows.append(row)
+        return rows
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(payload, dict):
+        rows = payload.get("test", payload.get("train"))
+    else:
+        rows = payload
+    if not isinstance(rows, list):
+        raise ValueError(f"{path} must contain a list or a test/train list")
+    return rows
+
+
 def relative_to_project(path: Path) -> str:
     try:
         return str(path.resolve().relative_to(PROJECT_ROOT))
@@ -176,10 +209,7 @@ def read_train_rows(path: Path, aspect: str) -> list[dict[str, Any]]:
 
 
 def read_test_rows(path: Path, aspect: str) -> list[dict[str, Any]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    all_rows = payload.get("test") if isinstance(payload, dict) else None
-    if not isinstance(all_rows, list):
-        raise ValueError(f"Missing test list: {path}")
+    all_rows = load_rows_payload(path)
     rows = [row for row in all_rows if row.get("aspect") == aspect]
     if not rows:
         raise ValueError(f"No test rows for aspect={aspect}: {path}")
@@ -300,27 +330,10 @@ def materialize_clean_test(
 ) -> tuple[Path, list[dict[str, Any]], list[str]]:
     raw_test_rows = read_test_rows(test_source, aspect)
     clean_test_rows, duplicate_test_ids = deduplicate_rows(raw_test_rows)
-    score_sets = list(clean_test_rows[0]["score_sets"])
     aspect_dir = output_dir / aspect
     aspect_dir.mkdir(parents=True, exist_ok=True)
-    test_path = aspect_dir / f"clean_test{len(clean_test_rows)}.json"
-    test_metadata = {
-        "schema_version": 1,
-        "purpose": "mode_unseen_task_final_test_shared_by_all_shot_settings",
-        "task": "rev_util",
-        "aspect": aspect,
-        "score_sets": score_sets,
-        "source_file": relative_to_project(test_source),
-        "source_sha256": sha256_file(test_source),
-        "source_test_count": len(raw_test_rows),
-        "test_count": len(clean_test_rows),
-        "test_label_counts": label_counts(clean_test_rows, score_sets),
-        "removed_duplicate_test_ids": duplicate_test_ids,
-    }
-    write_json(
-        test_path,
-        {"metadata": test_metadata, "train": [], "test": clean_test_rows},
-    )
+    test_path = aspect_dir / f"clean_test{len(clean_test_rows)}.jsonl"
+    write_jsonl(test_path, clean_test_rows)
     return test_path, clean_test_rows, duplicate_test_ids
 
 

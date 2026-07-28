@@ -165,6 +165,15 @@ def write_json(path: Path, payload: Any) -> None:
     temporary.replace(path)
 
 
+def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    temporary.replace(path)
+
+
 def relative_to_project(path: Path) -> str:
     try:
         return str(path.resolve().relative_to(PROJECT_ROOT))
@@ -710,23 +719,8 @@ def build_target(
         row["id"] for label in score_sets for row in selected[label][: max(shots)]
     }
     test_rows = [row for row in rows if row["id"] not in selected_ids]
-    test_path = target_dir / f"clean_test{len(test_rows)}.json"
-    test_metadata = {
-        "schema_version": 1,
-        "purpose": "mode_unseen_task_final_test_shared_by_all_shot_settings",
-        "task": "unseen_task",
-        "aspect": target,
-        "score_sets": score_sets,
-        "source_file": relative_to_project(source_info["source_file"]),
-        "source_sha256": sha256_file(source_info["source_file"]),
-        "source_target_count": source_info["source_count"],
-        "deduplicated_source_count": len(rows),
-        "removed_duplicate_source_ids": source_info["duplicate_source_ids"],
-        "removed_calibration_ids": sorted(selected_ids),
-        "test_count": len(test_rows),
-        "test_label_counts": label_counts(test_rows, score_sets),
-    }
-    write_json(test_path, {"metadata": test_metadata, "train": [], "test": test_rows})
+    test_path = target_dir / f"clean_test{len(test_rows)}.jsonl"
+    write_jsonl(test_path, test_rows)
 
     result: dict[str, Any] = {
         "target": target,

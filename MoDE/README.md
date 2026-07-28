@@ -46,14 +46,14 @@ datasets:
       1: test_data/actionability/validation_k1_per_class_cal5_seed42.json
       3: test_data/actionability/validation_k3_per_class_cal15_seed42.json
       5: test_data/actionability/validation_k5_per_class_cal25_seed42.json
-    test_file: test_data/actionability/clean_test1000.json
+    test_file: test_data/actionability/clean_test1000.jsonl
 ```
 
 `--target` 选择 `datasets` 下的任务，`--shots-per-class` 选择对应 calibration 文件。
 
 `test_data/` 按 target 分目录。每个目录中：
 
-- `clean_test*.json` 和配置选中的 `*validation*.json` 是优化/评测运行时输入；
+- `clean_test*.jsonl` 和配置选中的 `*validation*.json` 是优化/评测运行时输入；
 - `api_trajectories.jsonl` 是 API 生成缓存和审计记录，不参与优化运行，但应保留以便
   离线重建或中断续跑；
 - 根目录的 `split_manifest.json` 与 `unseen_generation_summary.json` 是生成审计元数据，
@@ -171,9 +171,9 @@ LoRA gradient-train 重合，coherence test 有 2 条内部重复，因此生成
 clean test：
 
 ```text
-test_data/coherence/clean_test1046.json
-data/positioning_check/clean_test603.json
-data/positioning_type/clean_test204.json
+test_data/coherence/clean_test1046.jsonl
+data/positioning_check/clean_test603.jsonl
+data/positioning_type/clean_test204.jsonl
 ```
 
 这里的清理与 k 无关，不是因为抽取 validation calibration 而删除测试数据。这样
@@ -286,7 +286,7 @@ python \
   --exp_name mode_factor_mix_coherence_k5pc \
   --model_name model/Qwen3-4B \
   --adapter 'MoDE/outputs/<run-id>/adapter' \
-  --dataset_file test_data/coherence/clean_test1046.json \
+  --dataset_file test_data/coherence/clean_test1046.jsonl \
   --output_path MoDE/eval_outputs \
   --max_model_len 8192 \
   --max_tokens 512 \
@@ -308,7 +308,7 @@ python \
   --exp_name mode_factor_mix_actionability_k5pc \
   --model_name model/Qwen3-4B \
   --adapter 'MoDE/outputs/<run-id>/adapter' \
-  --dataset_file test_data/actionability/clean_test1000.json \
+  --dataset_file test_data/actionability/clean_test1000.jsonl \
   --output_path MoDE/eval_outputs \
   --max_model_len 8192 \
   --max_tokens 512 \

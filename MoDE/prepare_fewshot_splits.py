@@ -54,7 +54,7 @@ DEFAULT_TASK_SOURCES = {
         / "train_data/lora_data/rev_util_actionability/splits/rev_util_actionability_deepseek-v4-pro_seed20260720.json",
         # This file is already aspect-filtered, prompt-unique, and test-clean. Reuse it
         # byte-for-byte so changing calibration provenance cannot change the final test.
-        "test": TEST_DATA_ROOT / "actionability/clean_test1000.json",
+        "test": TEST_DATA_ROOT / "actionability/clean_test1000.jsonl",
         "reuse_clean_test": True,
     },
 }
@@ -95,6 +95,15 @@ def write_json(path: Path, payload: Any) -> None:
     temporary.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    temporary.replace(path)
+
+
+def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
     temporary.replace(path)
 
 
@@ -203,10 +212,21 @@ def load_split(path: Path, dataset_path: Path, row_ids: set[str]) -> dict[str, A
 
 
 def load_test_rows(path: Path, aspect: str) -> list[dict[str, Any]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    rows = payload.get("test") if isinstance(payload, dict) else None
+    if path.suffix.lower() == ".jsonl":
+        rows = []
+        with path.open(encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if not isinstance(row, dict):
+                    raise ValueError(f"Invalid test row at {path}:{line_number}")
+                rows.append(row)
+    else:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        rows = payload.get("test") if isinstance(payload, dict) else payload
     if not isinstance(rows, list) or not rows:
-        raise ValueError(f"{path} must contain a non-empty top-level test list")
+        raise ValueError(f"{path} must contain a non-empty test list / JSONL rows")
     seen_ids: set[str] = set()
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
@@ -440,30 +460,12 @@ def create_splits(
             raise ValueError(f"Configured reusable test is not clean: {test_source}")
         task_output_dir = output_dir / aspect
         task_output_dir.mkdir(parents=True, exist_ok=True)
-        clean_test_filename = f"clean_test{len(clean_test)}.json"
+        clean_test_filename = f"clean_test{len(clean_test)}.jsonl"
         clean_test_path = (
             test_source if reuse_clean_test else task_output_dir / clean_test_filename
         )
-        clean_test_metadata = {
-            "schema_version": 3,
-            "purpose": "mode_final_test_shared_by_all_shot_settings",
-            "task": task_name,
-            "aspect": aspect,
-            "source_file": relative_to_project(test_source),
-            "source_sha256": sha256_file(test_source),
-            "source_test_count": len(test_rows),
-            "test_count": len(clean_test),
-            "score_sets": score_sets,
-            "test_label_counts": label_counts(clean_test, score_sets),
-            "gradient_train_source": relative_to_project(dataset_path),
-            "gradient_train_split": relative_to_project(split_path),
-            **test_audit,
-        }
         if not reuse_clean_test:
-            write_json(
-                clean_test_path,
-                {"metadata": clean_test_metadata, "train": [], "test": clean_test},
-            )
+            write_jsonl(clean_test_path, clean_test)
 
         task_manifest: dict[str, Any] = {
             "task": task_name,

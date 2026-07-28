@@ -191,15 +191,37 @@ def parse_label(row: dict[str, Any], index: int, allowed_scores: set[int]) -> in
     return label
 
 
-def load_rows(path: Path) -> tuple[list[dict[str, Any]], list[int]]:
+def load_dataset_rows(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Load eval rows from JSONL (one object per line) or legacy JSON wrappers."""
+    if path.suffix.lower() == ".jsonl":
+        rows: list[dict[str, Any]] = []
+        with path.open(encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if not isinstance(row, dict):
+                    raise ValueError(f"{path}:{line_number} must be a JSON object")
+                rows.append(row)
+        return rows, None
+
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, dict):
         rows = payload.get("test", payload.get("train"))
         metadata = payload.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = None
     else:
         rows = payload
         metadata = None
-    if not isinstance(rows, list) or not rows:
+    if not isinstance(rows, list):
+        raise ValueError(f"{path} must contain a list or a test/train list.")
+    return rows, metadata
+
+
+def load_rows(path: Path) -> tuple[list[dict[str, Any]], list[int]]:
+    rows, metadata = load_dataset_rows(path)
+    if not rows:
         raise ValueError(f"{path} must contain a non-empty test/train list.")
 
     declared_score_sets: list[tuple[str, list[int]]] = []

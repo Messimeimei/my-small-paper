@@ -47,17 +47,17 @@ task_from_exp() {
 }
 
 declare -A DATASETS=(
-  [rw_gen_coherence]="${DATA_ROOT}/coherence/clean_test1046.json"
-  [rw_gen_positioning_type]="${DATA_ROOT}/positioning_type/clean_test204.json"
-  [rw_gen_positioning_check]="${DATA_ROOT}/positioning_check/clean_test603.json"
-  [rev_util_actionability]="${DATA_ROOT}/actionability/clean_test1000.json"
-  [rev_util_grounding_specificity]="${DATA_ROOT}/grounding_specificity/clean_test1000.json"
-  [rev_util_helpfulness]="${DATA_ROOT}/helpfulness/clean_test1000.json"
-  [rev_util_verifiability]="${DATA_ROOT}/verifiability/clean_test788.json"
-  [rev_util_verifiability_extraction]="${DATA_ROOT}/verifiability_extraction/clean_test1000.json"
-  [novelty]="${DATA_ROOT}/novelty/clean_test66.json"
-  [revision_relatedness]="${DATA_ROOT}/revision_relatedness/clean_test3026.json"
-  [revision_correctness]="${DATA_ROOT}/revision_correctness/clean_test3026.json"
+  [rw_gen_coherence]="${DATA_ROOT}/coherence/clean_test1046.jsonl"
+  [rw_gen_positioning_type]="${DATA_ROOT}/positioning_type/clean_test204.jsonl"
+  [rw_gen_positioning_check]="${DATA_ROOT}/positioning_check/clean_test603.jsonl"
+  [rev_util_actionability]="${DATA_ROOT}/actionability/clean_test1000.jsonl"
+  [rev_util_grounding_specificity]="${DATA_ROOT}/grounding_specificity/clean_test1000.jsonl"
+  [rev_util_helpfulness]="${DATA_ROOT}/helpfulness/clean_test1000.jsonl"
+  [rev_util_verifiability]="${DATA_ROOT}/verifiability/clean_test788.jsonl"
+  [rev_util_verifiability_extraction]="${DATA_ROOT}/verifiability_extraction/clean_test1000.jsonl"
+  [novelty]="${DATA_ROOT}/novelty/clean_test66.jsonl"
+  [revision_relatedness]="${DATA_ROOT}/revision_relatedness/clean_test3026.jsonl"
+  [revision_correctness]="${DATA_ROOT}/revision_correctness/clean_test3026.jsonl"
 )
 
 run_one() {
