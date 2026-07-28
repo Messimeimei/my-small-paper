@@ -1,8 +1,29 @@
 # Minimal LoRA Training
 
-该目录提供一个最小的可复现训练入口：固定分层数据划分、LoRA SFT、按 epoch
-验证和保存 checkpoint、保存最佳 adapter。生成式验证直接使用训练中的模型和同一张
-GPU，不启动额外推理进程。
+该目录提供可复现的 LoRA SFT 入口：读取 `data/<task>/{cot,score_only}/train_*.jsonl`，
+固定分层划分、按 **生成式 validation accuracy** 保存最佳 checkpoint，并写出完整
+manifest / summary。生成式验证使用训练模型与同一张 GPU。
+
+## 0. 数据与配置
+
+训练数据在 `data/`：
+
+```text
+data/<task>/cot/train_cot.jsonl
+data/<task>/score_only/train_score_only.jsonl
+```
+
+对应 YAML 按任务分子目录（与 `data/` 对齐）：
+
+```text
+training/configs/<task>/cot.yaml
+training/configs/<task>/score_only.yaml
+```
+
+例如 `training/configs/rw_gen_coherence/cot.yaml`。`split_path` 可省略，默认写到
+`<dataset_dir>/splits/<stem>_seed<split_seed>.json`。
+
+日志前缀形如 `[rw_gen_coherence|cot|Qwen3-4B]`，含任务、监督模式与模型名。
 
 ## 1. 数据检查
 
@@ -11,14 +32,14 @@ GPU，不启动额外推理进程。
 ```bash
 python \
   training/train.py \
-  --config training/configs/rw_gen_coherence.yaml \
+  --config training/configs/rw_gen_coherence/cot.yaml \
   --seed 42 \
   --dry-run
 ```
 
 首次运行会创建固定的 train/validation ID 划分。后续配置和训练 seed 共用该文件。
-`training/configs/rev_util_actionability.yaml` 使用同一入口训练 1–5 分五分类专家；
-训练脚本会从 LoRA 数据推断分值集合，并据此完成分层划分和生成式验证。
+`training/configs/rev_util_actionability/cot.yaml` 使用同一入口训练 1–5 分五分类专家；
+训练脚本会从数据推断分值集合，并据此完成分层划分和生成式验证。
 
 ## 2. 从头训练
 
@@ -29,7 +50,7 @@ python \
 CUDA_VISIBLE_DEVICES=0 \
 python \
   training/train.py \
-  --config training/configs/rw_gen_coherence.yaml \
+  --config training/configs/rw_gen_coherence/cot.yaml \
   --seed 42 \
   --fresh
 ```
@@ -37,7 +58,7 @@ python \
 每次运行会建立独立目录：
 
 ```text
-train_outputs/rw_gen_coherence/<experiment>__seed<seed>__<UTC time>/
+train_outputs/<task>/<mode>/<experiment>__seed<seed>__<北京时间>/
 ├── manifest.json
 ├── resolved_config.json
 ├── data_summary.json
@@ -45,20 +66,21 @@ train_outputs/rw_gen_coherence/<experiment>__seed<seed>__<UTC time>/
 ├── train_history.jsonl
 ├── tensorboard/
 ├── trainer_state.json
-├── checkpoints/
-├── adapter/
+├── checkpoints/          # save_strategy=best，仅在 generation acc 创新高时保存
+├── adapter/              # 训练结束时的最佳 LoRA（按 eval_generation_accuracy）
 ├── validation_metrics.json
 ├── validation_predictions.jsonl
-└── summary.json
+└── summary.json          # 含 best_checkpoint_epoch / best_generation_accuracy
 ```
 
 - `manifest.json`：运行状态、时间、命令、代码版本和依赖版本。
 - `train_history.jsonl`：每个 logging step 的 loss、学习率和梯度范数。
 - `tensorboard/`：训练/验证 loss、学习率、梯度范数及最终生成式验证指标。
-- `checkpoints/`：可恢复训练的 Trainer checkpoint，最多保留两个。
-- `adapter/`：依据最高生成式 validation accuracy 自动恢复并保存的 LoRA adapter。
-- `validation_metrics.json`：生成式 Accuracy、macro-F1 和格式有效率。
+- `checkpoints/`：按 **accuracy** 变好时保存（不是按 eval_loss）；`save_total_limit` 限制数量。
+- `adapter/`：`load_best_model_at_end` 后保存的最佳 LoRA adapter。
+- `validation_metrics.json`：生成式 Accuracy、macro-F1、格式有效率；1–5 分任务另含 MAE/QWK；以及 token 统计。
 - `validation_predictions.jsonl`：每条验证样本的标签、预测和原始输出。
+- `summary.json`：记录 `best_checkpoint_epoch`、完整配置与 seed。
 
 ## 3. 断点续训
 
@@ -71,9 +93,9 @@ state 的完整 checkpoint。路径包含 `#`，在 shell 中必须加引号。
 ```bash
 python \
   training/train.py \
-  --config training/configs/rw_gen_coherence.yaml \
+  --config training/configs/rw_gen_coherence/cot.yaml \
   --seed 42 \
-  --resume 'train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_glm-5.2__seed42__20260720T131544Z' \
+  --resume 'train_outputs/rw_gen_coherence/cot/rw_gen_coherence#qwen3_4b#cot__seed42__...' \
   --dry-run
 ```
 
@@ -83,13 +105,12 @@ python \
 CUDA_VISIBLE_DEVICES=0 \
 python \
   training/train.py \
-  --config training/configs/rw_gen_coherence.yaml \
+  --config training/configs/rw_gen_coherence/cot.yaml \
   --seed 42 \
-  --resume 'train_outputs/rw_gen_coherence/rw_gen_coherence#qwen3_4b#distill_glm-5.2__seed42__20260720T131544Z'
+  --resume 'train_outputs/rw_gen_coherence/cot/<run_dir>'
 ```
 
-这个 GLM run 会从 `checkpoint-204`（epoch 1）继续到配置的 3 epochs，而不是重新
-执行第 1 个 epoch。恢复时会：
+恢复时会：
 
 - 复用原 run 目录，追加 `train.log`、`train_history.jsonl` 和 TensorBoard 事件；
 - 恢复 LoRA 权重、optimizer、scheduler、RNG、global step 和已训练数据位置；
@@ -102,10 +123,31 @@ python \
 旧 checkpoint。旧参数名 `--resume-from-checkpoint` 仍作为 `--resume` 的兼容别名。
 
 每个 epoch 结束时，脚本先计算 validation loss，再在当前训练 GPU 上逐批执行
-`model.generate()`，记录 Accuracy、macro-F1、格式有效率和逐样本输出，随后保存
-checkpoint 并继续下一个 epoch。
+`model.generate()`，记录 Accuracy、macro-F1、格式有效率（1–5 分另含 MAE/QWK）
+和逐样本输出。**仅当 `eval_generation_accuracy` 创新高时才写 checkpoint**
+（`save_strategy=best`），训练结束按该指标加载最佳权重并保存到 `adapter/`。
 
-## 4. 查看训练曲线
+## 4. 评测
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+python training/evaluate.py \
+  --exp_name 'rw_gen_coherence#qwen3_4b#cot' \
+  --model_name model/Qwen3-4B \
+  --adapter 'train_outputs/rw_gen_coherence/cot/<run>/adapter' \
+  --dataset_file data/rw_gen_coherence/cot/test_cot.jsonl \
+  --seed 42 \
+  --rollout 5
+```
+
+score-only 将 `dataset_file` 换成
+`data/<task>/score_only/test_score_only.jsonl`。结果写到
+`eval_outputs/<task>/<exp_name>/metrics.json` 与 `predictions.jsonl`，并更新
+`eval_outputs/comparison_table.md`（Score Acc / CoT Acc / ΔCoT / F1 / Token Ratio）。
+`metrics.json` 还包含：best checkpoint epoch（若能从训练 run 读到）、test Acc/Macro-F1、
+MAE/QWK（1–5）、格式有效率、平均 reasoning/output token、GPU 时间、seed 与完整配置。
+
+## 5. 查看训练曲线
 
 TensorBoard 是默认后端，不需要账号或外网。在训练节点启动：
 

@@ -22,7 +22,7 @@ python \
 `k` 表示每个标签的样本数，因此 calibration 总数为 `标签数 * k`。抽样使用
 固定 SHA256 排序，满足 1-shot ⊂ 3-shot ⊂ 5-shot。
 
-当前 `training/configs/*.yaml` 已被后续实验改为其他教师版本，不能据此反推现有
+当前 `training/configs/<task>/*.yaml` 已被后续实验改为其他教师版本，不能据此反推现有
 示例 adapter 的数据。拆分脚本固定使用与 `configs/factor_mix-example.yaml` 中 adapter
 实际 run hash 一致的数据和 split：
 

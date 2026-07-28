@@ -1,8 +1,8 @@
-experiment_name: multitask_cleaned#qwen3_4b#score_only_gold
+experiment_name: rev_util_actionability#qwen3_4b#cot
 model_name_or_path: model/Qwen3-4B
-dataset_path: train_data/lora_data/multitask_cleaned/multitask_32587_cleaned_score_only.jsonl
-split_path: train_data/lora_data/multitask_cleaned/splits/multitask_32587_cleaned_score_only_seed20260720.json
-output_root: train_outputs/multitask_cleaned_score_only
+dataset_path: data/rev_util_actionability/cot/train_cot.jsonl
+split_path: data/rev_util_actionability/cot/splits/train_cot_seed20260720.json
+output_root: train_outputs/rev_util_actionability/cot
 
 split_seed: 20260720
 validation_ratio: 0.10
@@ -19,10 +19,10 @@ training:
   learning_rate: 0.0001
   lr_scheduler_type: cosine
   warmup_ratio: 0.03
-  num_train_epochs: 1
-  per_device_train_batch_size: 2
+  num_train_epochs: 3
+  per_device_train_batch_size: 1
   per_device_eval_batch_size: 1
-  gradient_accumulation_steps: 8
+  gradient_accumulation_steps: 16
   max_grad_norm: 0.3
   bf16: true
   gradient_checkpointing: true
@@ -32,5 +32,5 @@ training:
   report_to: tensorboard
 
 generation:
-  batch_size: 4
-  max_new_tokens: 32
+  batch_size: 8
+  max_new_tokens: 512

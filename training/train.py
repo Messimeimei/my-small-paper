@@ -19,18 +19,21 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-import torch
-import transformers
-import trl
 import yaml
-from datasets import Dataset, __version__ as datasets_version
-from peft import LoraConfig, TaskType, __version__ as peft_version
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainerCallback
-from trl import SFTConfig, SFTTrainer
+
+_TRAINING_DIR = Path(__file__).resolve().parent
+if str(_TRAINING_DIR) not in sys.path:
+    sys.path.insert(0, str(_TRAINING_DIR))
+
+from metrics_utils import (
+    SCORE_RE,
+    infer_supervision_mode,
+    infer_task_name,
+    short_model_name,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SCORE_RE = re.compile(r"<score>\s*(-?\d+)\s*</score>", re.I)
 CHECKPOINT_RE = re.compile(r"checkpoint-(\d+)$")
 REQUIRED_RESUME_FILES = {
     "optimizer.pt",
@@ -84,11 +87,16 @@ def read_config(path: Path) -> dict[str, Any]:
         config = yaml.safe_load(handle)
     if not isinstance(config, dict):
         raise ValueError("Config must be a YAML object.")
-    required = {"experiment_name", "model_name_or_path", "dataset_path", "split_path"}
+    required = {"experiment_name", "model_name_or_path", "dataset_path"}
     missing = required - set(config)
     if missing:
         raise ValueError(f"Config is missing fields: {sorted(missing)}")
     return config
+
+
+def default_split_path(dataset_path: Path, split_seed: int) -> Path:
+    """Place fixed splits next to the dataset: <dir>/splits/<stem>_seedN.json."""
+    return dataset_path.parent / "splits" / f"{dataset_path.stem}_seed{split_seed}.json"
 
 
 def sha256_file(path: Path) -> str:
@@ -109,10 +117,31 @@ def write_json(path: Path, payload: Any) -> None:
     temporary.replace(path)
 
 
+def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    temporary.replace(path)
+
+
+def read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def parse_train_label(row: dict[str, Any], line_number: int) -> int:
+    raw = row.get("label", row.get("labels"))
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        raise ValueError(f"Invalid label at line {line_number}: {raw!r}")
+    return raw
+
+
 def load_rows(path: Path) -> list[dict[str, Any]]:
-    """读 JSONL；校验 id / label / prompt / completion 格式。"""
+    """读训练 JSONL（data/*/cot|score_only/train_*.jsonl 或旧 lora_data）。"""
     rows: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
+    declared_score_sets: list[int] | None = None
     with path.open(encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
             if not line.strip():
@@ -121,11 +150,9 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
             sample_id = str(row.get("id", "")).strip()
             prompt = row.get("prompt")
             completion = row.get("completion")
-            label = row.get("label")
+            label = parse_train_label(row, line_number)
             if not sample_id or sample_id in seen_ids:
                 raise ValueError(f"Invalid or duplicate id at {path}:{line_number}")
-            if isinstance(label, bool) or not isinstance(label, int):
-                raise ValueError(f"Invalid label at {path}:{line_number}")
             if not isinstance(prompt, list) or not prompt:
                 raise ValueError(f"Invalid prompt at {path}:{line_number}")
             if (
@@ -135,8 +162,31 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
                 or not SCORE_RE.search(str(completion[0].get("content", "")))
             ):
                 raise ValueError(f"Invalid completion at {path}:{line_number}")
+            if row.get("score_sets") is not None:
+                score_sets = row["score_sets"]
+                if (
+                    not isinstance(score_sets, list)
+                    or not score_sets
+                    or any(isinstance(v, bool) or not isinstance(v, int) for v in score_sets)
+                ):
+                    raise ValueError(f"Invalid score_sets at {path}:{line_number}")
+                if declared_score_sets is None:
+                    declared_score_sets = list(score_sets)
+                elif list(score_sets) != declared_score_sets:
+                    raise ValueError(f"Inconsistent score_sets at {path}:{line_number}")
+                if label not in set(declared_score_sets):
+                    raise ValueError(
+                        f"Label {label} outside score_sets at {path}:{line_number}"
+                    )
             seen_ids.add(sample_id)
-            rows.append(row)
+            normalized = {
+                **row,
+                "id": sample_id,
+                "label": label,
+                "prompt": prompt,
+                "completion": completion,
+            }
+            rows.append(normalized)
     if not rows:
         raise ValueError(f"No rows found in {path}")
     return rows
@@ -259,278 +309,6 @@ def disable_incompatible_torchao() -> str | None:
     return f"Disabled optional torchao {torchao_version}; PEFT requires >=0.16.0."
 
 
-class JsonlLogCallback(TrainerCallback):
-    """把 Trainer 的 log 追加写入 train_history.jsonl。"""
-
-    def __init__(self, path: Path) -> None:
-        self.path = path
-
-    def on_log(self, args, state, control, logs=None, **kwargs):  # noqa: ANN001
-        if not state.is_world_process_zero or not logs:
-            return
-        record = {"time_utc": utc_now(), "step": state.global_step, **logs}
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-
-def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    with temporary.open("w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-    temporary.replace(path)
-
-
-def read_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def classification_metrics(
-    predictions: list[dict[str, Any]], labels: list[int]
-) -> dict[str, Any]:
-    """Accuracy / macro-F1 / 格式有效率 / 混淆矩阵。"""
-    total = len(predictions)
-    allowed_scores = set(labels)
-    valid = [row for row in predictions if row["prediction"] in allowed_scores]
-    per_class: dict[str, dict[str, float | int]] = {}
-    f1_values = []
-    for label in labels:
-        tp = sum(row["label"] == label and row["prediction"] == label for row in predictions)
-        fp = sum(row["label"] != label and row["prediction"] == label for row in predictions)
-        fn = sum(row["label"] == label and row["prediction"] != label for row in predictions)
-        precision = tp / (tp + fp) if tp + fp else 0.0
-        recall = tp / (tp + fn) if tp + fn else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-        f1_values.append(f1)
-        per_class[str(label)] = {
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-            "support": sum(row["label"] == label for row in predictions),
-        }
-    confusion_matrix = {
-        str(gold): {
-            ("invalid" if predicted is None else str(predicted)): sum(
-                row["label"] == gold and row["prediction"] == predicted
-                for row in predictions
-            )
-            for predicted in (*labels, None)
-        }
-        for gold in labels
-    }
-    return {
-        "samples": total,
-        "score_sets": labels,
-        "accuracy": sum(row["correct"] for row in predictions) / total,
-        "macro_f1": sum(f1_values) / len(f1_values),
-        "format_valid_rate": len(valid) / total,
-        "invalid_outputs": total - len(valid),
-        "confusion_matrix": confusion_matrix,
-        "per_class": per_class,
-    }
-
-
-@torch.inference_mode()
-def generate_validation(
-    model,
-    tokenizer,
-    rows: list[dict[str, Any]],
-    batch_size: int,
-    max_length: int,
-    max_new_tokens: int,
-    score_sets: list[int],
-    logger: logging.Logger | None = None,
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """用训练模型所在设备做 greedy 生成，并从输出抽取 <score>。"""
-    was_training = model.training
-    original_use_cache = model.config.use_cache
-    original_padding_side = tokenizer.padding_side
-    device = next(model.parameters()).device
-    predictions: list[dict[str, Any]] = []
-    allowed_scores = set(score_sets)
-    inputs = None
-    output_ids = None
-    generated = None
-
-    try:
-        model.eval()
-        # Checkpointing is inactive in eval mode; keep its flag for resumed training.
-        model.config.use_cache = True
-        tokenizer.padding_side = "left"  # 生成时左填充
-        if device.type == "cuda":
-            torch.cuda.empty_cache()
-        if logger is not None:
-            logger.info(
-                "Starting generation validation on training device %s: samples=%d batch_size=%d",
-                device,
-                len(rows),
-                batch_size,
-            )
-
-        total_batches = math.ceil(len(rows) / batch_size)
-        progress_interval = max(1, total_batches // 20)
-        batches = range(0, len(rows), batch_size)
-        for batch_index, start in enumerate(batches, start=1):
-            batch = rows[start : start + batch_size]
-            texts = [
-                tokenizer.apply_chat_template(
-                    row["prompt"],
-                    tokenize=False,
-                    add_generation_prompt=True,
-                    enable_thinking=False,
-                )
-                for row in batch
-            ]
-            inputs = tokenizer(
-                texts,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=max_length,
-            ).to(device)
-            output_ids = model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=False,
-                pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.eos_token_id,
-            )
-            generated = output_ids[:, inputs["input_ids"].shape[1] :]
-            outputs = tokenizer.batch_decode(generated, skip_special_tokens=True)
-            for row, output in zip(batch, outputs, strict=True):
-                scores = SCORE_RE.findall(output)
-                prediction = int(scores[-1]) if scores else None
-                if prediction not in allowed_scores:
-                    prediction = None
-                predictions.append(
-                    {
-                        "id": row["id"],
-                        "label": row["label"],
-                        "prediction": prediction,
-                        "correct": prediction == row["label"],
-                        "output": output,
-                    }
-                )
-            if logger is not None and (
-                batch_index % progress_interval == 0 or batch_index == total_batches
-            ):
-                logger.info(
-                    "Generation validation progress: %d/%d",
-                    min(start + batch_size, len(rows)),
-                    len(rows),
-                )
-        return classification_metrics(predictions, score_sets), predictions
-    finally:
-        # Drop the final generation tensors before returning cached memory to CUDA.
-        inputs = None
-        output_ids = None
-        generated = None
-        model.config.use_cache = original_use_cache
-        tokenizer.padding_side = original_padding_side
-        model.train(was_training)
-        if device.type == "cuda":
-            torch.cuda.empty_cache()
-
-
-def build_eval_dataset(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": row["id"],
-            "label": row["label"],
-            "prompt": row["prompt"],
-            "task": row.get("task"),
-            "aspect": row.get("aspect"),
-        }
-        for row in rows
-    ]
-
-
-def write_eval_dataset(
-    path: Path, rows: list[dict[str, Any]], score_sets: list[int]
-) -> None:
-    write_json(path, {"metadata": {"score_sets": score_sets}, "test": build_eval_dataset(rows)})
-
-
-class GenerativeEvalSFTTrainer(SFTTrainer):
-    """每次 evaluate 后用训练模型和同一设备做生成式分类验证。"""
-
-    def __init__(
-        self,
-        *args,
-        validation_rows: list[dict[str, Any]],
-        score_sets: list[int],
-        generation_batch_size: int,
-        generation_max_length: int,
-        generation_max_new_tokens: int,
-        run_directory: Path,
-        logger: logging.Logger,
-        **kwargs,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.validation_rows = validation_rows
-        self.score_sets = score_sets
-        self.generation_batch_size = generation_batch_size
-        self.generation_max_length = generation_max_length
-        self.generation_max_new_tokens = generation_max_new_tokens
-        self.run_directory = run_directory
-        self.logger = logger
-        self.latest_generation_metrics: dict[str, Any] | None = None
-        self.latest_generation_predictions: list[dict[str, Any]] | None = None
-        self.validation_dataset_path = self.run_directory / "validation_dataset.json"
-        write_eval_dataset(
-            self.validation_dataset_path, self.validation_rows, self.score_sets
-        )
-
-    def evaluate(self, *args, metric_key_prefix: str = "eval", **kwargs):  # noqa: ANN002
-        metrics = super().evaluate(*args, metric_key_prefix=metric_key_prefix, **kwargs)
-        validation_metrics, predictions = generate_validation(
-            self.model,
-            self.processing_class,
-            self.validation_rows,
-            batch_size=self.generation_batch_size,
-            max_length=self.generation_max_length,
-            max_new_tokens=self.generation_max_new_tokens,
-            score_sets=self.score_sets,
-            logger=self.logger,
-        )
-        metric_names = {
-            f"{metric_key_prefix}_generation_accuracy": validation_metrics["accuracy"],
-            f"{metric_key_prefix}_generation_macro_f1": validation_metrics["macro_f1"],
-            f"{metric_key_prefix}_generation_format_valid_rate": validation_metrics[
-                "format_valid_rate"
-            ],
-            f"{metric_key_prefix}_generation_invalid_outputs": validation_metrics[
-                "invalid_outputs"
-            ],
-        }
-        metrics.update(metric_names)
-        self.latest_generation_metrics = validation_metrics
-        self.latest_generation_predictions = predictions
-
-        step = int(self.state.global_step)
-        epoch_value = self.state.epoch
-        epoch_tag = (
-            f"{epoch_value:.4f}".replace(".", "p") if epoch_value is not None else "unknown"
-        )
-        eval_root = self.run_directory / "epoch_evals"
-        payload = {
-            "step": step,
-            "epoch": epoch_value,
-            "metrics": validation_metrics,
-            "trainer_metrics": metrics,
-        }
-        write_json(eval_root / f"step_{step:06d}__epoch_{epoch_tag}.metrics.json", payload)
-        write_json(eval_root / "latest.metrics.json", payload)
-        write_jsonl(
-            eval_root / f"step_{step:06d}__epoch_{epoch_tag}.predictions.jsonl",
-            predictions,
-        )
-        write_jsonl(eval_root / "latest.predictions.jsonl", predictions)
-        self.log(metric_names)
-        return metrics
-
-
 # 机器时区多为 UTC；run 目录名用北京时间，便于阅读。
 _CN_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
 
@@ -539,10 +317,23 @@ def create_run_directory(config: dict[str, Any], seed: int) -> tuple[str, Path]:
     """新建独立 run 目录：experiment__seed__北京时间。"""
     timestamp = datetime.now(_CN_TZ).strftime("%Y-%m-%d_%H-%M-%S")
     run_id = f"{config['experiment_name']}__seed{seed}__{timestamp}"
-    output_root = resolve_path(config.get("output_root", "train_outputs/lora"))
+    output_root = resolve_path(config.get("output_root", "train_outputs"))
     run_directory = output_root / run_id
     run_directory.mkdir(parents=True, exist_ok=False)
     return run_id, run_directory
+
+
+def best_checkpoint_epoch(trainer_state: Any) -> float | None:
+    """Resolve the epoch of the accuracy-selected best checkpoint."""
+    best_step = getattr(trainer_state, "best_global_step", None)
+    history = getattr(trainer_state, "log_history", None) or []
+    if best_step is not None:
+        for row in reversed(history):
+            if int(row.get("step", -1)) == int(best_step) and "epoch" in row:
+                return float(row["epoch"])
+    if getattr(trainer_state, "epoch", None) is not None:
+        return float(trainer_state.epoch)
+    return None
 
 
 def checkpoint_step(path: Path) -> int:
@@ -787,19 +578,27 @@ def main() -> None:
     config_path = resolve_path(args.config)
     config = read_config(config_path)
     dataset_path = resolve_path(config["dataset_path"])
-    split_path = resolve_path(config["split_path"])
+    split_seed = int(config.get("split_seed", 20260720))
+    if config.get("split_path"):
+        split_path = resolve_path(config["split_path"])
+    else:
+        split_path = default_split_path(dataset_path, split_seed)
     model_path = resolve_path(config["model_name_or_path"])
 
     # --- 数据与固定划分 ---
     dataset_hash = sha256_file(dataset_path)
     rows = load_rows(dataset_path)
     labels = score_sets(rows)
+    task_name = infer_task_name(dataset_path, rows)
+    supervision_mode = infer_supervision_mode(dataset_path, rows)
+    model_short = short_model_name(model_path)
+    run_tag = f"{task_name}|{supervision_mode}|{model_short}"
     split = load_or_create_split(
         rows,
         labels,
         split_path,
         dataset_hash,
-        int(config.get("split_seed", 20260720)),
+        split_seed,
         float(config.get("validation_ratio", 0.1)),
     )
     train_rows, validation_rows = split_rows(rows, split)
@@ -807,7 +606,11 @@ def main() -> None:
         "dataset": str(dataset_path),
         "dataset_sha256": dataset_hash,
         "split": str(split_path),
+        "task": task_name,
+        "supervision_mode": supervision_mode,
         "score_sets": labels,
+        "prompt_version": rows[0].get("prompt_version"),
+        "teacher_models": rows[0].get("teacher_models"),
         "all": {"samples": len(rows), "labels": label_counts(rows, labels)},
         "train": {
             "samples": len(train_rows),
@@ -825,6 +628,8 @@ def main() -> None:
         "dataset_path": str(dataset_path),
         "split_path": str(split_path),
         "seed": args.seed,
+        "task": task_name,
+        "supervision_mode": supervision_mode,
     }
     resume_checkpoint: Path | None = None
     resume_state: dict[str, Any] | None = None
@@ -854,6 +659,21 @@ def main() -> None:
             }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
+
+    import torch
+    import transformers
+    import trl
+    from datasets import Dataset, __version__ as datasets_version
+    from peft import LoraConfig, TaskType, __version__ as peft_version
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from trl import SFTConfig
+
+    from generative_trainer import (
+        CompactTrainLogCallback,
+        GenerativeEvalSFTTrainer,
+        JsonlLogCallback,
+    )
+
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is not available; run training on a GPU node.")
 
@@ -870,8 +690,12 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
         handlers=[logging.StreamHandler(), logging.FileHandler(log_path, encoding="utf-8")],
+        force=True,
     )
     logger = logging.getLogger(__name__)
+    # Keep HuggingFace trainer logs quieter; CompactTrainLogCallback prints the useful lines.
+    transformers.logging.set_verbosity_warning()
+    logging.getLogger("transformers.trainer").setLevel(logging.WARNING)
 
     environment_metadata = {
         "git": git_metadata(),
@@ -982,8 +806,9 @@ def main() -> None:
             logging_strategy="steps",
             logging_steps=int(training.get("logging_steps", 10)),
             eval_strategy="epoch",
-            save_strategy="epoch",
-            load_best_model_at_end=True,  # 按最高生成式验证 acc 保留最佳
+            # Save only when generation accuracy improves (not by eval_loss).
+            save_strategy="best",
+            load_best_model_at_end=True,
             metric_for_best_model="eval_generation_accuracy",
             greater_is_better=True,
             save_total_limit=int(training.get("save_total_limit", 2)),
@@ -1003,7 +828,10 @@ def main() -> None:
             generation_max_new_tokens=int(generation.get("max_new_tokens", 512)),
             run_directory=run_directory,
             logger=logger,
-            callbacks=[JsonlLogCallback(run_directory / "train_history.jsonl")],
+            callbacks=[
+                JsonlLogCallback(run_directory / "train_history.jsonl", run_tag=run_tag),
+                CompactTrainLogCallback(run_tag=run_tag, logger=logger),
+            ],
         )
         trainable_parameters = sum(
             parameter.numel() for parameter in trainer.model.parameters() if parameter.requires_grad
@@ -1017,10 +845,19 @@ def main() -> None:
         write_json(run_directory / "manifest.json", manifest)
 
         if resume_checkpoint is None:
-            logger.info("Starting fresh run %s", run_id)
+            logger.info(
+                "[%s] Starting fresh run %s seed=%d train=%d val=%d scores=%s",
+                run_tag,
+                run_id,
+                args.seed,
+                len(train_rows),
+                len(validation_rows),
+                labels,
+            )
         else:
             logger.info(
-                "Resuming run %s from %s (step=%d epoch=%s)",
+                "[%s] Resuming run %s from %s (step=%d epoch=%s)",
+                run_tag,
                 run_id,
                 resume_checkpoint,
                 resume_state["global_step"],
@@ -1032,9 +869,9 @@ def main() -> None:
                     path_relocation["old"],
                     path_relocation["new"],
                 )
-        logger.info("Train=%d validation=%d", len(train_rows), len(validation_rows))
         logger.info(
-            "Trainable parameters=%d (%.4f%%)",
+            "[%s] Trainable parameters=%d (%.4f%%); save_strategy=best by eval_generation_accuracy",
+            run_tag,
             trainable_parameters,
             manifest["parameters"]["trainable_percent"],
         )
@@ -1054,21 +891,38 @@ def main() -> None:
         write_json(run_directory / "validation_metrics.json", validation_metrics)
         write_jsonl(run_directory / "validation_predictions.jsonl", predictions)
 
+        best_epoch = best_checkpoint_epoch(trainer.state)
         summary = {
             "run_id": run_id,
+            "run_tag": run_tag,
+            "task": task_name,
+            "supervision_mode": supervision_mode,
+            "model_name_or_path": str(model_path),
+            "seed": args.seed,
             "best_checkpoint": trainer.state.best_model_checkpoint,
+            "best_checkpoint_epoch": best_epoch,
+            "best_checkpoint_step": trainer.state.best_global_step,
+            "best_generation_accuracy": trainer.state.best_metric,
+            "metric_for_best_model": "eval_generation_accuracy",
             "train_metrics": train_result.metrics,
             "language_model_validation": language_model_metrics,
             "generation_validation": validation_metrics,
             "adapter_directory": str(adapter_directory),
             "resume_from_checkpoint": str(resume_checkpoint) if resume_checkpoint else None,
             "resume_from_step": int(resume_state["global_step"]) if resume_state else None,
+            "resolved_config": resolved_config,
         }
         write_json(run_directory / "summary.json", summary)
         finish_attempt(manifest, status="completed")
         write_json(run_directory / "manifest.json", manifest)
-        logger.info("Completed run %s", run_id)
-        logger.info("Validation metrics: %s", validation_metrics)
+        logger.info(
+            "[%s] Completed run %s | best_epoch=%s best_acc=%s",
+            run_tag,
+            run_id,
+            best_epoch,
+            trainer.state.best_metric,
+        )
+        logger.info("[%s] Validation metrics: %s", run_tag, validation_metrics)
     except BaseException as error:
         # 失败也写回 manifest，便于事后排查
         finish_attempt(manifest, status="failed", error=error)

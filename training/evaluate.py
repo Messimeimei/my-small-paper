@@ -4,6 +4,9 @@
 Without --adapter (or with none/None/NONE), loads the base model directly.
 With an adapter path, merges LoRA into a cached full model then loads with
 plain vLLM (vLLM 0.8.4 + cachetools>=6 breaks enable_lora in spawned workers).
+
+Supports data/<task>/{cot,score_only}/test_*.jsonl (labels field) and legacy JSON.
+Writes metrics.json / predictions.jsonl and updates eval_outputs/comparison_table.md.
 """
 
 from __future__ import annotations
@@ -14,8 +17,8 @@ import importlib.metadata
 import json
 import os
 import random
-import re
 import shutil
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +26,22 @@ from typing import Any
 
 import numpy as np
 import torch
+
+_TRAINING_DIR = Path(__file__).resolve().parent
+if str(_TRAINING_DIR) not in sys.path:
+    sys.path.insert(0, str(_TRAINING_DIR))
+
+from metrics_utils import (
+    classification_metrics,
+    criterion_title,
+    extract_score,
+    infer_supervision_mode,
+    infer_task_name,
+    merge_comparison_row,
+    render_comparison_table,
+    short_model_name,
+    token_stats,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,10 +56,9 @@ def _import_vllm():
             "python -m pip install -r requirements-eval.txt"
         ) from exc
     return LLM, SamplingParams
-SCORE_RE = re.compile(r"<score>\s*(-?\d+)\s*</score>", re.I)
-DEFAULT_DATASET = (
-    PROJECT_ROOT / "rw_gen__coherence__exact_user_deduplicated__test__n1046.json"
-)
+
+
+DEFAULT_DATASET = PROJECT_ROOT / "data/rw_gen_coherence/cot/test_cot.jsonl"
 DEFAULT_MERGE_CACHE = PROJECT_ROOT / "merged"
 DEFAULT_EVAL_OUTPUT_ROOT = PROJECT_ROOT / "eval_outputs"
 DEFAULT_MERGE_RETENTION_DAYS = 2
@@ -126,6 +144,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Enable native thinking in chat template when supported.",
     )
+    parser.add_argument(
+        "--train_config",
+        default=None,
+        help="Optional training YAML to embed in metrics (seed/config provenance).",
+    )
     return parser.parse_args()
 
 
@@ -164,6 +187,10 @@ def write_json(path: Path, payload: Any) -> None:
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     temporary.replace(path)
+
+
+def read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def normalize_score_sets(raw: Any, *, context: str) -> list[int]:
@@ -284,51 +311,13 @@ def load_rows(path: Path) -> tuple[list[dict[str, Any]], list[int]]:
                 "prompt": row["prompt"],
                 "task": row.get("task"),
                 "aspect": row.get("aspect"),
+                "evaluation_mode": row.get("evaluation_mode")
+                or row.get("supervision_mode"),
+                "prompt_version": row.get("prompt_version"),
+                "score_sets": score_sets,
             }
         )
     return cleaned, score_sets
-
-
-def extract_score(text: str, allowed_scores: set[int]) -> int | None:
-    matches = SCORE_RE.findall(text or "")
-    if not matches:
-        return None
-    score = int(matches[-1])
-    return score if score in allowed_scores else None
-
-
-def classification_metrics(
-    predictions: list[dict[str, Any]], score_sets: list[int]
-) -> dict[str, Any]:
-    total = len(predictions)
-    allowed_scores = set(score_sets)
-    f1_values = []
-    per_class: dict[str, dict[str, float | int]] = {}
-    for label in score_sets:
-        tp = sum(row["label"] == label and row["prediction"] == label for row in predictions)
-        fp = sum(row["label"] != label and row["prediction"] == label for row in predictions)
-        fn = sum(row["label"] == label and row["prediction"] != label for row in predictions)
-        precision = tp / (tp + fp) if tp + fp else 0.0
-        recall = tp / (tp + fn) if tp + fn else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-        f1_values.append(f1)
-        per_class[str(label)] = {
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-            "support": sum(row["label"] == label for row in predictions),
-        }
-    return {
-        "samples": total,
-        "score_sets": score_sets,
-        "accuracy": sum(bool(row["correct"]) for row in predictions) / total,
-        "macro_f1": sum(f1_values) / len(f1_values),
-        "format_valid_rate": sum(
-            row["prediction"] in allowed_scores for row in predictions
-        )
-        / total,
-        "per_class": per_class,
-    }
 
 
 def mean_rollout_metrics(
@@ -336,8 +325,11 @@ def mean_rollout_metrics(
 ) -> dict[str, Any]:
     """Average metrics across rollouts instead of voting across predictions."""
 
-    def summarize(values: list[float | int]) -> tuple[float, float]:
-        array = np.asarray(values, dtype=float)
+    def summarize(values: list[float | int | None]) -> tuple[float | None, float | None]:
+        cleaned = [float(value) for value in values if value is not None]
+        if not cleaned:
+            return None, None
+        array = np.asarray(cleaned, dtype=float)
         return float(array.mean()), float(array.std())
 
     aggregate: dict[str, Any] = {
@@ -345,8 +337,10 @@ def mean_rollout_metrics(
         "score_sets": score_sets,
         "per_class": {},
     }
-    for metric in ("accuracy", "macro_f1", "format_valid_rate"):
-        mean, std = summarize([rollout[metric] for rollout in rollout_metrics])
+    for metric in ("accuracy", "macro_f1", "format_valid_rate", "mae", "qwk"):
+        if metric not in rollout_metrics[0] and metric in {"mae", "qwk"}:
+            continue
+        mean, std = summarize([rollout.get(metric) for rollout in rollout_metrics])
         aggregate[metric] = mean
         aggregate[f"{metric}_std"] = std
 
@@ -466,7 +460,6 @@ def ensure_merged_model(base: Path, adapter: Path, cache_root: Path) -> Path:
     out = merged_model_dir(base, adapter, cache_root)
     marker = out / ".ok"
     if marker.is_file() and (out / "config.json").is_file():
-        # Refresh mtime so recently reused caches survive retention cleanup.
         now = utc_now()
         marker.write_text(now + "\n", encoding="utf-8")
         print(f"reusing merged model: {out}", flush=True)
@@ -540,9 +533,116 @@ def init_vllm(
     return llm, sampling_params
 
 
+def load_train_run_metadata(adapter: Path | None) -> dict[str, Any]:
+    """Pull best-checkpoint epoch / config from a training run directory if present."""
+    if adapter is None:
+        return {}
+    run_dir = adapter.parent if adapter.name == "adapter" else adapter
+    if run_dir.name.startswith("checkpoint-"):
+        run_dir = run_dir.parent.parent
+    meta: dict[str, Any] = {"train_run_directory": str(run_dir)}
+    summary_path = run_dir / "summary.json"
+    state_path = run_dir / "trainer_state.json"
+    config_path = run_dir / "resolved_config.json"
+    if summary_path.is_file():
+        summary = read_json(summary_path)
+        meta.update(
+            {
+                "best_checkpoint": summary.get("best_checkpoint"),
+                "best_checkpoint_epoch": summary.get("best_checkpoint_epoch"),
+                "best_checkpoint_step": summary.get("best_checkpoint_step"),
+                "best_generation_accuracy": summary.get("best_generation_accuracy"),
+                "train_run_id": summary.get("run_id"),
+                "train_seed": summary.get("seed"),
+            }
+        )
+    if state_path.is_file() and meta.get("best_checkpoint_epoch") is None:
+        state = read_json(state_path)
+        meta.setdefault("best_checkpoint_step", state.get("best_global_step"))
+        meta.setdefault("best_generation_accuracy", state.get("best_metric"))
+        best_step = state.get("best_global_step")
+        for row in reversed(state.get("log_history") or []):
+            if best_step is not None and int(row.get("step", -1)) == int(best_step):
+                if "epoch" in row:
+                    meta["best_checkpoint_epoch"] = float(row["epoch"])
+                break
+    if config_path.is_file():
+        meta["train_resolved_config"] = read_json(config_path)
+    return meta
+
+
+def load_optional_yaml(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    import yaml
+
+    with path.open(encoding="utf-8") as handle:
+        payload = yaml.safe_load(handle)
+    return payload if isinstance(payload, dict) else None
+
+
+def gpu_time_snapshot() -> dict[str, Any]:
+    info: dict[str, Any] = {
+        "cuda_available": torch.cuda.is_available(),
+    }
+    if not torch.cuda.is_available():
+        return info
+    info["device_name"] = torch.cuda.get_device_name(0)
+    info["memory_allocated_bytes"] = int(torch.cuda.memory_allocated(0))
+    info["memory_reserved_bytes"] = int(torch.cuda.memory_reserved(0))
+    return info
+
+
+def update_comparison_table(
+    output_root: Path,
+    *,
+    criterion: str,
+    mode: str,
+    model_key: str,
+    accuracy: float,
+    macro_f1: float,
+    avg_output_tokens: float | None,
+    source_metrics: Path,
+) -> Path:
+    """Merge this run into a Score vs CoT comparison markdown table."""
+    table_json = output_root / "comparison_table.json"
+    table_md = output_root / "comparison_table.md"
+    payload = {"model_key": model_key, "rows": {}}
+    if table_json.is_file():
+        loaded = read_json(table_json)
+        if isinstance(loaded, dict) and loaded.get("model_key") == model_key:
+            payload = loaded
+        elif isinstance(loaded, dict):
+            # Different model family: keep separate file keyed by model.
+            table_json = output_root / f"comparison_table__{model_key}.json"
+            table_md = output_root / f"comparison_table__{model_key}.md"
+            if table_json.is_file():
+                payload = read_json(table_json)
+            else:
+                payload = {"model_key": model_key, "rows": {}}
+    rows = payload.setdefault("rows", {})
+    rows[criterion] = merge_comparison_row(
+        rows.get(criterion),
+        criterion=criterion,
+        mode=mode,
+        accuracy=accuracy,
+        macro_f1=macro_f1,
+        avg_output_tokens=avg_output_tokens,
+    )
+    rows[criterion]["sources"] = {
+        **(rows[criterion].get("sources") or {}),
+        mode: str(source_metrics),
+    }
+    payload["updated_at_utc"] = utc_now()
+    ordered = sorted(rows.values(), key=lambda row: row.get("criterion", ""))
+    write_json(table_json, payload)
+    table_md.write_text(render_comparison_table(ordered), encoding="utf-8")
+    return table_md
+
+
 def run_rollout(
-    llm: LLM,
-    sampling_params: SamplingParams,
+    llm,
+    sampling_params,
     rows: list[dict[str, Any]],
     score_sets: list[int],
     args: argparse.Namespace,
@@ -559,6 +659,12 @@ def run_rollout(
     predictions: list[dict[str, Any]] = []
     allowed_scores = set(score_sets)
     started = time.perf_counter()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        gpu_started = time.perf_counter()
+    else:
+        gpu_started = started
+
     for start in range(0, len(rows), args.batch_size):
         batch = rows[start : start + args.batch_size]
         texts = format_prompts(
@@ -582,10 +688,15 @@ def run_rollout(
         done = min(start + args.batch_size, len(rows))
         print(f"[rollout {rollout_index}] {done}/{len(rows)}", flush=True)
 
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    gpu_elapsed = time.perf_counter() - gpu_started
     elapsed = time.perf_counter() - started
     metrics = classification_metrics(predictions, score_sets)
     metrics["elapsed_sec"] = round(elapsed, 3)
+    metrics["gpu_time_sec"] = round(gpu_elapsed, 3)
     metrics["samples_per_sec"] = round(len(rows) / max(elapsed, 1e-9), 3)
+    metrics["tokens"] = token_stats(predictions, tokenizer)
     return predictions, metrics
 
 
@@ -610,15 +721,30 @@ def main() -> None:
     output_root = resolve_path(args.output_path)
     out_dir = eval_run_dir(output_root, args.exp_name)
     out_dir.mkdir(parents=True, exist_ok=True)
+    train_config = (
+        load_optional_yaml(resolve_path(args.train_config))
+        if args.train_config
+        else None
+    )
 
     set_seed(args.seed)
     rows, score_sets = load_rows(dataset_file)
+    task_name = infer_task_name(dataset_file, rows)
+    supervision_mode = infer_supervision_mode(dataset_file, rows)
+    aspect = rows[0].get("aspect") or task_name
+    criterion = criterion_title(str(aspect))
+    run_tag = f"{task_name}|{supervision_mode}|{short_model_name(model_name)}"
+    train_meta = load_train_run_metadata(adapter)
+
     cleanup_merged_cache(merge_cache, args.merge_retention_days)
+    wall_started = time.perf_counter()
+    gpu_before = gpu_time_snapshot()
     if adapter is None:
         model_path = model_name
         backend = "vllm-base"
         print(
-            f"backend={backend} samples={len(rows)} base={model_name} adapter=None",
+            f"[{run_tag}] backend={backend} samples={len(rows)} "
+            f"base={model_name} adapter=None",
             flush=True,
         )
     else:
@@ -626,7 +752,7 @@ def main() -> None:
         model_path = ensure_merged_model(model_name, adapter, merge_cache)
         backend = "vllm-merged"
         print(
-            f"backend={backend} samples={len(rows)} base={model_name} "
+            f"[{run_tag}] backend={backend} samples={len(rows)} base={model_name} "
             f"adapter={adapter} merged={model_path}",
             flush=True,
         )
@@ -653,10 +779,11 @@ def main() -> None:
         rollout_predictions.append(predictions)
         rollout_metrics.append(metrics)
         print(
-            f"[rollout {rollout_index}] "
+            f"[{run_tag}][rollout {rollout_index}] "
             f"acc={metrics['accuracy']:.4f} "
             f"macro_f1={metrics['macro_f1']:.4f} "
-            f"valid={metrics['format_valid_rate']:.4f}",
+            f"valid={metrics['format_valid_rate']:.4f} "
+            f"gpu_s={metrics['gpu_time_sec']:.1f}",
             flush=True,
         )
 
@@ -673,15 +800,67 @@ def main() -> None:
                 "rollout_correct": correct,
                 "mean_correct": sum(correct) / len(correct),
                 "outputs": outputs,
+                "raw_outputs": outputs,
                 "task": row.get("task"),
                 "aspect": row.get("aspect"),
             }
         )
     aggregate_metrics = mean_rollout_metrics(rollout_metrics, score_sets)
+    avg_output_tokens = None
+    avg_reasoning_tokens = None
+    token_means = [
+        rollout["tokens"]["avg_output_tokens"]
+        for rollout in rollout_metrics
+        if rollout.get("tokens", {}).get("avg_output_tokens") is not None
+    ]
+    reason_means = [
+        rollout["tokens"]["avg_reasoning_tokens"]
+        for rollout in rollout_metrics
+        if rollout.get("tokens", {}).get("avg_reasoning_tokens") is not None
+    ]
+    if token_means:
+        avg_output_tokens = float(np.mean(token_means))
+    if reason_means:
+        avg_reasoning_tokens = float(np.mean(reason_means))
+    aggregate_metrics["tokens"] = {
+        "avg_output_tokens": avg_output_tokens,
+        "avg_reasoning_tokens": avg_reasoning_tokens,
+    }
+    aggregate_metrics["gpu_time_sec"] = float(
+        np.mean([rollout["gpu_time_sec"] for rollout in rollout_metrics])
+    )
+    aggregate_metrics["elapsed_sec"] = float(
+        np.mean([rollout["elapsed_sec"] for rollout in rollout_metrics])
+    )
 
+    full_config = {
+        "exp_name": args.exp_name,
+        "model_name": str(model_name),
+        "adapter": str(adapter) if adapter is not None else None,
+        "dataset_file": str(dataset_file),
+        "seed": args.seed,
+        "rollout": args.rollout,
+        "temp": 0.0,
+        "top_p": 1.0,
+        "max_model_len": args.max_model_len,
+        "max_tokens": args.max_tokens,
+        "batch_size": args.batch_size,
+        "gpu_memory_utilization": args.gpu_memory_utilization,
+        "enable_thinking": args.enable_thinking,
+        "output_path": str(output_root),
+        "train_config": train_config,
+        "train_run": train_meta,
+    }
+
+    wall_elapsed = time.perf_counter() - wall_started
     summary = {
         "exp_name": args.exp_name,
-        "task": task_name_from_exp(args.exp_name),
+        "run_tag": run_tag,
+        "task": task_name,
+        "criterion": criterion,
+        "aspect": aspect,
+        "supervision_mode": supervision_mode,
+        "evaluation_mode": supervision_mode,
         "output_dir": str(out_dir),
         "backend": backend,
         "model_name": str(model_name),
@@ -701,26 +880,67 @@ def main() -> None:
         "enable_thinking": args.enable_thinking,
         "finished_at_utc": utc_now(),
         "aggregation": "mean_over_rollouts",
+        "best_checkpoint_epoch": train_meta.get("best_checkpoint_epoch"),
+        "best_checkpoint_step": train_meta.get("best_checkpoint_step"),
+        "best_generation_accuracy": train_meta.get("best_generation_accuracy"),
+        "test_accuracy": aggregate_metrics.get("accuracy"),
+        "test_macro_f1": aggregate_metrics.get("macro_f1"),
+        "test_mae": aggregate_metrics.get("mae"),
+        "test_qwk": aggregate_metrics.get("qwk"),
+        "format_valid_rate": aggregate_metrics.get("format_valid_rate"),
+        "avg_output_tokens": avg_output_tokens,
+        "avg_reasoning_tokens": avg_reasoning_tokens,
+        "gpu_time_sec": aggregate_metrics.get("gpu_time_sec"),
+        "wall_time_sec": round(wall_elapsed, 3),
+        "gpu_before": gpu_before,
+        "gpu_after": gpu_time_snapshot(),
+        "full_config": full_config,
         "aggregate": aggregate_metrics,
         "rollouts": rollout_metrics,
     }
-    write_json(out_dir / "metrics.json", summary)
+    metrics_path = out_dir / "metrics.json"
+    write_json(metrics_path, summary)
 
     prediction_path = out_dir / "predictions.jsonl"
     with prediction_path.open("w", encoding="utf-8") as handle:
         for row in prediction_records:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-    print(
-        f"[done] acc={aggregate_metrics['accuracy']:.4f}"
-        f"+/-{aggregate_metrics['accuracy_std']:.4f} "
-        f"macro_f1={aggregate_metrics['macro_f1']:.4f}"
-        f"+/-{aggregate_metrics['macro_f1_std']:.4f} "
-        f"valid={aggregate_metrics['format_valid_rate']:.4f}"
-        f"+/-{aggregate_metrics['format_valid_rate_std']:.4f}"
+    model_key = short_model_name(model_name)
+    table_path = update_comparison_table(
+        output_root,
+        criterion=criterion,
+        mode=supervision_mode if supervision_mode in {"cot", "score_only"} else "cot",
+        model_key=model_key,
+        accuracy=float(aggregate_metrics["accuracy"]),
+        macro_f1=float(aggregate_metrics["macro_f1"]),
+        avg_output_tokens=avg_output_tokens,
+        source_metrics=metrics_path,
     )
-    print(f"wrote {out_dir / 'metrics.json'}")
+
+    print(
+        f"[{run_tag}][done] acc={aggregate_metrics['accuracy']:.4f}"
+        f"+/-{aggregate_metrics.get('accuracy_std') or 0:.4f} "
+        f"macro_f1={aggregate_metrics['macro_f1']:.4f}"
+        f"+/-{aggregate_metrics.get('macro_f1_std') or 0:.4f} "
+        f"valid={aggregate_metrics['format_valid_rate']:.4f}"
+        f"+/-{aggregate_metrics.get('format_valid_rate_std') or 0:.4f}"
+    )
+    if aggregate_metrics.get("mae") is not None:
+        print(
+            f"[{run_tag}] mae={aggregate_metrics['mae']:.4f} "
+            f"qwk={aggregate_metrics.get('qwk')}",
+            flush=True,
+        )
+    print(
+        f"[{run_tag}] tokens: output={avg_output_tokens} reasoning={avg_reasoning_tokens} "
+        f"gpu_s={aggregate_metrics.get('gpu_time_sec')} "
+        f"best_epoch={train_meta.get('best_checkpoint_epoch')}",
+        flush=True,
+    )
+    print(f"wrote {metrics_path}")
     print(f"wrote {prediction_path}")
+    print(f"updated {table_path}")
 
 
 if __name__ == "__main__":
