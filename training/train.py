@@ -15,7 +15,7 @@ import re
 import subprocess
 import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -531,9 +531,13 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         return metrics
 
 
+# 机器时区多为 UTC；run 目录名用北京时间，便于阅读。
+_CN_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
+
+
 def create_run_directory(config: dict[str, Any], seed: int) -> tuple[str, Path]:
-    """新建独立 run 目录：experiment__seed__UTC。"""
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    """新建独立 run 目录：experiment__seed__北京时间。"""
+    timestamp = datetime.now(_CN_TZ).strftime("%Y-%m-%d_%H-%M-%S")
     run_id = f"{config['experiment_name']}__seed{seed}__{timestamp}"
     output_root = resolve_path(config.get("output_root", "train_outputs/lora"))
     run_directory = output_root / run_id
