@@ -2,11 +2,17 @@
 """Evaluate a base model (optionally + LoRA adapter/checkpoint) with vLLM.
 
 Without --adapter (or with none/None/NONE), loads the base model directly.
-With an adapter path, merges LoRA into a cached full model then loads with
+With an adapter path, merges LoRA into a temporary full model then loads with
 plain vLLM (vLLM 0.8.4 + cachetools>=6 breaks enable_lora in spawned workers).
+The merged weights are deleted after evaluation finishes (or on failure).
 
-Supports data/<task>/{cot,score_only}/test_*.jsonl (labels field) and legacy JSON.
-Writes metrics.json / predictions.jsonl and updates eval_outputs/comparison_table.md.
+Prefer YAML under evaloutput/configs/<task>/{base,ft}_{cot,score_only}.yaml
+via --config; CLI flags override config values. Supports
+data/<task>/{cot,score_only}/test_*.jsonl (labels field) and legacy JSON.
+
+Writes to evaloutput/<task>/<exp_name>/ (metrics.json, predictions.jsonl,
+resolved_config.json) and updates evaloutput/comparison_table.md with the
+four settings: base-score_only, base-cot, score_only(ft), cot(ft).
 """
 
 from __future__ import annotations
@@ -26,6 +32,7 @@ from typing import Any
 
 import numpy as np
 import torch
+import yaml
 
 _TRAINING_DIR = Path(__file__).resolve().parent
 if str(_TRAINING_DIR) not in sys.path:
@@ -33,8 +40,10 @@ if str(_TRAINING_DIR) not in sys.path:
 
 from metrics_utils import (
     classification_metrics,
+    compute_efficiency_metrics,
     criterion_title,
     extract_score,
+    infer_comparison_mode,
     infer_supervision_mode,
     infer_task_name,
     merge_comparison_row,
@@ -59,9 +68,43 @@ def _import_vllm():
 
 
 DEFAULT_DATASET = PROJECT_ROOT / "data/rw_gen_coherence/cot/test_cot.jsonl"
-DEFAULT_MERGE_CACHE = PROJECT_ROOT / "merged"
-DEFAULT_EVAL_OUTPUT_ROOT = PROJECT_ROOT / "eval_outputs"
-DEFAULT_MERGE_RETENTION_DAYS = 2
+# Prefer data disk for temporary merges (system disk is often too small for 4B weights).
+_AUTODL_TMP = Path("/root/autodl-tmp")
+DEFAULT_MERGE_CACHE = (
+    _AUTODL_TMP / "merged" if _AUTODL_TMP.is_dir() else PROJECT_ROOT / "merged"
+)
+DEFAULT_EVAL_OUTPUT_ROOT = PROJECT_ROOT / "evaloutput"
+DEFAULT_MERGE_RETENTION_DAYS = 0
+
+# YAML keys -> argparse destinations (same names as CLI flags without --).
+CONFIG_KEYS = {
+    "exp_name",
+    "model_name",
+    "adapter",
+    "dataset_file",
+    "output_path",
+    "max_model_len",
+    "max_tokens",
+    "temp",
+    "top_p",
+    "seed",
+    "rollout",
+    "batch_size",
+    "gpu_memory_utilization",
+    "merge_cache",
+    "merge_retention_days",
+    "enable_thinking",
+    "train_config",
+}
+
+
+def resolve_path(value: str | Path) -> Path:
+    path = Path(value).expanduser()
+    return path.resolve() if path.is_absolute() else (PROJECT_ROOT / path).resolve()
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def task_name_from_exp(exp_name: str) -> str:
@@ -69,96 +112,176 @@ def task_name_from_exp(exp_name: str) -> str:
     return exp_name.split("#", 1)[0]
 
 
-def eval_run_dir(output_root: Path, exp_name: str) -> Path:
+def eval_run_dir(output_root: Path, exp_name: str, task_name: str | None = None) -> Path:
     """Layout: <output_root>/<task>/<exp_name>/"""
-    return output_root / task_name_from_exp(exp_name) / exp_name
+    task = task_name or task_name_from_exp(exp_name)
+    return output_root / task / exp_name
 
 
-def parse_args() -> argparse.Namespace:
+def read_eval_config(path: Path) -> dict[str, Any]:
+    with path.open(encoding="utf-8") as handle:
+        config = yaml.safe_load(handle)
+    if not isinstance(config, dict):
+        raise SystemExit(f"Eval config must be a YAML object: {path}")
+    required = {"exp_name", "model_name", "dataset_file"}
+    missing = required - set(config)
+    if missing:
+        raise SystemExit(f"Eval config {path} missing fields: {sorted(missing)}")
+    unknown = set(config) - CONFIG_KEYS
+    if unknown:
+        raise SystemExit(
+            f"Eval config {path} has unknown fields: {sorted(unknown)}. "
+            f"Allowed: {sorted(CONFIG_KEYS)}"
+        )
+    return config
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    argv = list(sys.argv[1:] if argv is None else argv)
+
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--config", default=None)
+    pre_args, _ = pre.parse_known_args(argv)
+
+    config_defaults: dict[str, Any] = {}
+    config_path: Path | None = None
+    if pre_args.config:
+        config_path = resolve_path(pre_args.config)
+        if not config_path.is_file():
+            raise SystemExit(f"Eval config not found: {config_path}")
+        loaded = read_eval_config(config_path)
+        for key, value in loaded.items():
+            if key in CONFIG_KEYS:
+                config_defaults[key] = value
+
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--exp_name", required=True)
-    parser.add_argument("--model_name", required=True, help="Base model path.")
+    parser.add_argument(
+        "--config",
+        default=None,
+        help=(
+            "Eval YAML under evaloutput/configs/<task>/"
+            "{base,ft}_{cot,score_only}.yaml. "
+            "CLI flags override values from the config."
+        ),
+    )
+    parser.add_argument(
+        "--exp_name",
+        default=config_defaults.get("exp_name"),
+        required="exp_name" not in config_defaults,
+    )
+    parser.add_argument(
+        "--model_name",
+        default=config_defaults.get("model_name"),
+        required="model_name" not in config_defaults,
+        help="Base model path.",
+    )
     parser.add_argument(
         "--adapter",
-        default=None,
+        default=config_defaults.get("adapter"),
         help=(
             "LoRA adapter/ or checkpoints/checkpoint-* path. "
             "Omit, or pass none/None/NONE, to evaluate the base model only."
         ),
     )
-    parser.add_argument("--dataset_file", default=str(DEFAULT_DATASET))
+    parser.add_argument(
+        "--dataset_file",
+        default=config_defaults.get("dataset_file", str(DEFAULT_DATASET)),
+    )
     parser.add_argument(
         "--output_path",
-        default=str(DEFAULT_EVAL_OUTPUT_ROOT),
+        default=config_defaults.get("output_path", str(DEFAULT_EVAL_OUTPUT_ROOT)),
         help=(
-            "Eval output root (default: <project>/eval_outputs). "
-            "Each run writes to <output_path>/<task>/<exp_name>/ where "
-            "<task> is the part of --exp_name before the first '#'."
+            "Eval output root (default: <project>/evaloutput). "
+            "Each run writes to <output_path>/<task>/<exp_name>/."
         ),
     )
-    parser.add_argument("--max_model_len", type=int, default=8192)
-    parser.add_argument("--max_tokens", type=int, default=512)
+    parser.add_argument(
+        "--max_model_len",
+        type=int,
+        default=int(config_defaults.get("max_model_len", 8192)),
+    )
+    parser.add_argument(
+        "--max_tokens",
+        type=int,
+        default=int(config_defaults.get("max_tokens", 512)),
+    )
     parser.add_argument(
         "--temp",
         type=float,
-        default=0.0,
+        default=float(config_defaults.get("temp", 0.0)),
         help="Must be 0: every rollout uses greedy decoding.",
     )
     parser.add_argument(
         "--top_p",
         type=float,
-        default=1.0,
+        default=float(config_defaults.get("top_p", 1.0)),
         help="Must be 1.0: nucleus sampling is disabled for greedy decoding.",
     )
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--rollout", type=int, default=1)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=int(config_defaults.get("seed", 42)),
+    )
+    parser.add_argument(
+        "--rollout",
+        type=int,
+        default=int(config_defaults.get("rollout", 1)),
+    )
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=64,
+        default=int(config_defaults.get("batch_size", 64)),
         help="Prompt chunk size for progress logging; vLLM schedules internally.",
     )
     parser.add_argument(
         "--gpu_memory_utilization",
         type=float,
-        default=0.9,
+        default=float(config_defaults.get("gpu_memory_utilization", 0.9)),
         help="vLLM GPU memory fraction of the visible device.",
     )
     parser.add_argument(
         "--merge_cache",
-        default=str(DEFAULT_MERGE_CACHE),
-        help="Directory for cached merged models (default: <project>/merged).",
+        default=config_defaults.get("merge_cache", str(DEFAULT_MERGE_CACHE)),
+        help=(
+            "Scratch directory for temporary merged models "
+            f"(default: {DEFAULT_MERGE_CACHE}). Deleted after each eval."
+        ),
     )
     parser.add_argument(
         "--merge_retention_days",
         type=float,
-        default=DEFAULT_MERGE_RETENTION_DAYS,
+        default=float(
+            config_defaults.get("merge_retention_days", DEFAULT_MERGE_RETENTION_DAYS)
+        ),
         help=(
-            "Delete cached merged models older than this many days "
-            f"(default: {DEFAULT_MERGE_RETENTION_DAYS}). "
-            "Set <=0 to disable cleanup."
+            "Before eval, delete leftover merged dirs older than this many days "
+            f"(default: {DEFAULT_MERGE_RETENTION_DAYS} = remove all leftovers). "
+            "The merged model from the current run is always deleted after use."
         ),
     )
-    parser.add_argument(
+    thinking_default = bool(config_defaults.get("enable_thinking", False))
+    thinking_group = parser.add_mutually_exclusive_group()
+    thinking_group.add_argument(
         "--enable_thinking",
+        dest="enable_thinking",
         action="store_true",
+        default=thinking_default,
         help="Enable native thinking in chat template when supported.",
+    )
+    thinking_group.add_argument(
+        "--disable_thinking",
+        dest="enable_thinking",
+        action="store_false",
+        help="Disable native thinking even if config enables it.",
     )
     parser.add_argument(
         "--train_config",
-        default=None,
+        default=config_defaults.get("train_config"),
         help="Optional training YAML to embed in metrics (seed/config provenance).",
     )
-    return parser.parse_args()
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def resolve_path(value: str | Path) -> Path:
-    path = Path(value).expanduser()
-    return path.resolve() if path.is_absolute() else (PROJECT_ROOT / path).resolve()
+    args = parser.parse_args(argv)
+    args.config_path = str(config_path) if config_path is not None else None
+    return args
 
 
 def normalize_adapter(value: str | None) -> Path | None:
@@ -426,10 +549,14 @@ def _merged_entry_mtime(path: Path) -> float:
 
 
 def cleanup_merged_cache(cache_root: Path, retention_days: float) -> None:
-    """Remove stale merged-model directories under cache_root."""
-    if retention_days <= 0 or not cache_root.is_dir():
+    """Remove leftover merged-model directories under cache_root.
+
+    retention_days <= 0 means remove every leftover entry (default), since merged
+    weights are intended to be temporary and deleted after each eval.
+    """
+    if not cache_root.is_dir():
         return
-    cutoff = time.time() - retention_days * 86400
+    cutoff = None if retention_days <= 0 else time.time() - retention_days * 86400
     removed = 0
     for child in cache_root.iterdir():
         if not child.is_dir():
@@ -438,32 +565,57 @@ def cleanup_merged_cache(cache_root: Path, retention_days: float) -> None:
             mtime = _merged_entry_mtime(child)
         except OSError:
             continue
-        if mtime >= cutoff:
+        if cutoff is not None and mtime >= cutoff:
             continue
         try:
             shutil.rmtree(child)
             removed += 1
-            print(f"removed stale merged cache: {child}", flush=True)
+            print(f"removed leftover merged cache: {child}", flush=True)
         except OSError as exc:
             print(f"failed to remove {child}: {exc}", flush=True)
     if removed:
+        age_msg = (
+            "all leftovers"
+            if retention_days <= 0
+            else f"older than {retention_days:g} day(s)"
+        )
         print(
             f"cleaned {removed} merged cache entr"
-            f"{'y' if removed == 1 else 'ies'} "
-            f"older than {retention_days:g} day(s)",
+            f"{'y' if removed == 1 else 'ies'} ({age_msg})",
             flush=True,
         )
 
 
+def remove_merged_model(path: Path | None) -> None:
+    """Delete a temporary merged-model directory if it still exists."""
+    if path is None:
+        return
+    if not path.exists():
+        return
+    try:
+        shutil.rmtree(path)
+        print(f"removed temporary merged model: {path}", flush=True)
+    except OSError as exc:
+        print(f"failed to remove merged model {path}: {exc}", flush=True)
+    # Also drop a sibling .tmp directory from a crashed merge.
+    temporary = path.with_name(path.name + ".tmp")
+    if temporary.exists():
+        try:
+            shutil.rmtree(temporary)
+            print(f"removed incomplete merge dir: {temporary}", flush=True)
+        except OSError as exc:
+            print(f"failed to remove {temporary}: {exc}", flush=True)
+
+
 def ensure_merged_model(base: Path, adapter: Path, cache_root: Path) -> Path:
-    """Merge LoRA on CPU and cache the full weights for plain vLLM loading."""
+    """Merge LoRA on CPU into a temporary directory for plain vLLM loading.
+
+    Caller must delete the returned path after evaluation (see remove_merged_model).
+    """
     out = merged_model_dir(base, adapter, cache_root)
-    marker = out / ".ok"
-    if marker.is_file() and (out / "config.json").is_file():
-        now = utc_now()
-        marker.write_text(now + "\n", encoding="utf-8")
-        print(f"reusing merged model: {out}", flush=True)
-        return out
+    # Never reuse on-disk merges: always rebuild, then delete after eval.
+    if out.exists():
+        shutil.rmtree(out)
 
     note = disable_incompatible_torchao()
     if note:
@@ -478,7 +630,7 @@ def ensure_merged_model(base: Path, adapter: Path, cache_root: Path) -> Path:
         shutil.rmtree(temporary)
     temporary.mkdir(parents=True)
 
-    print(f"merging LoRA on CPU -> {out}", flush=True)
+    print(f"merging LoRA on CPU -> {out} (temporary; deleted after eval)", flush=True)
     started = time.perf_counter()
     tokenizer = AutoTokenizer.from_pretrained(str(base), local_files_only=True)
     model = AutoModelForCausalLM.from_pretrained(
@@ -499,10 +651,9 @@ def ensure_merged_model(base: Path, adapter: Path, cache_root: Path) -> Path:
             "merged_at_utc": utc_now(),
         },
     )
-    if out.exists():
-        shutil.rmtree(out)
+    del model
     temporary.rename(out)
-    marker.write_text(utc_now() + "\n", encoding="utf-8")
+    (out / ".ok").write_text(utc_now() + "\n", encoding="utf-8")
     print(f"merge done in {time.perf_counter() - started:.1f}s", flush=True)
     return out
 
@@ -574,11 +725,33 @@ def load_train_run_metadata(adapter: Path | None) -> dict[str, Any]:
 def load_optional_yaml(path: Path | None) -> dict[str, Any] | None:
     if path is None:
         return None
-    import yaml
-
     with path.open(encoding="utf-8") as handle:
         payload = yaml.safe_load(handle)
     return payload if isinstance(payload, dict) else None
+
+
+def resolved_eval_config(args: argparse.Namespace, *, adapter: Path | None) -> dict[str, Any]:
+    """Snapshot of the effective eval settings written next to metrics."""
+    return {
+        "config": args.config_path,
+        "exp_name": args.exp_name,
+        "model_name": str(resolve_path(args.model_name)),
+        "adapter": str(adapter) if adapter is not None else None,
+        "dataset_file": str(resolve_path(args.dataset_file)),
+        "output_path": str(resolve_path(args.output_path)),
+        "max_model_len": args.max_model_len,
+        "max_tokens": args.max_tokens,
+        "temp": args.temp,
+        "top_p": args.top_p,
+        "seed": args.seed,
+        "rollout": args.rollout,
+        "batch_size": args.batch_size,
+        "gpu_memory_utilization": args.gpu_memory_utilization,
+        "merge_cache": str(resolve_path(args.merge_cache)),
+        "merge_retention_days": args.merge_retention_days,
+        "enable_thinking": args.enable_thinking,
+        "train_config": args.train_config,
+    }
 
 
 def gpu_time_snapshot() -> dict[str, Any]:
@@ -603,8 +776,12 @@ def update_comparison_table(
     macro_f1: float,
     avg_output_tokens: float | None,
     source_metrics: Path,
+    gpu_time_sec: float | None = None,
+    samples_per_sec: float | None = None,
+    tokens_per_sec: float | None = None,
+    n_samples: int | None = None,
 ) -> Path:
-    """Merge this run into a Score vs CoT comparison markdown table."""
+    """Merge this run into the 4-way comparison table (base/ft × score_only/cot)."""
     table_json = output_root / "comparison_table.json"
     table_md = output_root / "comparison_table.md"
     payload = {"model_key": model_key, "rows": {}}
@@ -628,6 +805,10 @@ def update_comparison_table(
         accuracy=accuracy,
         macro_f1=macro_f1,
         avg_output_tokens=avg_output_tokens,
+        gpu_time_sec=gpu_time_sec,
+        samples_per_sec=samples_per_sec,
+        tokens_per_sec=tokens_per_sec,
+        n_samples=n_samples,
     )
     rows[criterion]["sources"] = {
         **(rows[criterion].get("sources") or {}),
@@ -719,8 +900,6 @@ def main() -> None:
     dataset_file = resolve_path(args.dataset_file)
     merge_cache = resolve_path(args.merge_cache)
     output_root = resolve_path(args.output_path)
-    out_dir = eval_run_dir(output_root, args.exp_name)
-    out_dir.mkdir(parents=True, exist_ok=True)
     train_config = (
         load_optional_yaml(resolve_path(args.train_config))
         if args.train_config
@@ -730,6 +909,14 @@ def main() -> None:
     set_seed(args.seed)
     rows, score_sets = load_rows(dataset_file)
     task_name = infer_task_name(dataset_file, rows)
+    # Prefer dataset-derived task for folder layout; fall back to exp_name prefix.
+    task_folder = task_name if task_name and task_name != "unknown" else task_name_from_exp(
+        args.exp_name
+    )
+    out_dir = eval_run_dir(output_root, args.exp_name, task_folder)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_json(out_dir / "resolved_config.json", resolved_eval_config(args, adapter=adapter))
+
     supervision_mode = infer_supervision_mode(dataset_file, rows)
     aspect = rows[0].get("aspect") or task_name
     criterion = criterion_title(str(aspect))
@@ -737,211 +924,248 @@ def main() -> None:
     train_meta = load_train_run_metadata(adapter)
 
     cleanup_merged_cache(merge_cache, args.merge_retention_days)
+    # Also sweep the legacy project-local merge dir if it still holds leftovers.
+    legacy_merge = PROJECT_ROOT / "merged"
+    if legacy_merge.resolve() != merge_cache.resolve() and legacy_merge.is_dir():
+        cleanup_merged_cache(legacy_merge, 0)
+
     wall_started = time.perf_counter()
     gpu_before = gpu_time_snapshot()
-    if adapter is None:
-        model_path = model_name
-        backend = "vllm-base"
+    merged_to_cleanup: Path | None = None
+    llm = None
+    try:
+        if adapter is None:
+            model_path = model_name
+            backend = "vllm-base"
+            print(
+                f"[{run_tag}] backend={backend} samples={len(rows)} "
+                f"base={model_name} adapter=None",
+                flush=True,
+            )
+        else:
+            adapter_weight_file(adapter)
+            model_path = ensure_merged_model(model_name, adapter, merge_cache)
+            merged_to_cleanup = model_path
+            backend = "vllm-merged"
+            print(
+                f"[{run_tag}] backend={backend} samples={len(rows)} base={model_name} "
+                f"adapter={adapter} merged={model_path}",
+                flush=True,
+            )
+
+        llm, sampling_params = init_vllm(
+            model_path,
+            max_model_len=args.max_model_len,
+            max_tokens=args.max_tokens,
+            seed=args.seed,
+            gpu_memory_utilization=args.gpu_memory_utilization,
+        )
+
+        rollout_metrics = []
+        rollout_predictions: list[list[dict[str, Any]]] = []
+        for rollout_index in range(1, args.rollout + 1):
+            predictions, metrics = run_rollout(
+                llm,
+                sampling_params,
+                rows,
+                score_sets,
+                args,
+                rollout_index=rollout_index,
+            )
+            rollout_predictions.append(predictions)
+            rollout_metrics.append(metrics)
+            print(
+                f"[{run_tag}][rollout {rollout_index}] "
+                f"acc={metrics['accuracy']:.4f} "
+                f"macro_f1={metrics['macro_f1']:.4f} "
+                f"valid={metrics['format_valid_rate']:.4f} "
+                f"gpu_s={metrics['gpu_time_sec']:.1f}",
+                flush=True,
+            )
+
+        prediction_records: list[dict[str, Any]] = []
+        for index, row in enumerate(rows):
+            scores = [preds[index]["prediction"] for preds in rollout_predictions]
+            outputs = [preds[index]["output"] for preds in rollout_predictions]
+            correct = [score == row["label"] for score in scores]
+            prediction_records.append(
+                {
+                    "id": row["id"],
+                    "label": row["label"],
+                    "rollout_predictions": scores,
+                    "rollout_correct": correct,
+                    "mean_correct": sum(correct) / len(correct),
+                    "outputs": outputs,
+                    "raw_outputs": outputs,
+                    "task": row.get("task"),
+                    "aspect": row.get("aspect"),
+                }
+            )
+        aggregate_metrics = mean_rollout_metrics(rollout_metrics, score_sets)
+        avg_output_tokens = None
+        avg_reasoning_tokens = None
+        token_means = [
+            rollout["tokens"]["avg_output_tokens"]
+            for rollout in rollout_metrics
+            if rollout.get("tokens", {}).get("avg_output_tokens") is not None
+        ]
+        reason_means = [
+            rollout["tokens"]["avg_reasoning_tokens"]
+            for rollout in rollout_metrics
+            if rollout.get("tokens", {}).get("avg_reasoning_tokens") is not None
+        ]
+        if token_means:
+            avg_output_tokens = float(np.mean(token_means))
+        if reason_means:
+            avg_reasoning_tokens = float(np.mean(reason_means))
+        aggregate_metrics["tokens"] = {
+            "avg_output_tokens": avg_output_tokens,
+            "avg_reasoning_tokens": avg_reasoning_tokens,
+        }
+        aggregate_metrics["gpu_time_sec"] = float(
+            np.mean([rollout["gpu_time_sec"] for rollout in rollout_metrics])
+        )
+        aggregate_metrics["elapsed_sec"] = float(
+            np.mean([rollout["elapsed_sec"] for rollout in rollout_metrics])
+        )
+
+        full_config = resolved_eval_config(args, adapter=adapter)
+        full_config["train_config"] = train_config
+        full_config["train_run"] = train_meta
+
+        wall_elapsed = time.perf_counter() - wall_started
+        summary = {
+            "exp_name": args.exp_name,
+            "run_tag": run_tag,
+            "task": task_name,
+            "criterion": criterion,
+            "aspect": aspect,
+            "supervision_mode": supervision_mode,
+            "evaluation_mode": supervision_mode,
+            "output_dir": str(out_dir),
+            "backend": backend,
+            "model_name": str(model_name),
+            "adapter": str(adapter) if adapter is not None else None,
+            "merged_model": str(model_path) if adapter is not None else None,
+            "dataset_file": str(dataset_file),
+            "score_sets": score_sets,
+            "seed": args.seed,
+            "rollout": args.rollout,
+            "decoding": "greedy",
+            "temp": 0.0,
+            "top_p": 1.0,
+            "max_model_len": args.max_model_len,
+            "max_tokens": args.max_tokens,
+            "batch_size": args.batch_size,
+            "gpu_memory_utilization": args.gpu_memory_utilization,
+            "enable_thinking": args.enable_thinking,
+            "finished_at_utc": utc_now(),
+            "aggregation": "mean_over_rollouts",
+            "best_checkpoint_epoch": train_meta.get("best_checkpoint_epoch"),
+            "best_checkpoint_step": train_meta.get("best_checkpoint_step"),
+            "best_generation_accuracy": train_meta.get("best_generation_accuracy"),
+            "test_accuracy": aggregate_metrics.get("accuracy"),
+            "test_macro_f1": aggregate_metrics.get("macro_f1"),
+            "test_mae": aggregate_metrics.get("mae"),
+            "test_qwk": aggregate_metrics.get("qwk"),
+            "format_valid_rate": aggregate_metrics.get("format_valid_rate"),
+            "avg_output_tokens": avg_output_tokens,
+            "avg_reasoning_tokens": avg_reasoning_tokens,
+            "gpu_time_sec": aggregate_metrics.get("gpu_time_sec"),
+            "wall_time_sec": round(wall_elapsed, 3),
+            "gpu_before": gpu_before,
+            "gpu_after": gpu_time_snapshot(),
+            "full_config": full_config,
+            "aggregate": aggregate_metrics,
+            "rollouts": rollout_metrics,
+        }
+        metrics_path = out_dir / "metrics.json"
+        write_json(metrics_path, summary)
+
+        prediction_path = out_dir / "predictions.jsonl"
+        with prediction_path.open("w", encoding="utf-8") as handle:
+            for row in prediction_records:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+        # Per-task comparison table + root aggregate table.
+        model_key = short_model_name(model_name)
+        mode = infer_comparison_mode(
+            supervision_mode=supervision_mode,
+            adapter=adapter,
+            exp_name=args.exp_name,
+        )
+        n_samples = int(aggregate_metrics.get("samples") or len(rows))
+        gpu_time_sec = aggregate_metrics.get("gpu_time_sec")
+        rollout_sps = [
+            float(r["samples_per_sec"])
+            for r in rollout_metrics
+            if r.get("samples_per_sec") is not None
+        ]
+        samples_per_sec = float(np.mean(rollout_sps)) if rollout_sps else None
+        eff = compute_efficiency_metrics(
+            n_samples=n_samples,
+            avg_output_tokens=avg_output_tokens,
+            gpu_time_sec=gpu_time_sec,
+            samples_per_sec=samples_per_sec,
+        )
+        table_kwargs = dict(
+            criterion=criterion,
+            mode=mode,
+            model_key=model_key,
+            accuracy=float(aggregate_metrics["accuracy"]),
+            macro_f1=float(aggregate_metrics["macro_f1"]),
+            avg_output_tokens=avg_output_tokens,
+            source_metrics=metrics_path,
+            gpu_time_sec=eff["gpu_time_sec"],
+            samples_per_sec=eff["samples_per_sec"],
+            tokens_per_sec=eff["tokens_per_sec"],
+            n_samples=n_samples,
+        )
+        task_table_path = update_comparison_table(
+            output_root / task_folder,
+            **table_kwargs,
+        )
+        root_table_path = update_comparison_table(
+            output_root,
+            **table_kwargs,
+        )
+
         print(
-            f"[{run_tag}] backend={backend} samples={len(rows)} "
-            f"base={model_name} adapter=None",
+            f"[{run_tag}][done] acc={aggregate_metrics['accuracy']:.4f}"
+            f"+/-{aggregate_metrics.get('accuracy_std') or 0:.4f} "
+            f"macro_f1={aggregate_metrics['macro_f1']:.4f}"
+            f"+/-{aggregate_metrics.get('macro_f1_std') or 0:.4f} "
+            f"valid={aggregate_metrics['format_valid_rate']:.4f}"
+            f"+/-{aggregate_metrics.get('format_valid_rate_std') or 0:.4f}"
+        )
+        if aggregate_metrics.get("mae") is not None:
+            print(
+                f"[{run_tag}] mae={aggregate_metrics['mae']:.4f} "
+                f"qwk={aggregate_metrics.get('qwk')}",
+                flush=True,
+            )
+        print(
+            f"[{run_tag}] tokens: output={avg_output_tokens} "
+            f"reasoning={avg_reasoning_tokens} "
+            f"gpu_s={aggregate_metrics.get('gpu_time_sec')} "
+            f"best_epoch={train_meta.get('best_checkpoint_epoch')}",
             flush=True,
         )
-    else:
-        adapter_weight_file(adapter)
-        model_path = ensure_merged_model(model_name, adapter, merge_cache)
-        backend = "vllm-merged"
-        print(
-            f"[{run_tag}] backend={backend} samples={len(rows)} base={model_name} "
-            f"adapter={adapter} merged={model_path}",
-            flush=True,
-        )
-
-    llm, sampling_params = init_vllm(
-        model_path,
-        max_model_len=args.max_model_len,
-        max_tokens=args.max_tokens,
-        seed=args.seed,
-        gpu_memory_utilization=args.gpu_memory_utilization,
-    )
-
-    rollout_metrics = []
-    rollout_predictions: list[list[dict[str, Any]]] = []
-    for rollout_index in range(1, args.rollout + 1):
-        predictions, metrics = run_rollout(
-            llm,
-            sampling_params,
-            rows,
-            score_sets,
-            args,
-            rollout_index=rollout_index,
-        )
-        rollout_predictions.append(predictions)
-        rollout_metrics.append(metrics)
-        print(
-            f"[{run_tag}][rollout {rollout_index}] "
-            f"acc={metrics['accuracy']:.4f} "
-            f"macro_f1={metrics['macro_f1']:.4f} "
-            f"valid={metrics['format_valid_rate']:.4f} "
-            f"gpu_s={metrics['gpu_time_sec']:.1f}",
-            flush=True,
-        )
-
-    prediction_records: list[dict[str, Any]] = []
-    for index, row in enumerate(rows):
-        scores = [preds[index]["prediction"] for preds in rollout_predictions]
-        outputs = [preds[index]["output"] for preds in rollout_predictions]
-        correct = [score == row["label"] for score in scores]
-        prediction_records.append(
-            {
-                "id": row["id"],
-                "label": row["label"],
-                "rollout_predictions": scores,
-                "rollout_correct": correct,
-                "mean_correct": sum(correct) / len(correct),
-                "outputs": outputs,
-                "raw_outputs": outputs,
-                "task": row.get("task"),
-                "aspect": row.get("aspect"),
-            }
-        )
-    aggregate_metrics = mean_rollout_metrics(rollout_metrics, score_sets)
-    avg_output_tokens = None
-    avg_reasoning_tokens = None
-    token_means = [
-        rollout["tokens"]["avg_output_tokens"]
-        for rollout in rollout_metrics
-        if rollout.get("tokens", {}).get("avg_output_tokens") is not None
-    ]
-    reason_means = [
-        rollout["tokens"]["avg_reasoning_tokens"]
-        for rollout in rollout_metrics
-        if rollout.get("tokens", {}).get("avg_reasoning_tokens") is not None
-    ]
-    if token_means:
-        avg_output_tokens = float(np.mean(token_means))
-    if reason_means:
-        avg_reasoning_tokens = float(np.mean(reason_means))
-    aggregate_metrics["tokens"] = {
-        "avg_output_tokens": avg_output_tokens,
-        "avg_reasoning_tokens": avg_reasoning_tokens,
-    }
-    aggregate_metrics["gpu_time_sec"] = float(
-        np.mean([rollout["gpu_time_sec"] for rollout in rollout_metrics])
-    )
-    aggregate_metrics["elapsed_sec"] = float(
-        np.mean([rollout["elapsed_sec"] for rollout in rollout_metrics])
-    )
-
-    full_config = {
-        "exp_name": args.exp_name,
-        "model_name": str(model_name),
-        "adapter": str(adapter) if adapter is not None else None,
-        "dataset_file": str(dataset_file),
-        "seed": args.seed,
-        "rollout": args.rollout,
-        "temp": 0.0,
-        "top_p": 1.0,
-        "max_model_len": args.max_model_len,
-        "max_tokens": args.max_tokens,
-        "batch_size": args.batch_size,
-        "gpu_memory_utilization": args.gpu_memory_utilization,
-        "enable_thinking": args.enable_thinking,
-        "output_path": str(output_root),
-        "train_config": train_config,
-        "train_run": train_meta,
-    }
-
-    wall_elapsed = time.perf_counter() - wall_started
-    summary = {
-        "exp_name": args.exp_name,
-        "run_tag": run_tag,
-        "task": task_name,
-        "criterion": criterion,
-        "aspect": aspect,
-        "supervision_mode": supervision_mode,
-        "evaluation_mode": supervision_mode,
-        "output_dir": str(out_dir),
-        "backend": backend,
-        "model_name": str(model_name),
-        "adapter": str(adapter) if adapter is not None else None,
-        "merged_model": str(model_path) if adapter is not None else None,
-        "dataset_file": str(dataset_file),
-        "score_sets": score_sets,
-        "seed": args.seed,
-        "rollout": args.rollout,
-        "decoding": "greedy",
-        "temp": 0.0,
-        "top_p": 1.0,
-        "max_model_len": args.max_model_len,
-        "max_tokens": args.max_tokens,
-        "batch_size": args.batch_size,
-        "gpu_memory_utilization": args.gpu_memory_utilization,
-        "enable_thinking": args.enable_thinking,
-        "finished_at_utc": utc_now(),
-        "aggregation": "mean_over_rollouts",
-        "best_checkpoint_epoch": train_meta.get("best_checkpoint_epoch"),
-        "best_checkpoint_step": train_meta.get("best_checkpoint_step"),
-        "best_generation_accuracy": train_meta.get("best_generation_accuracy"),
-        "test_accuracy": aggregate_metrics.get("accuracy"),
-        "test_macro_f1": aggregate_metrics.get("macro_f1"),
-        "test_mae": aggregate_metrics.get("mae"),
-        "test_qwk": aggregate_metrics.get("qwk"),
-        "format_valid_rate": aggregate_metrics.get("format_valid_rate"),
-        "avg_output_tokens": avg_output_tokens,
-        "avg_reasoning_tokens": avg_reasoning_tokens,
-        "gpu_time_sec": aggregate_metrics.get("gpu_time_sec"),
-        "wall_time_sec": round(wall_elapsed, 3),
-        "gpu_before": gpu_before,
-        "gpu_after": gpu_time_snapshot(),
-        "full_config": full_config,
-        "aggregate": aggregate_metrics,
-        "rollouts": rollout_metrics,
-    }
-    metrics_path = out_dir / "metrics.json"
-    write_json(metrics_path, summary)
-
-    prediction_path = out_dir / "predictions.jsonl"
-    with prediction_path.open("w", encoding="utf-8") as handle:
-        for row in prediction_records:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-    model_key = short_model_name(model_name)
-    table_path = update_comparison_table(
-        output_root,
-        criterion=criterion,
-        mode=supervision_mode if supervision_mode in {"cot", "score_only"} else "cot",
-        model_key=model_key,
-        accuracy=float(aggregate_metrics["accuracy"]),
-        macro_f1=float(aggregate_metrics["macro_f1"]),
-        avg_output_tokens=avg_output_tokens,
-        source_metrics=metrics_path,
-    )
-
-    print(
-        f"[{run_tag}][done] acc={aggregate_metrics['accuracy']:.4f}"
-        f"+/-{aggregate_metrics.get('accuracy_std') or 0:.4f} "
-        f"macro_f1={aggregate_metrics['macro_f1']:.4f}"
-        f"+/-{aggregate_metrics.get('macro_f1_std') or 0:.4f} "
-        f"valid={aggregate_metrics['format_valid_rate']:.4f}"
-        f"+/-{aggregate_metrics.get('format_valid_rate_std') or 0:.4f}"
-    )
-    if aggregate_metrics.get("mae") is not None:
-        print(
-            f"[{run_tag}] mae={aggregate_metrics['mae']:.4f} "
-            f"qwk={aggregate_metrics.get('qwk')}",
-            flush=True,
-        )
-    print(
-        f"[{run_tag}] tokens: output={avg_output_tokens} reasoning={avg_reasoning_tokens} "
-        f"gpu_s={aggregate_metrics.get('gpu_time_sec')} "
-        f"best_epoch={train_meta.get('best_checkpoint_epoch')}",
-        flush=True,
-    )
-    print(f"wrote {metrics_path}")
-    print(f"wrote {prediction_path}")
-    print(f"updated {table_path}")
-
+        print(f"wrote {out_dir / 'resolved_config.json'}")
+        print(f"wrote {metrics_path}")
+        print(f"wrote {prediction_path}")
+        print(f"updated {task_table_path}")
+        print(f"updated {root_table_path}")
+    finally:
+        # Release vLLM before deleting on-disk merged weights.
+        if llm is not None:
+            try:
+                del llm
+            except Exception:
+                pass
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        remove_merged_model(merged_to_cleanup)
 
 if __name__ == "__main__":
     main()

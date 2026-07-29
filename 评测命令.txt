@@ -1,100 +1,34 @@
-// 在项目根目录执行；模型放 /root/autodl-tmp/model/（项目内 model/ 为软链接）
+// ========== 评测 ==========
+// 基座 CoT
+CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
+  --config evaloutput/configs/rw_gen_positioning_type/base_cot.yaml
 
-// 显存小的卡，跑 4B 以下模型评测（实测 58/81 GB 显存剩余，可以用 bs=64）
-CUDA_VISIBLE_DEVICES=2 python inference_rw_gen_coherence.py \
-  --exp_name rw_gen_qwen3_4b-v1 \
-  --model_name model/Qwen3-4B \
-  --dataset_file rw_gen__coherence__exact_user_deduplicated__test__n1046.json \
-  --output_path eval_data/eval_outputs \
-  --max_model_len 16384 \
-  --max_tokens 2048 \
-  --temp 0 \
-  --top_p 1.0 \
-  --seed 42 \
-  --rollout 1 \
-  --batch_size 64
+// 基座 Score-only
+CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
+  --config evaloutput/configs/rw_gen_positioning_type/base_score_only.yaml
 
-// 训练命令
-CUDA_VISIBLE_DEVICES=2 \
-python \
-  training/train.py \
-  --config training/configs/rev_util_helpfulness/score_only.yaml \
-  --seed 42
+// CoT 微调
+CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
+  --config evaloutput/configs/rw_gen_positioning_type/ft_cot.yaml
 
-// 多任务 cleaned score-only（同一入口，换 config）
-CUDA_VISIBLE_DEVICES=2 \
-python \
-  training/train.py \
-  --config training/configs/multitask_cleaned/score_only.yaml \
-  --seed 42 \
-  --fresh
+// Score-only 微调
+CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
+  --config evaloutput/configs/rw_gen_positioning_type/ft_score_only.yaml
 
-// 搜索命令
+// ========== 训练 ==========
 CUDA_VISIBLE_DEVICES=0 \
 python \
-  MoDE/optimize_factor_mix.py \
-  --target actionability \
-  --shots-per-class 5
+  training/train.py \
+  --config training/configs/rw_gen_positioning_check/cot.yaml \
+  --seed 42
 
-// 评测结果默认写到 eval_outputs/<task>/<exp_name>/（task 为 exp_name 第一个 # 前）
+CUDA_VISIBLE_DEVICES=1 \
+python \
+  training/train.py \
+  --config training/configs/rw_gen_positioning_type/score_only.yaml \
+  --seed 42
 
-//评测命令
-// LoRA adapter / checkpoint 评测（vLLM + LoRA；多一个 --adapter）
-CUDA_VISIBLE_DEVICES=0 python \
-  training/evaluate.py \
-  --exp_name rev_util_grounding_specificity#finetune \
-  --model_name model/Qwen3-4B \
-  --adapter train_outputs/rev_util_grounding_specificity/rev_util_grounding_specificity#qwen3_4b#distill_deepseek-v4-pro__seed42__20260724T014920Z/adapter \
-  --dataset_file test_data/grounding_specificity/clean_test1000.jsonl \
-  --max_model_len 8192 \
-  --max_tokens 512 \
-  --temp 0 \
-  --top_p 1.0 \
-  --seed 42 \
-  --rollout 5 \
-  --batch_size 64 \
-  --gpu_memory_utilization 0.9
-
-// 显存大的卡，跑 7B 以下模型评测（实测 7B 模型的 32k 上下文可以跑 bs=8， 跑16会崩掉）
-CUDA_VISIBLE_DEVICES=2 python eval_data/inference.py \
-  --exp_name meta_reviewer_ds_7b \
-  --model_name model/DeepSeek-R1-Distill-Qwen-7B \
-  --dataset_file eval_data/prompted_meta_reviewer_data.json \
-  --output_path eval_data/eval_outputs \
-  --max_model_len 32768 \
-  --max_tokens 2048 \
-  --temp 0 \
-  --top_p 1.0 \
-  --seed 42 \
-  --rollout 1 \
-  --batch_size 8
-
-// 显存大的卡，跑长上下文的 4B 以下模型评测（实测 4B 模型的 32k 上下文可以跑 bs=8， 跑16会崩掉）
-CUDA_VISIBLE_DEVICES=0 python eval_data/inference.py \
-  --exp_name rw_gen_gemma3_4b \
-  --model_name model/Gemma-3-4B-It \
-  --dataset_file eval_data/prompted_rw_gen_data.json \
-  --output_path eval_data/eval_outputs \
-  --max_model_len 16384 \
-  --max_tokens 2048 \
-  --temp 0 \
-  --top_p 1.0 \
-  --seed 42 \
-  --rollout 1 \
-  --batch_size 64
-
-// 蒸馏命令（API 教师 CoT；配置读 train_data/distill_data/.env）
-// preview 冒烟：2 条样本，输出到 distill_data/preview/<task>/
-python train_data/distill_data/generate_mode_cot.py \
-  --input train_data/cleaned_data/preview/rw_gen_coherence_4890_preview.json \
-  --output-dir train_data/distill_data/preview \
-  --model deepseek-v4-pro \
-  --max-tokens 2048 \
-  --timeout 180 \
-  --progress-interval 10 \
-  --preview-chars 180
-
-// 全量蒸馏（同模型已跑过的样本会跳过；结果写 distill_data/<task>/*.jsonl）
+// ========== 蒸馏（API 教师 CoT；配置读 .env）==========
 python train_data/distill_data/generate_mode_cot.py \
   --input train_data/cleaned_data/rw_gen_coherence_4890.json \
   --output-dir train_data/distill_data \
@@ -103,11 +37,3 @@ python train_data/distill_data/generate_mode_cot.py \
   --timeout 180 \
   --progress-interval 10 \
   --preview-chars 180
-
-// 换教师追加到同一 JSONL（勿加 --overwrite，否则会清掉其他模型轨迹）
-python train_data/distill_data/generate_mode_cot.py \
-  --input train_data/cleaned_data/rw_gen_positioning_type_954.json \
-  --output-dir train_data/distill_data \
-  --model deepseek-v4-pro \
-  --max-tokens 2048 \
-  --timeout 180

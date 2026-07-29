@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON="${PYTHON:-python}"
 EVAL_PY="${ROOT}/training/evaluate.py"
 DATA_ROOT="${ROOT}/test_data"
-OUT_ROOT="${ROOT}/eval_outputs"
+OUT_ROOT="${ROOT}/evaloutput"
 LOG_DIR="${ROOT}/MoDE/eval_batch_logs"
 GPU="${CUDA_VISIBLE_DEVICES:-0}"
 

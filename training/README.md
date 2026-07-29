@@ -129,23 +129,30 @@ python \
 
 ## 4. 评测
 
+评测配置按任务放在 `evaloutput/configs/<task>/`（每个可训练任务 4 份），结果写到
+`evaloutput/<task>/<exp_name>/`：
+
+```text
+evaloutput/configs/<task>/
+  base_cot.yaml / base_score_only.yaml
+  ft_cot.yaml / ft_score_only.yaml
+evaloutput/<task>/<exp_name>/
+  resolved_config.json / metrics.json / predictions.jsonl
+```
+
 ```bash
 CUDA_VISIBLE_DEVICES=0 \
 python training/evaluate.py \
-  --exp_name 'rw_gen_coherence#qwen3_4b#cot' \
-  --model_name model/Qwen3-4B \
-  --adapter 'train_outputs/rw_gen_coherence/cot/<run>/adapter' \
-  --dataset_file data/rw_gen_coherence/cot/test_cot.jsonl \
-  --seed 42 \
-  --rollout 5
+  --config evaloutput/configs/rw_gen_coherence/base_cot.yaml
+
+CUDA_VISIBLE_DEVICES=0 \
+python training/evaluate.py \
+  --config evaloutput/configs/rev_util_actionability/ft_cot.yaml
 ```
 
-score-only 将 `dataset_file` 换成
-`data/<task>/score_only/test_score_only.jsonl`。结果写到
-`eval_outputs/<task>/<exp_name>/metrics.json` 与 `predictions.jsonl`，并更新
-`eval_outputs/comparison_table.md`（Score Acc / CoT Acc / ΔCoT / F1 / Token Ratio）。
-`metrics.json` 还包含：best checkpoint epoch（若能从训练 run 读到）、test Acc/Macro-F1、
+`metrics.json` 含：best checkpoint epoch（若能从训练 run 读到）、test Acc/Macro-F1、
 MAE/QWK（1–5）、格式有效率、平均 reasoning/output token、GPU 时间、seed 与完整配置。
+对比表同时写在任务目录与 `evaloutput/comparison_table.md`。
 
 ## 5. 查看训练曲线
 
