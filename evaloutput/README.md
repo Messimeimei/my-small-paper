@@ -2,15 +2,27 @@
 
 评测配置与结果都放在本目录：按任务分子目录，配置在 `configs/`，结果在对应任务文件夹下。
 
-每个可训练任务有 4 份配置；仅测试集任务（novelty / revision_*）只有 base：
+每个可训练任务有 6 份微调相关配置（含 2×2 交叉）+ 2 份 base；仅测试集任务（novelty / revision_*）只有 base：
 
 ```text
 configs/<task>/
-  base_cot.yaml           # 基座 + CoT 测试集
-  base_score_only.yaml    # 基座 + Score-only 测试集
-  ft_cot.yaml             # CoT 微调 adapter
-  ft_score_only.yaml      # Score-only 微调 adapter
+  base_cot.yaml                 # 基座 + CoT 测试集
+  base_score_only.yaml          # 基座 + Score-only 测试集
+  ft_cot.yaml                   # CoT SFT × CoT 测试（对角已完成）
+  ft_score_only.yaml            # Score-only SFT × Score-only 测试（对角已完成）
+  ft_score_only_on_cot.yaml     # 交叉：Score-only SFT × CoT 测试 prompt
+  ft_cot_on_score_only.yaml     # 交叉：CoT SFT × Score-only / Direct-score 测试 prompt
 ```
+
+2×2 交叉评测（不重新训练，复用 seed-42 adapter）：
+
+| 训练 \\ 测试 | Direct-score 测试 | CoT 测试 |
+|---|---|---|
+| Score-only SFT | `ft_score_only.yaml` | `ft_score_only_on_cot.yaml` |
+| CoT SFT | `ft_cot_on_score_only.yaml` | `ft_cot.yaml` |
+
+解码统一：`temp=0`，`rollout=1`；Direct-score `max_tokens=32`，CoT `max_tokens=512`。
+结果写入 `evaloutput/<task>/<exp_name>/`（含 gold/prediction/raw output、format_valid_rate、token 数、latency/samp/s、confusion matrix）。
 
 ```text
 evaloutput/

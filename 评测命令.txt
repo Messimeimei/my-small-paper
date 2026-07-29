@@ -15,6 +15,19 @@ CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
 CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
   --config evaloutput/configs/rw_gen_positioning_type/ft_score_only.yaml
 
+// ========== 2×2 交叉评测（不重训；补跑对角外两格）==========
+// Score-only SFT × CoT 测试 prompt（max_tokens=512）
+CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
+  --config evaloutput/configs/rev_util_actionability/ft_score_only_on_cot.yaml
+
+// CoT SFT × Direct-score 测试 prompt（max_tokens=32）
+CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
+  --config evaloutput/configs/rev_util_actionability/ft_cot_on_score_only.yaml
+
+// 其余任务同理，把路径里的 task 名换掉即可：
+//   rev_util_grounding_specificity / rev_util_helpfulness / rev_util_verifiability
+//   rw_gen_coherence / rw_gen_positioning_check / rw_gen_positioning_type
+
 // ========== 训练 ==========
 CUDA_VISIBLE_DEVICES=0 \
 python \

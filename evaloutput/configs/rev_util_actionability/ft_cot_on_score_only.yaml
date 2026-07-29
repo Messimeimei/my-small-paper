@@ -1,0 +1,18 @@
+# 交叉评测：CoT SFT adapter × Score-only / Direct-score 测试 prompt
+# 训练: cot  | 测试: score_only  | max_tokens=32
+exp_name: rev_util_actionability#qwen3_4b#ft#cot#on_score_only
+model_name: model/Qwen3-4B
+adapter: train_outputs/rev_util_actionability/cot/rev_util_actionability#qwen3_4b#cot__seed42__2026-07-29_10-27-06/adapter
+dataset_file: data/rev_util_actionability/score_only/test_score_only.jsonl
+output_path: evaloutput
+train_config: training/configs/rev_util_actionability/cot.yaml
+
+max_model_len: 8192
+max_tokens: 32
+temp: 0
+top_p: 1.0
+seed: 42
+rollout: 1
+batch_size: 64
+gpu_memory_utilization: 0.9
+enable_thinking: false

@@ -114,4 +114,4 @@ python train_data/distill_data/generate_mode_cot.py \
 输出文件路径为
 `train_data/distill_data/rw_gen_coherence/rw_gen_coherence_4890_distill.jsonl`。
 
-API 配置从本目录 `.env` 读取 `OPENBITFUN_API_KEY` 和 `OPENBITFUN_BASE_URL`。也可以配置 `OPENBITFUN_MODEL` 作为默认教师，但显式使用 `--model` 更适合多教师蒸馏。
+运行蒸馏脚本时需自行配置教师 API（如环境变量中的 API Key / Base URL）；本仓库不附带密钥文件。显式使用 `--model` 更适合多教师蒸馏。
