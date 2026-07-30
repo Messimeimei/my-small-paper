@@ -298,6 +298,64 @@ def infer_comparison_mode(
     return f"{setting}_{mode}"
 
 
+def infer_eval_condition(
+    *,
+    exp_name: str,
+    supervision_mode: str,
+    adapter: str | None,
+    train_config: str | None = None,
+) -> str | None:
+    """Map one eval run to a stable matrix code such as B-L / C-C / A→L."""
+    text = (exp_name or "").lower()
+    cfg = (train_config or "").lower().replace("\\", "/")
+    is_base = (
+        adapter is None
+        or str(adapter).strip().lower() in {"", "none"}
+        or "#base#" in text
+    )
+
+    if "#on_label_only" in text or "#on_score_only" in text:
+        test = "label_only"
+    elif "#on_cot" in text:
+        test = "cot"
+    else:
+        test = "label_only" if supervision_mode in {"score_only", "label_only"} else "cot"
+
+    if is_base:
+        train = "B"
+    elif "align" in text or "align.yaml" in cfg or "/align/" in cfg:
+        train = "A"
+    elif "#ft#label_only" in text or "#ft#score_only" in text or text.endswith(
+        ("#label_only", "#score_only")
+    ):
+        train = "L"
+    elif "#ft#cot" in text or text.endswith("#cot"):
+        train = "C"
+    elif "#ft#" in text:
+        if "align" in text:
+            train = "A"
+        elif "label_only" in text or "score_only" in text:
+            train = "L"
+        elif "cot" in text:
+            train = "C"
+        else:
+            return None
+    else:
+        return None
+
+    mapping = {
+        ("B", "label_only"): "B-L",
+        ("B", "cot"): "B-C",
+        ("L", "label_only"): "L-L",
+        ("C", "cot"): "C-C",
+        ("C", "label_only"): "C→L",
+        ("L", "cot"): "L→C",
+        ("A", "cot"): "A-C",
+        ("A", "label_only"): "A→L",
+    }
+    return mapping.get((train, test))
+
+
 def render_comparison_table(rows: list[dict[str, Any]]) -> str:
     """Plain GFM Markdown table (Cursor preview strips HTML styles).
 

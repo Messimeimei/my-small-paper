@@ -6,13 +6,13 @@ With an adapter path, merges LoRA into a temporary full model then loads with
 plain vLLM (vLLM 0.8.4 + cachetools>=6 breaks enable_lora in spawned workers).
 The merged weights are deleted after evaluation finishes (or on failure).
 
-Prefer YAML under evaloutput/configs/<task>/{base,ft}_{cot,score_only}.yaml
+Prefer YAML under eval_output/configs/<task>/{base,ft}_on_{cot,label_only}.yaml
 via --config; CLI flags override config values. Supports
 data/<task>/{cot,score_only}/test_*.jsonl (labels field) and legacy JSON.
 
-Writes to evaloutput/<task>/<exp_name>/ (metrics.json, predictions.jsonl,
-resolved_config.json) and updates evaloutput/comparison_table.md with the
-four settings: base-score_only, base-cot, score_only(ft), cot(ft).
+Writes to eval_output/<task>/<exp_name>/ (metrics.json, predictions.jsonl,
+resolved_config.json) and rebuilds eval_output/evaluation_analysis.md from all
+discovered metrics.json files (no comparison_table.md).
 """
 
 from __future__ import annotations
@@ -38,16 +38,14 @@ _TRAINING_DIR = Path(__file__).resolve().parent
 if str(_TRAINING_DIR) not in sys.path:
     sys.path.insert(0, str(_TRAINING_DIR))
 
+from eval_analysis import update_evaluation_analysis
 from metrics_utils import (
     classification_metrics,
-    compute_efficiency_metrics,
     criterion_title,
     extract_score,
-    infer_comparison_mode,
+    infer_eval_condition,
     infer_supervision_mode,
     infer_task_name,
-    merge_comparison_row,
-    render_comparison_table,
     short_model_name,
     token_stats,
 )
@@ -73,7 +71,7 @@ _AUTODL_TMP = Path("/root/autodl-tmp")
 DEFAULT_MERGE_CACHE = (
     _AUTODL_TMP / "merged" if _AUTODL_TMP.is_dir() else PROJECT_ROOT / "merged"
 )
-DEFAULT_EVAL_OUTPUT_ROOT = PROJECT_ROOT / "evaloutput"
+DEFAULT_EVAL_OUTPUT_ROOT = PROJECT_ROOT / "eval_output"
 DEFAULT_MERGE_RETENTION_DAYS = 0
 
 # YAML keys -> argparse destinations (same names as CLI flags without --).
@@ -141,10 +139,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     pre = argparse.ArgumentParser(add_help=False)
     pre.add_argument("--config", default=None)
+    pre.add_argument("--refresh-analysis-only", action="store_true")
     pre_args, _ = pre.parse_known_args(argv)
 
     config_defaults: dict[str, Any] = {}
     config_path: Path | None = None
+    analysis_only = bool(pre_args.refresh_analysis_only)
     if pre_args.config:
         config_path = resolve_path(pre_args.config)
         if not config_path.is_file():
@@ -156,23 +156,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--refresh-analysis-only",
+        action="store_true",
+        help="Rebuild eval_output/evaluation_analysis.md from existing metrics.json and exit.",
+    )
+    parser.add_argument(
         "--config",
         default=None,
         help=(
-            "Eval YAML under evaloutput/configs/<task>/"
-            "{base,ft}_{cot,score_only}.yaml. "
+            "Eval YAML under eval_output/configs/<task>/"
+            "e.g. base_on_cot.yaml, ft_cot_on_label_only.yaml. "
             "CLI flags override values from the config."
         ),
     )
     parser.add_argument(
         "--exp_name",
         default=config_defaults.get("exp_name"),
-        required="exp_name" not in config_defaults,
+        required=(not analysis_only and "exp_name" not in config_defaults),
     )
     parser.add_argument(
         "--model_name",
         default=config_defaults.get("model_name"),
-        required="model_name" not in config_defaults,
+        required=(not analysis_only and "model_name" not in config_defaults),
         help="Base model path.",
     )
     parser.add_argument(
@@ -191,7 +196,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--output_path",
         default=config_defaults.get("output_path", str(DEFAULT_EVAL_OUTPUT_ROOT)),
         help=(
-            "Eval output root (default: <project>/evaloutput). "
+            "Eval output root (default: <project>/eval_output). "
             "Each run writes to <output_path>/<task>/<exp_name>/."
         ),
     )
@@ -766,61 +771,6 @@ def gpu_time_snapshot() -> dict[str, Any]:
     return info
 
 
-def update_comparison_table(
-    output_root: Path,
-    *,
-    criterion: str,
-    mode: str,
-    model_key: str,
-    accuracy: float,
-    macro_f1: float,
-    avg_output_tokens: float | None,
-    source_metrics: Path,
-    gpu_time_sec: float | None = None,
-    samples_per_sec: float | None = None,
-    tokens_per_sec: float | None = None,
-    n_samples: int | None = None,
-) -> Path:
-    """Merge this run into the 4-way comparison table (base/ft × score_only/cot)."""
-    table_json = output_root / "comparison_table.json"
-    table_md = output_root / "comparison_table.md"
-    payload = {"model_key": model_key, "rows": {}}
-    if table_json.is_file():
-        loaded = read_json(table_json)
-        if isinstance(loaded, dict) and loaded.get("model_key") == model_key:
-            payload = loaded
-        elif isinstance(loaded, dict):
-            # Different model family: keep separate file keyed by model.
-            table_json = output_root / f"comparison_table__{model_key}.json"
-            table_md = output_root / f"comparison_table__{model_key}.md"
-            if table_json.is_file():
-                payload = read_json(table_json)
-            else:
-                payload = {"model_key": model_key, "rows": {}}
-    rows = payload.setdefault("rows", {})
-    rows[criterion] = merge_comparison_row(
-        rows.get(criterion),
-        criterion=criterion,
-        mode=mode,
-        accuracy=accuracy,
-        macro_f1=macro_f1,
-        avg_output_tokens=avg_output_tokens,
-        gpu_time_sec=gpu_time_sec,
-        samples_per_sec=samples_per_sec,
-        tokens_per_sec=tokens_per_sec,
-        n_samples=n_samples,
-    )
-    rows[criterion]["sources"] = {
-        **(rows[criterion].get("sources") or {}),
-        mode: str(source_metrics),
-    }
-    payload["updated_at_utc"] = utc_now()
-    ordered = sorted(rows.values(), key=lambda row: row.get("criterion", ""))
-    write_json(table_json, payload)
-    table_md.write_text(render_comparison_table(ordered), encoding="utf-8")
-    return table_md
-
-
 def run_rollout(
     llm,
     sampling_params,
@@ -884,6 +834,11 @@ def run_rollout(
 def main() -> None:
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     args = parse_args()
+    if args.refresh_analysis_only:
+        output_root = resolve_path(args.output_path)
+        analysis_path = update_evaluation_analysis(output_root)
+        print(f"updated {analysis_path}")
+        return
     if args.rollout < 1:
         raise SystemExit("--rollout must be >= 1")
     if args.batch_size < 1:
@@ -1029,6 +984,14 @@ def main() -> None:
             np.mean([rollout["elapsed_sec"] for rollout in rollout_metrics])
         )
 
+        train_config_path = str(args.train_config) if args.train_config else None
+        eval_condition = infer_eval_condition(
+            exp_name=args.exp_name,
+            supervision_mode=supervision_mode,
+            adapter=str(adapter) if adapter is not None else None,
+            train_config=train_config_path,
+        )
+
         full_config = resolved_eval_config(args, adapter=adapter)
         full_config["train_config"] = train_config
         full_config["train_run"] = train_meta
@@ -1042,6 +1005,7 @@ def main() -> None:
             "aspect": aspect,
             "supervision_mode": supervision_mode,
             "evaluation_mode": supervision_mode,
+            "eval_condition": eval_condition,
             "output_dir": str(out_dir),
             "backend": backend,
             "model_name": str(model_name),
@@ -1087,48 +1051,8 @@ def main() -> None:
             for row in prediction_records:
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-        # Per-task comparison table + root aggregate table.
-        model_key = short_model_name(model_name)
-        mode = infer_comparison_mode(
-            supervision_mode=supervision_mode,
-            adapter=adapter,
-            exp_name=args.exp_name,
-        )
-        n_samples = int(aggregate_metrics.get("samples") or len(rows))
-        gpu_time_sec = aggregate_metrics.get("gpu_time_sec")
-        rollout_sps = [
-            float(r["samples_per_sec"])
-            for r in rollout_metrics
-            if r.get("samples_per_sec") is not None
-        ]
-        samples_per_sec = float(np.mean(rollout_sps)) if rollout_sps else None
-        eff = compute_efficiency_metrics(
-            n_samples=n_samples,
-            avg_output_tokens=avg_output_tokens,
-            gpu_time_sec=gpu_time_sec,
-            samples_per_sec=samples_per_sec,
-        )
-        table_kwargs = dict(
-            criterion=criterion,
-            mode=mode,
-            model_key=model_key,
-            accuracy=float(aggregate_metrics["accuracy"]),
-            macro_f1=float(aggregate_metrics["macro_f1"]),
-            avg_output_tokens=avg_output_tokens,
-            source_metrics=metrics_path,
-            gpu_time_sec=eff["gpu_time_sec"],
-            samples_per_sec=eff["samples_per_sec"],
-            tokens_per_sec=eff["tokens_per_sec"],
-            n_samples=n_samples,
-        )
-        task_table_path = update_comparison_table(
-            output_root / task_folder,
-            **table_kwargs,
-        )
-        root_table_path = update_comparison_table(
-            output_root,
-            **table_kwargs,
-        )
+        # Rebuild the single aggregate analysis report under eval_output/.
+        analysis_path = update_evaluation_analysis(output_root)
 
         print(
             f"[{run_tag}][done] acc={aggregate_metrics['accuracy']:.4f}"
@@ -1154,8 +1078,7 @@ def main() -> None:
         print(f"wrote {out_dir / 'resolved_config.json'}")
         print(f"wrote {metrics_path}")
         print(f"wrote {prediction_path}")
-        print(f"updated {task_table_path}")
-        print(f"updated {root_table_path}")
+        print(f"updated {analysis_path}")
     finally:
         # Release vLLM before deleting on-disk merged weights.
         if llm is not None:

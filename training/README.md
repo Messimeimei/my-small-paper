@@ -1,6 +1,6 @@
 # Minimal LoRA Training
 
-该目录提供可复现的 LoRA SFT 入口：读取 `data/<task>/{cot,score_only}/train_*.jsonl`，
+该目录提供可复现的 LoRA SFT 入口：读取 `data/<task>/{cot,score_only}/train_*.jsonl`（Label-only 数据在 `score_only/` 目录），
 固定分层划分、按 **生成式 validation accuracy** 保存最佳 checkpoint，并写出完整
 manifest / summary。生成式验证使用训练模型与同一张 GPU。
 
@@ -10,14 +10,14 @@ manifest / summary。生成式验证使用训练模型与同一张 GPU。
 
 ```text
 data/<task>/cot/train_cot.jsonl
-data/<task>/score_only/train_score_only.jsonl
+data/<task>/score_only/train_score_only.jsonl   # Label-only 训练数据
 ```
 
 对应 YAML 按任务分子目录（与 `data/` 对齐）：
 
 ```text
 training/configs/<task>/cot.yaml
-training/configs/<task>/score_only.yaml
+training/configs/<task>/score_only.yaml   # Label-only SFT（配置文件名保留 score_only）
 training/configs/<task>/align.yaml   # 可选：Align 监督（需 CoT 数据）
 ```
 
@@ -28,7 +28,7 @@ training/configs/<task>/align.yaml   # 可选：Align 监督（需 CoT 数据）
 
 | 方式 | 配置 | 说明 |
 |------|------|------|
-| **standard**（默认） | 不写 `supervision`，或 `cot` / `score_only` 数据 | 与原先一致：`completion_only_loss=True`，整段 completion 平均 CE |
+| **standard**（默认） | 不写 `supervision`，或 `cot` / Label-only 数据 | 与原先一致：`completion_only_loss=True`，整段 completion 平均 CE |
 | **align** | `supervision.method: align` + CoT 数据 | 论文 Align：每条样本拆成 label-only / rationale-only 两视图，分别平均 loss 后加权组合 |
 
 Align 示例（`training/configs/rw_gen_coherence/align.yaml`）：
@@ -152,30 +152,32 @@ python \
 
 ## 4. 评测
 
-评测配置按任务放在 `evaloutput/configs/<task>/`（每个可训练任务 4 份），结果写到
-`evaloutput/<task>/<exp_name>/`：
+评测配置按任务放在 `eval_output/configs/<task>/`（每个可训练任务 8 份），结果写到
+`eval_output/<task>/<exp_name>/`：
 
 ```text
-evaloutput/configs/<task>/
-  base_cot.yaml / base_score_only.yaml
-  ft_cot.yaml / ft_score_only.yaml
-evaloutput/<task>/<exp_name>/
+eval_output/configs/<task>/
+  base_on_cot.yaml / base_on_label_only.yaml
+  ft_cot_on_cot.yaml / ft_label_only_on_label_only.yaml
+  ft_cot_on_label_only.yaml / ft_label_only_on_cot.yaml
+  ft_align_on_cot.yaml / ft_align_on_label_only.yaml
+eval_output/<task>/<exp_name>/
   resolved_config.json / metrics.json / predictions.jsonl
 ```
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 \
 python training/evaluate.py \
-  --config evaloutput/configs/rw_gen_coherence/base_cot.yaml
+  --config eval_output/configs/rw_gen_coherence/base_on_cot.yaml
 
 CUDA_VISIBLE_DEVICES=0 \
 python training/evaluate.py \
-  --config evaloutput/configs/rev_util_actionability/ft_cot.yaml
+  --config eval_output/configs/rev_util_actionability/ft_cot_on_cot.yaml
 ```
 
 `metrics.json` 含：best checkpoint epoch（若能从训练 run 读到）、test Acc/Macro-F1、
 MAE/QWK（1–5）、格式有效率、平均 reasoning/output token、GPU 时间、seed 与完整配置。
-对比表同时写在任务目录与 `evaloutput/comparison_table.md`。
+汇总分析写入 `eval_output/evaluation_analysis.md`（每次评测后自动重建）。
 
 ## 5. 查看训练曲线
 
