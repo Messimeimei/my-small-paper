@@ -17,6 +17,7 @@ from data_utils import (
     score_sets,
     split_rows,
 )
+from logic_snapshot import write_training_logic_snapshot
 from metrics_utils import infer_supervision_mode, infer_task_name, short_model_name
 from run_utils import (
     begin_attempt,
@@ -199,6 +200,9 @@ def run_training(context: dict[str, Any]) -> None:
             "bf16_supported": torch.cuda.is_bf16_supported(),
         },
     }
+    environment_metadata["logic"] = write_training_logic_snapshot(
+        run_directory, {**context, "run_id": run_id}
+    )
     if resume_checkpoint is None:
         write_json(run_directory / "resolved_config.json", context["resolved_config"])
         write_json(run_directory / "data_summary.json", context["data_summary"])

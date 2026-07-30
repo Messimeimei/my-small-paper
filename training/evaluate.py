@@ -8,7 +8,7 @@ The merged weights are deleted after evaluation finishes (or on failure).
 
 Prefer YAML under eval_output/configs/<task>/{base,ft}_on_{cot,label_only}.yaml
 via --config; CLI flags override config values. Supports
-data/<task>/{cot,score_only}/test_*.jsonl (labels field) and legacy JSON.
+data/<task>/{cot,label_only}/test_*.jsonl (labels field) and legacy JSON.
 
 Writes to eval_output/<task>/<exp_name>/ (metrics.json, predictions.jsonl,
 resolved_config.json) and rebuilds eval_output/evaluation_analysis.md from all
@@ -39,6 +39,7 @@ if str(_TRAINING_DIR) not in sys.path:
     sys.path.insert(0, str(_TRAINING_DIR))
 
 from eval_analysis import update_evaluation_analysis
+from logic_snapshot import write_inference_logic_snapshot
 from metrics_utils import (
     classification_metrics,
     criterion_title,
@@ -877,6 +878,16 @@ def main() -> None:
     criterion = criterion_title(str(aspect))
     run_tag = f"{task_name}|{supervision_mode}|{short_model_name(model_name)}"
     train_meta = load_train_run_metadata(adapter)
+    write_inference_logic_snapshot(
+        out_dir,
+        args=args,
+        dataset_file=dataset_file,
+        sample_count=len(rows),
+        score_sets=score_sets,
+        supervision_mode=supervision_mode,
+        adapter=adapter,
+        train_meta=train_meta,
+    )
 
     cleanup_merged_cache(merge_cache, args.merge_retention_days)
     # Also sweep the legacy project-local merge dir if it still holds leftovers.

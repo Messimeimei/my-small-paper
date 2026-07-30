@@ -27,7 +27,7 @@ configs/<task>/
 
 解码统一：`temp=0`，`rollout=1`；Label-only 测试 `max_tokens=32`，CoT 测试 `max_tokens=512`。
 
-> 数据文件路径仍使用 `data/<task>/score_only/`（历史目录名），含义为 **Label-only** 测试 prompt。
+> Label-only 数据位于 `data/<task>/label_only/`。
 
 ```text
 eval_output/

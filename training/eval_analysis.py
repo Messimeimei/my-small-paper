@@ -20,7 +20,7 @@ EVAL_CONDITIONS: tuple[str, ...] = (
     "A→L",
 )
 
-# Legacy condition codes from older runs (score-only wording).
+# Legacy condition codes from older runs (Label-only wording).
 LEGACY_CONDITION_ALIASES = {
     "B-S": "B-L",
     "S-S": "L-L",

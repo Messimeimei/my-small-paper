@@ -1,4 +1,4 @@
-"""Existing score_only / cot SFT path (unchanged behavior)."""
+"""Existing label_only / cot SFT path (unchanged behavior)."""
 
 from __future__ import annotations
 

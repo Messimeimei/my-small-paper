@@ -1,6 +1,6 @@
 # Minimal LoRA Training
 
-该目录提供可复现的 LoRA SFT 入口：读取 `data/<task>/{cot,score_only}/train_*.jsonl`（Label-only 数据在 `score_only/` 目录），
+该目录提供可复现的 LoRA SFT 入口：读取 `data/<task>/{cot,label_only}/train_*.jsonl`（Label-only 数据在 `label_only/` 目录），
 固定分层划分、按 **生成式 validation accuracy** 保存最佳 checkpoint，并写出完整
 manifest / summary。生成式验证使用训练模型与同一张 GPU。
 
@@ -10,14 +10,14 @@ manifest / summary。生成式验证使用训练模型与同一张 GPU。
 
 ```text
 data/<task>/cot/train_cot.jsonl
-data/<task>/score_only/train_score_only.jsonl   # Label-only 训练数据
+data/<task>/label_only/train_label_only.jsonl   # Label-only 训练数据
 ```
 
 对应 YAML 按任务分子目录（与 `data/` 对齐）：
 
 ```text
 training/configs/<task>/cot.yaml
-training/configs/<task>/score_only.yaml   # Label-only SFT（配置文件名保留 score_only）
+training/configs/<task>/label_only.yaml   # Label-only SFT
 training/configs/<task>/align.yaml   # 可选：Align 监督（需 CoT 数据）
 ```
 

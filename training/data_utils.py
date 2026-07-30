@@ -19,7 +19,7 @@ def parse_train_label(row: dict[str, Any], line_number: int) -> int:
 
 
 def load_rows(path: Path) -> list[dict[str, Any]]:
-    """Read training JSONL (data/*/cot|score_only/train_*.jsonl)."""
+    """Read training JSONL (data/*/cot|label_only/train_*.jsonl)."""
     rows: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     declared_score_sets: list[int] | None = None

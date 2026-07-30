@@ -34,9 +34,9 @@ SciLoom-MoDE/
       train_cot.jsonl             # 有则用于训练（含 completion）
       test_cot.jsonl              # 测试集
       splits/*.json               # train/val 划分（若有）
-    score_only/
-      train_score_only.jsonl
-      test_score_only.jsonl
+    label_only/
+      train_label_only.jsonl
+      test_label_only.jsonl
       splits/*.json
   distill_data/                   # 教师模型原始 / 可接受蒸馏轨迹
   origin_data/                    # 清洗前的原始任务 JSONL（含 preview）
@@ -44,7 +44,7 @@ SciLoom-MoDE/
 
 ## 任务一览
 
-| 数据集 | 任务简介 | 标签 | CoT train | CoT test | Score-only train | Score-only test |
+| 数据集 | 任务简介 | 标签 | CoT train | CoT test | Label-only train | Label-only test |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | `rev_util_actionability` | 评审意见是否给出作者可执行的修改建议 | 1–5 | 1788 | 1000 | 1788 | 1000 |
 | `rev_util_grounding_specificity` | 意见是否落到具体章节/图表，并说清问题 | 1–5 | 2652 | 1000 | 2652 | 1000 |
@@ -61,9 +61,9 @@ SciLoom-MoDE/
 
 - 前 7 个任务有 train + test，用于垂域微调与 in-domain 评测。
 - `novelty` / `revision_*` 仅有 test，用作未训练维度 / OOD 评测。
-- **cot** 与 **score_only** 样本对齐：同一 `id`，仅 system 要求与 `completion` 不同。
+- **cot** 与 **label_only** 样本对齐：同一 `id`，仅 system 要求与 `completion` 不同。
   - cot：输出 `<reasoning>...</reasoning><score>N</score>`
-  - score_only：输出 `<score>N</score>`
+  - label_only：输出 `<score>N</score>`
 
 ## 样本格式
 
@@ -86,7 +86,7 @@ SciLoom-MoDE/
 
 ### 测试集（`test_*.jsonl`）
 
-字段与训练类似，金标签为 `labels`（整数），无 `completion`；`evaluation_mode` 为 `cot` 或 `score_only`。
+字段与训练类似，金标签为 `labels`（整数），无 `completion`；`evaluation_mode` 为 `cot` 或 `label_only`。
 
 ### 划分文件（`splits/`）
 
@@ -117,7 +117,7 @@ SciLoom-MoDE/
 ## `origin_data/`
 
 清洗前 / 全量原始 JSONL（文件名含样本量，如 `rw_gen__coherence__n4890.jsonl`），以及 `preview/` 小样。  
-正式训练请优先使用各任务下的 `cot` / `score_only` 划分数据。
+正式训练请优先使用各任务下的 `cot` / `label_only` 划分数据。
 
 ## 快速加载
 

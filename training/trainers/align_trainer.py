@@ -38,7 +38,10 @@ class AlignGenerativeEvalSFTTrainer(GenerativeEvalSFTTrainer):
 
         label_loss_mask = inputs.pop("label_loss_mask")
         rationale_loss_mask = inputs.pop("rationale_loss_mask")
-        labels = inputs["labels"]
+        # Align computes its own token-level objective below. Do not pass labels to
+        # the model: TRL's chunked_nll forward intentionally returns logits=None
+        # when labels are present, and the native LM loss would be redundant here.
+        labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.logits
 
