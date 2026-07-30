@@ -12,33 +12,41 @@ from metrics_utils import criterion_title, infer_eval_condition
 EVAL_CONDITIONS: tuple[str, ...] = (
     "B-L",
     "B-C",
-    "L-L",
-    "C-C",
-    "C→L",
-    "L→C",
-    "A-C",
-    "A→L",
+    "LL",
+    "LC",
+    "CL",
+    "CC",
+    "AL",
+    "AC",
 )
 
-# Legacy condition codes from older runs (Label-only wording).
+TRAINABLE_CONDITIONS: tuple[str, ...] = ("LL", "LC", "CL", "CC", "AL", "AC")
+
+# Legacy condition codes from older runs.
 LEGACY_CONDITION_ALIASES = {
     "B-S": "B-L",
-    "S-S": "L-L",
-    "C→S": "C→L",
-    "S→C": "L→C",
-    "A-A": "A-C",
-    "A→S": "A→L",
+    "S-S": "LL",
+    "L-L": "LL",
+    "C→S": "CL",
+    "C→L": "CL",
+    "S→C": "LC",
+    "L→C": "LC",
+    "C-C": "CC",
+    "A-A": "AC",
+    "A-C": "AC",
+    "A→S": "AL",
+    "A→L": "AL",
 }
 
 CONDITION_META: dict[str, tuple[str, str, str]] = {
     "B-L": ("Base", "Label-only", "基座模型直接输出标签"),
     "B-C": ("Base", "CoT", "基座模型先输出推理再输出标签"),
-    "L-L": ("Label-only SFT", "Label-only", "同格式 Label-only 微调与测试"),
-    "C-C": ("CoT SFT", "CoT", "同格式 CoT 微调与测试"),
-    "C→L": ("CoT SFT", "Label-only", "CoT adapter 交叉测试 Label-only prompt"),
-    "L→C": ("Label-only SFT", "CoT", "Label-only adapter 交叉测试 CoT prompt"),
-    "A-C": ("Align SFT", "CoT", "Align adapter 在 CoT 测试 prompt 上评测"),
-    "A→L": ("Align SFT", "Label-only", "Align adapter 交叉测试 Label-only prompt"),
+    "LL": ("Label-only SFT", "Label-only", "同格式 Label-only 微调与测试"),
+    "LC": ("Label-only SFT", "CoT", "Label-only adapter 交叉测试 CoT prompt"),
+    "CL": ("CoT SFT", "Label-only", "CoT adapter 交叉测试 Label-only prompt"),
+    "CC": ("CoT SFT", "CoT", "同格式 CoT 微调与测试"),
+    "AL": ("Align SFT", "Label-only", "Align adapter 交叉测试 Label-only prompt"),
+    "AC": ("Align SFT", "CoT", "Align adapter 在 CoT 测试 prompt 上评测"),
 }
 
 TRAINABLE_TASKS: tuple[str, ...] = (
@@ -237,7 +245,7 @@ def render_main_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
 
 def render_migration_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
     lines = [
-        "| 任务 | C→L 相对 L-L | L→C 相对 C-C | A→L 相对 L-L |",
+        "| 任务 | CL 相对 LL | LC 相对 CC | AL 相对 LL |",
         "| --- | ---: | ---: | ---: |",
     ]
     deltas_cl: list[float] = []
@@ -259,9 +267,9 @@ def render_migration_table(records: dict[tuple[str, str], dict[str, Any]]) -> st
 
     for task in TRAINABLE_TASKS:
         title = criterion_title(task)
-        d_cl, v_cl = delta("C→L", "L-L")
-        d_lc, v_lc = delta("L→C", "C-C")
-        d_al, v_al = delta("A→L", "L-L")
+        d_cl, v_cl = delta("CL", "LL")
+        d_lc, v_lc = delta("LC", "CC")
+        d_al, v_al = delta("AL", "LL")
         if v_cl is not None:
             deltas_cl.append(v_cl)
         if v_lc is not None:
@@ -283,15 +291,7 @@ def render_migration_table(records: dict[tuple[str, str], dict[str, Any]]) -> st
 
 
 def render_ordinal_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
-    headers = [
-        "任务",
-        "L-L MAE / QWK",
-        "C-C MAE / QWK",
-        "C→L MAE / QWK",
-        "L→C MAE / QWK",
-        "A-C MAE / QWK",
-        "A→L MAE / QWK",
-    ]
+    headers = ["任务", *[f"{code} MAE / QWK" for code in TRAINABLE_CONDITIONS]]
     lines = [
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] + ["---:"] * (len(headers) - 1)) + " |",
@@ -301,7 +301,7 @@ def render_ordinal_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
             continue
         title = criterion_title(task)
         cells = [title]
-        for code in ("L-L", "C-C", "C→L", "L→C", "A-C", "A→L"):
+        for code in TRAINABLE_CONDITIONS:
             record = records.get((task, code))
             if record is None:
                 cells.append("—")
@@ -369,9 +369,9 @@ def render_evaluation_analysis(records: dict[tuple[str, str], dict[str, Any]]) -
     ]
     condition_text = "、".join(present_conditions) if present_conditions else "（尚无结果）"
     align_note = ""
-    if not any(code.startswith("A") for code in present_conditions):
+    if not any(code in {"AL", "AC"} for code in present_conditions):
         align_note = (
-            "\n> Align 列（A-C / A→L）会在运行 "
+            "\n> Align 列（AL / AC）会在运行 "
             "`eval_output/configs/<task>/ft_align_on_*.yaml` 后自动填入。\n"
         )
 

@@ -310,7 +310,7 @@ def infer_eval_condition(
     adapter: str | None,
     train_config: str | None = None,
 ) -> str | None:
-    """Map one eval run to a stable matrix code such as B-L / C-C / A→L."""
+    """Map one eval run to a stable matrix code such as B-L / CC / AL."""
     text = (exp_name or "").lower()
     cfg = (train_config or "").lower().replace("\\", "/")
     is_base = (
@@ -351,12 +351,12 @@ def infer_eval_condition(
     mapping = {
         ("B", "label_only"): "B-L",
         ("B", "cot"): "B-C",
-        ("L", "label_only"): "L-L",
-        ("C", "cot"): "C-C",
-        ("C", "label_only"): "C→L",
-        ("L", "cot"): "L→C",
-        ("A", "cot"): "A-C",
-        ("A", "label_only"): "A→L",
+        ("L", "label_only"): "LL",
+        ("L", "cot"): "LC",
+        ("C", "label_only"): "CL",
+        ("C", "cot"): "CC",
+        ("A", "label_only"): "AL",
+        ("A", "cot"): "AC",
     }
     return mapping.get((train, test))
 
