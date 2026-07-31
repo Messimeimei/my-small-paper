@@ -20,7 +20,9 @@ TRAINING_LOGIC_SOURCES = (
     "training/supervision/__init__.py",
     "training/supervision/standard.py",
     "training/supervision/align.py",
+    "training/supervision/paper_align.py",
     "training/trainers/align_trainer.py",
+    "training/trainers/paper_align_trainer.py",
 )
 
 INFERENCE_LOGIC_SOURCES = (
@@ -96,9 +98,9 @@ def _standard_objective(supervision_mode: str) -> dict[str, Any]:
     }
 
 
-def _align_objective() -> dict[str, Any]:
+def _legacy_align_objective() -> dict[str, Any]:
     return {
-        "name": "align_unpaired_split_view",
+        "name": "legacy_align_unpaired_split_view_v1",
         "views_per_original_sample": 2,
         "prompt_mode": "The original CoT prompt is reused for both views.",
         "targets": {
@@ -123,6 +125,35 @@ def _align_objective() -> dict[str, Any]:
     }
 
 
+def _paper_align_objective() -> dict[str, Any]:
+    return {
+        "name": "paper_align_paired_direct_reason_v1",
+        "views_per_original_sample": 2,
+        "prompt_mode": {
+            "label_view": "Use the matched label-only Direct prompt.",
+            "reason_view": "Use the original CoT Reason prompt.",
+        },
+        "targets": {
+            "label_view": "<score> block followed by EOS",
+            "reason_view": "Full <reasoning> then <score> completion followed by EOS",
+        },
+        "pairing": (
+            "CoT and label-only rows are matched by source ID before tokenization. "
+            "Each dataset item contains both views, and the collator expands them "
+            "together so every micro-batch contains complete source pairs."
+        ),
+        "loss": (
+            "Compute mean next-token CE over all Direct-view completion tokens and "
+            "mean CE over all Reason-view completion tokens separately, then use "
+            "label_coeff * label_loss + rationale_coeff * reason_loss."
+        ),
+        "reference": (
+            "Investigating the Impact of Rationales for LLMs on Natural Language "
+            "Understanding, Section 4 and Appendix D.1/D.4."
+        ),
+    }
+
+
 def build_training_logic_snapshot(context: dict[str, Any]) -> dict[str, Any]:
     config = context["config"]
     training = config.get("training") or {}
@@ -132,17 +163,19 @@ def build_training_logic_snapshot(context: dict[str, Any]) -> dict[str, Any]:
     supervision_mode = str(context["supervision_mode"])
     variant = f"{method}:{supervision_mode}"
     sources = source_fingerprints(TRAINING_LOGIC_SOURCES)
-    objective = (
-        _align_objective()
-        if method == "align"
-        else _standard_objective(supervision_mode)
-    )
+    if method == "legacy_align":
+        objective = _legacy_align_objective()
+    elif method == "paper_align":
+        objective = _paper_align_objective()
+    else:
+        objective = _standard_objective(supervision_mode)
     accumulation = int(training.get("gradient_accumulation_steps", 16))
     micro_batch_size = int(training.get("per_device_train_batch_size", 1))
+    views_per_micro_batch = micro_batch_size * (2 if method == "paper_align" else 1)
     supervision = config.get("supervision") or {}
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "training",
         "logic_id": _logic_id("training", variant, sources),
         "variant": variant,
@@ -152,9 +185,12 @@ def build_training_logic_snapshot(context: dict[str, Any]) -> dict[str, Any]:
             "parameter_update": {
                 "adapter": "LoRA",
                 "target_modules": lora.get("target_modules", "all-linear"),
-                "micro_batch_size_per_device": micro_batch_size,
+                "source_items_per_micro_batch_per_device": micro_batch_size,
+                "views_per_micro_batch_per_device": views_per_micro_batch,
                 "gradient_accumulation_steps": accumulation,
-                "views_per_optimizer_step_per_device": micro_batch_size * accumulation,
+                "views_per_optimizer_step_per_device": (
+                    views_per_micro_batch * accumulation
+                ),
                 "order": (
                     "forward -> loss -> backward for each micro-batch; after the "
                     "configured accumulation count: gradient clipping -> optimizer "
@@ -176,6 +212,7 @@ def build_training_logic_snapshot(context: dict[str, Any]) -> dict[str, Any]:
         "effective_run": {
             "run_id": context.get("run_id"),
             "dataset": str(context["data_summary"]["dataset"]),
+            "label_dataset": context["data_summary"].get("label_dataset"),
             "split": str(context["data_summary"]["split"]),
             "train_samples": context["data_summary"]["train"]["samples"],
             "validation_samples": context["data_summary"]["validation"]["samples"],
@@ -186,11 +223,13 @@ def build_training_logic_snapshot(context: dict[str, Any]) -> dict[str, Any]:
             "max_length": int(training.get("max_length", 8192)),
             "precision": "bf16" if training.get("bf16", True) else "fp16",
             "label_coeff": (
-                float(supervision.get("label_coeff", 0.5)) if method == "align" else None
+                float(supervision.get("label_coeff", 0.5))
+                if method in {"legacy_align", "paper_align"}
+                else None
             ),
             "rationale_coeff": (
                 float(supervision.get("rationale_coeff", 0.5))
-                if method == "align"
+                if method in {"legacy_align", "paper_align"}
                 else None
             ),
         },

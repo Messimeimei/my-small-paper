@@ -17,8 +17,9 @@ data/<task>/label_only/train_label_only.jsonl   # Label-only 训练数据
 
 ```text
 training/configs/<task>/cot.yaml
-training/configs/<task>/label_only.yaml   # Label-only SFT
-training/configs/<task>/align.yaml   # 可选：Align 监督（需 CoT 数据）
+training/configs/<task>/label_only.yaml
+training/configs/<task>/legacy_align.yaml
+training/configs/<task>/paper_align.yaml
 ```
 
 例如 `training/configs/rw_gen_coherence/cot.yaml`。`split_path` 可省略，默认写到
@@ -28,25 +29,30 @@ training/configs/<task>/align.yaml   # 可选：Align 监督（需 CoT 数据）
 
 | 方式 | 配置 | 说明 |
 |------|------|------|
-| **standard**（默认） | 不写 `supervision`，或 `cot` / Label-only 数据 | 与原先一致：`completion_only_loss=True`，整段 completion 平均 CE |
-| **align** | `supervision.method: align` + CoT 数据 | 论文 Align：每条样本拆成 label-only / rationale-only 两视图，分别平均 loss 后加权组合 |
+| **standard**（默认） | 不写 `supervision` | 对一条完整 completion 计算平均 CE |
+| **legacy_align** | `supervision.method: legacy_align` | 冻结保留的旧实现：同一 CoT prompt 对应 score-only / reasoning-only 两个独立 view |
+| **paper_align** | `supervision.method: paper_align` | 按 ID 配对 Direct 与 Reason view；两个 view 强制同 batch，分别平均 CE 后加权 |
 
-Align 示例（`training/configs/rw_gen_coherence/align.yaml`）：
+`paper_align` 必须同时配置：
 
 ```yaml
+dataset_path: data/<task>/cot/train_cot.jsonl
+label_dataset_path: data/<task>/label_only/train_label_only.jsonl
 supervision:
-  method: align
-  label_coeff: 0.5      # α，对应 <score> 块
-  rationale_coeff: 0.5  # 1−α，对应 <reasoning> 块
+  method: paper_align
+  label_coeff: 0.5
+  rationale_coeff: 0.5
 ```
 
-训练数据仍为 CoT JSONL；脚本会将 train 集扩成 2× 视图（1373 条 → 2746 视图）。
-验证与 checkpoint 选择逻辑不变，仍按完整 CoT 生成式 `eval_generation_accuracy`。
+每个 paper-align dataset item 是一个源样本 pair。collator 将其展开为
+`label-only prompt -> score` 和 `CoT prompt -> reasoning + score` 两条序列，
+保证同一 ID 的两条序列处于同一 micro-batch。验证和最佳 checkpoint 选择使用
+label-only Direct prompt。详细版本定义见 `training/ALIGN_METHODS.md`。
 
-代码结构：`train.py`（CLI）→ `pipeline.py`（编排）→ `supervision/{standard,align}.py`（策略）；
-共用 `data_utils.py`、`run_utils.py`、`generative_trainer.py`。
+不再提供含义不明确的 `align.yaml`；训练时必须显式选择 `legacy_align.yaml` 或 `paper_align.yaml`。
 
-日志前缀形如 `[rw_gen_coherence|cot|Qwen3-4B]`，含任务、监督模式与模型名。
+代码结构：`train.py`（CLI）→ `pipeline.py`（编排）→
+`supervision/{standard,align,paper_align}.py`（策略）。
 
 ## 1. 数据检查
 

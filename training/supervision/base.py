@@ -21,6 +21,8 @@ class TrainingBuildContext:
     labels: list[int]
     logger: Any
     manifest: dict[str, Any]
+    label_train_rows: list[dict[str, Any]] | None = None
+    label_validation_rows: list[dict[str, Any]] | None = None
 
 
 class SupervisionStrategy(Protocol):

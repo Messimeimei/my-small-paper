@@ -58,8 +58,24 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
     task_name = infer_task_name(dataset_path, rows)
     dataset_supervision_mode = infer_supervision_mode(dataset_path, rows)
     training_method = resolve_training_method(config, dataset_supervision_mode)
+    label_dataset_path = None
+    label_dataset_hash = None
+    label_rows = None
+    if training_method == "paper_align":
+        if not config.get("label_dataset_path"):
+            raise ValueError(
+                "supervision.method=paper_align requires label_dataset_path"
+            )
+        label_dataset_path = resolve_path(config["label_dataset_path"])
+        label_dataset_hash = sha256_file(label_dataset_path)
+        label_rows = load_rows(label_dataset_path)
+        from supervision.paper_align import validate_and_pair_rows
+
+        validate_and_pair_rows(rows, label_rows)
     supervision_mode = (
-        "align" if training_method == "align" else dataset_supervision_mode
+        training_method
+        if training_method in {"legacy_align", "paper_align"}
+        else dataset_supervision_mode
     )
     model_short = short_model_name(model_path)
     run_tag = f"{task_name}|{supervision_mode}|{model_short}"
@@ -74,6 +90,14 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
         write_json=write_json,
     )
     train_rows, validation_rows = split_rows(rows, split)
+    label_train_rows = None
+    label_validation_rows = None
+    if label_rows is not None:
+        label_rows_by_id = {row["id"]: row for row in label_rows}
+        label_train_rows = [label_rows_by_id[row["id"]] for row in train_rows]
+        label_validation_rows = [
+            label_rows_by_id[row["id"]] for row in validation_rows
+        ]
     data_summary = {
         "dataset": str(dataset_path),
         "dataset_sha256": dataset_hash,
@@ -94,13 +118,26 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
             "labels": label_counts(validation_rows, labels),
         },
     }
-    if training_method == "align":
+    if training_method == "legacy_align":
         data_summary["align_train_views"] = len(train_rows) * 2
+    elif training_method == "paper_align":
+        data_summary["align_train_pairs"] = len(train_rows)
+        data_summary["align_train_views"] = len(train_rows) * 2
+        data_summary["label_dataset"] = str(label_dataset_path)
+        data_summary["label_dataset_sha256"] = label_dataset_hash
+        data_summary["pairing"] = (
+            "Each CoT source row is paired by ID with one label-only row."
+        )
 
     resolved_config = {
         **config,
         "model_name_or_path": str(model_path),
         "dataset_path": str(dataset_path),
+        **(
+            {"label_dataset_path": str(label_dataset_path)}
+            if label_dataset_path is not None
+            else {}
+        ),
         "split_path": str(split_path),
         "seed": args.seed,
         "task": task_name,
@@ -131,6 +168,8 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
         "model_path": model_path,
         "train_rows": train_rows,
         "validation_rows": validation_rows,
+        "label_train_rows": label_train_rows,
+        "label_validation_rows": label_validation_rows,
         "labels": labels,
         "task_name": task_name,
         "supervision_mode": supervision_mode,
@@ -276,6 +315,8 @@ def run_training(context: dict[str, Any]) -> None:
             model_path=model_path,
             train_rows=context["train_rows"],
             validation_rows=context["validation_rows"],
+            label_train_rows=context["label_train_rows"],
+            label_validation_rows=context["label_validation_rows"],
             labels=context["labels"],
             logger=logger,
             manifest=manifest,

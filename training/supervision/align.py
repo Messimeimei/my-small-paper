@@ -1,4 +1,4 @@
-"""Align-style supervision: separate label / rationale token losses."""
+"""Legacy Align supervision kept for reproducibility of the original runs."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from generative_trainer import (
 )
 from metrics_utils import REASONING_RE, SCORE_RE
 from supervision.base import TrainingBuildContext
-from trainers.align_trainer import AlignGenerativeEvalSFTTrainer
+from trainers.align_trainer import LegacyAlignGenerativeEvalSFTTrainer
 
 
 @dataclass(frozen=True)
@@ -227,8 +227,10 @@ class AlignDataCollator:
         return {key: torch.tensor(value, dtype=torch.long) for key, value in batch.items()}
 
 
-class AlignStrategy:
-    training_method = "align"
+class LegacyAlignStrategy:
+    """Original unpaired score-only / reasoning-only split-view strategy."""
+
+    training_method = "legacy_align"
 
     def build_trainer(
         self,
@@ -237,7 +239,7 @@ class AlignStrategy:
         tokenizer,
         peft_config: LoraConfig,
         context: TrainingBuildContext,
-    ) -> AlignGenerativeEvalSFTTrainer:
+    ) -> LegacyAlignGenerativeEvalSFTTrainer:
         config = context.config
         training = config.get("training", {})
         generation = config.get("generation", {})
@@ -294,7 +296,7 @@ class AlignStrategy:
             save_total_limit=int(training.get("save_total_limit", 2)),
             report_to=report_to,
         )
-        return AlignGenerativeEvalSFTTrainer(
+        return LegacyAlignGenerativeEvalSFTTrainer(
             model=model,
             args=sft_config,
             train_dataset=train_dataset,

@@ -4,16 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from supervision.align import AlignStrategy
+from supervision.align import LegacyAlignStrategy
+from supervision.paper_align import PaperAlignStrategy
 from supervision.standard import StandardStrategy
 
 STRATEGIES = {
     "standard": StandardStrategy,
-    "align": AlignStrategy,
+    "legacy_align": LegacyAlignStrategy,
+    "paper_align": PaperAlignStrategy,
 }
 
 
-def resolve_training_method(config: dict[str, Any], dataset_supervision_mode: str) -> str:
+def resolve_training_method(
+    config: dict[str, Any],
+    dataset_supervision_mode: str,
+) -> str:
     supervision = config.get("supervision") or {}
     method = supervision.get("method")
     if method is None:
@@ -22,9 +27,12 @@ def resolve_training_method(config: dict[str, Any], dataset_supervision_mode: st
         raise ValueError(
             f"Unknown supervision.method={method!r}; expected one of {sorted(STRATEGIES)}"
         )
-    if method == "align" and dataset_supervision_mode != "cot":
+    if (
+        method in {"legacy_align", "paper_align"}
+        and dataset_supervision_mode != "cot"
+    ):
         raise ValueError(
-            "supervision.method=align requires a CoT training dataset with "
+            f"supervision.method={method} requires a CoT training dataset with "
             "<reasoning> and <score> blocks."
         )
     return method
