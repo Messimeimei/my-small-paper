@@ -328,6 +328,12 @@ def infer_eval_condition(
 
     if is_base:
         train = "B"
+    elif (
+        "paper_align" in text
+        or "paper_align.yaml" in cfg
+        or "/paper_align/" in cfg
+    ):
+        train = "PA"
     elif "align" in text or "align.yaml" in cfg or "/align/" in cfg:
         train = "A"
     elif "#ft#label_only" in text or "#ft#label_only" in text or text.endswith(
@@ -357,6 +363,8 @@ def infer_eval_condition(
         ("C", "cot"): "CC",
         ("A", "label_only"): "AL",
         ("A", "cot"): "AC",
+        ("PA", "label_only"): "PAL",
+        ("PA", "cot"): "PAC",
     }
     return mapping.get((train, test))
 

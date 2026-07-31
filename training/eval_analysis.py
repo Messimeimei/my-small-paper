@@ -18,9 +18,20 @@ EVAL_CONDITIONS: tuple[str, ...] = (
     "CC",
     "AL",
     "AC",
+    "PAL",
+    "PAC",
 )
 
-TRAINABLE_CONDITIONS: tuple[str, ...] = ("LL", "LC", "CL", "CC", "AL", "AC")
+TRAINABLE_CONDITIONS: tuple[str, ...] = (
+    "LL",
+    "LC",
+    "CL",
+    "CC",
+    "AL",
+    "AC",
+    "PAL",
+    "PAC",
+)
 
 # Legacy condition codes from older runs.
 LEGACY_CONDITION_ALIASES = {
@@ -47,6 +58,16 @@ CONDITION_META: dict[str, tuple[str, str, str]] = {
     "CC": ("CoT SFT", "CoT", "同格式 CoT 微调与测试"),
     "AL": ("Align SFT", "Label-only", "Align adapter 交叉测试 Label-only prompt"),
     "AC": ("Align SFT", "CoT", "Align adapter 在 CoT 测试 prompt 上评测"),
+    "PAL": (
+        "Paper Align SFT",
+        "Label-only",
+        "Paper Align adapter 交叉测试 Label-only prompt",
+    ),
+    "PAC": (
+        "Paper Align SFT",
+        "CoT",
+        "Paper Align adapter 在 CoT 测试 prompt 上评测",
+    ),
 }
 
 TRAINABLE_TASKS: tuple[str, ...] = (
@@ -245,12 +266,13 @@ def render_main_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
 
 def render_migration_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
     lines = [
-        "| 任务 | CL 相对 LL | LC 相对 CC | AL 相对 LL |",
-        "| --- | ---: | ---: | ---: |",
+        "| 任务 | CL 相对 LL | LC 相对 CC | AL 相对 LL | PAL 相对 LL |",
+        "| --- | ---: | ---: | ---: | ---: |",
     ]
     deltas_cl: list[float] = []
     deltas_lc: list[float] = []
     deltas_al: list[float] = []
+    deltas_pal: list[float] = []
 
     def delta(left: str, right: str) -> tuple[str, float | None]:
         left_rec = records.get((task, left))
@@ -270,22 +292,27 @@ def render_migration_table(records: dict[tuple[str, str], dict[str, Any]]) -> st
         d_cl, v_cl = delta("CL", "LL")
         d_lc, v_lc = delta("LC", "CC")
         d_al, v_al = delta("AL", "LL")
+        d_pal, v_pal = delta("PAL", "LL")
         if v_cl is not None:
             deltas_cl.append(v_cl)
         if v_lc is not None:
             deltas_lc.append(v_lc)
         if v_al is not None:
             deltas_al.append(v_al)
-        lines.append(f"| {title} | {d_cl} | {d_lc} | {d_al} |")
+        if v_pal is not None:
+            deltas_pal.append(v_pal)
+        lines.append(f"| {title} | {d_cl} | {d_lc} | {d_al} | {d_pal} |")
 
     avg_cl = mean_of(deltas_cl)
     avg_lc = mean_of(deltas_lc)
     avg_al = mean_of(deltas_al)
+    avg_pal = mean_of(deltas_pal)
     lines.append(
         "| **平均** | "
         f"{f'{avg_cl:+.1f} pp' if avg_cl is not None else '—'} | "
         f"{f'{avg_lc:+.1f} pp' if avg_lc is not None else '—'} | "
-        f"{f'{avg_al:+.1f} pp' if avg_al is not None else '—'} |"
+        f"{f'{avg_al:+.1f} pp' if avg_al is not None else '—'} | "
+        f"{f'{avg_pal:+.1f} pp' if avg_pal is not None else '—'} |"
     )
     return "\n".join(lines) + "\n"
 
@@ -368,12 +395,18 @@ def render_evaluation_analysis(records: dict[tuple[str, str], dict[str, Any]]) -
         code for code in EVAL_CONDITIONS if any(records.get((task, code)) for task in TRAINABLE_TASKS)
     ]
     condition_text = "、".join(present_conditions) if present_conditions else "（尚无结果）"
-    align_note = ""
+    align_notes: list[str] = []
     if not any(code in {"AL", "AC"} for code in present_conditions):
-        align_note = (
+        align_notes.append(
             "\n> Align 列（AL / AC）会在运行 "
             "`eval_output/configs/<task>/ft_align_on_*.yaml` 后自动填入。\n"
         )
+    if not any(code in {"PAL", "PAC"} for code in present_conditions):
+        align_notes.append(
+            "\n> Paper Align 列（PAL / PAC）会在运行 "
+            "`eval_output/configs/<task>/ft_paper_align_on_*.yaml` 后自动填入。\n"
+        )
+    align_note = "".join(align_notes)
 
     return f"""# Qwen3-4B 评测结果分析
 
@@ -422,10 +455,12 @@ Label-only 与 CoT 测试集按任务逐 ID、逐标签配对，因此交叉评�
 | `ft_label_only_on_cot.yaml` | Label-only SFT × CoT 测试（交叉） |
 | `ft_align_on_cot.yaml` | Align SFT × CoT 测试 |
 | `ft_align_on_label_only.yaml` | Align SFT × Label-only 测试（交叉） |
+| `ft_paper_align_on_cot.yaml` | Paper Align SFT × CoT 测试 |
+| `ft_paper_align_on_label_only.yaml` | Paper Align SFT × Label-only 测试（交叉） |
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python training/evaluate.py \\
-  --config eval_output/configs/rev_util_actionability/ft_align_on_cot.yaml
+  --config eval_output/configs/rev_util_actionability/ft_paper_align_on_cot.yaml
 ```
 
 每次评测完成后，本文件会自动刷新；详细逐样本结果仍在对应实验目录的 `metrics.json` 与 `predictions.jsonl`。
