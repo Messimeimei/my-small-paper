@@ -1,8 +1,8 @@
 # Inference Logic Snapshot
 
-- Logic ID: `294314c42f22d38c`
+- Logic ID: `6af4d07b69e8dc3a`
 - Variant: `vllm:cot`
-- Generated at: `2026-07-30T14:01:15.691116+00:00`
+- Generated at: `2026-07-31T07:35:32.007693+00:00`
 
 ## Logic
 
@@ -28,7 +28,7 @@
     1
   ],
   "adapter": "/root/autodl-tmp/train_outputs/rw_gen_positioning_type/align/rw_gen_positioning_type#qwen3_4b#align__seed42__2026-07-30_21-13-32/adapter",
-  "train_logic_run": "rw_gen_positioning_type#qwen3_4b#align__seed42__2026-07-30_21-13-32",
+  "train_logic_run": null,
   "seed": 42,
   "rollouts": 1,
   "batch_size": 64,
@@ -40,6 +40,6 @@
 
 ## Source Fingerprints
 
-- `training/logic_snapshot.py`: `49d1780903c5ecbfbd5b27d3712599995ed727ab8585e2e3949144e15db49318`
+- `training/logic_snapshot.py`: `0acfb8624872c4b2b7ac20014b44f48280969a4f2ec16182f414b01c1cdec2ca`
 - `training/evaluate.py`: `68c47819c52a855377f220fb037e413f357ecd486a68394144906ff20d405967`
-- `training/metrics_utils.py`: `bcf5d952e05aa9e04ce7bda5deae2b0931bfe07a2fab031aa764fe4b1bb34ddb`
+- `training/metrics_utils.py`: `f57a537806a194c2ec10bb03d701dec78c4e91d122d1189e0d0bfae93ea441ea`

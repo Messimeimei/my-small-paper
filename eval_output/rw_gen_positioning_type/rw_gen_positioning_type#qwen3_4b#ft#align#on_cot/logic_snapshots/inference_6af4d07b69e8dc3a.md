@@ -1,8 +1,8 @@
 # Inference Logic Snapshot
 
-- Logic ID: `8a4a35b4fcb624c8`
-- Variant: `vllm:label_only`
-- Generated at: `2026-07-31T07:39:24.003848+00:00`
+- Logic ID: `6af4d07b69e8dc3a`
+- Variant: `vllm:cot`
+- Generated at: `2026-07-31T07:34:57.932340+00:00`
 
 ## Logic
 
@@ -20,7 +20,21 @@
 
 ```json
 {
-  "note": "See run-local snapshot for effective settings."
+  "experiment": "rw_gen_positioning_type#qwen3_4b#ft#align#on_cot",
+  "dataset": "/root/my-small-paper/data/rw_gen_positioning_type/cot/test_cot.jsonl",
+  "samples": 204,
+  "score_sets": [
+    0,
+    1
+  ],
+  "adapter": "/root/autodl-tmp/train_outputs/rw_gen_positioning_type/align/rw_gen_positioning_type#qwen3_4b#align__seed42__2026-07-30_21-13-32/adapter",
+  "train_logic_run": null,
+  "seed": 42,
+  "rollouts": 1,
+  "batch_size": 64,
+  "max_model_len": 8192,
+  "max_tokens": 512,
+  "enable_thinking": false
 }
 ```
 

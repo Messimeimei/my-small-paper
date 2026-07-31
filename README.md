@@ -224,4 +224,4 @@ a
 
 昨天训练的时候好像出了点问题，训练方法是不对的。我的 align 训练在昨天使用数据的时候有问题，我把 cot 的训练数据中的每一条样本，拆分成两条样本，但是每个样本的 system prompt 是一样的，都要求模型先输出 reasoning 再输出 lable。但是两条样本的 completion 一个是 score，一个是 reasoning，这就导致模型在训练的时候，两个 loss 的计算一个是引导模型先输出 score，另一个是先输出 reasoning。但是这两个样本的 system prompt 又是要求先 reasoning 再  score，所以导致模型最后训练出来的效果是有可能只输出 reasonig 或者 score，然后当前结果是模型的 score 概率更高，导致模型没有先输出 reasoning 再输出 score。
 
-所以今天需要修改 train 的脚本就可以，不需要修改数据，让训练的时候正确的构造两条样本即可，严格复现论文的训练逻辑：1.首先就是数据构造，对于一条样本，构造两个训练样本，其中的 label-only 版本就是 system prompt 要求只输出 label，completion 也只有 label，在训练的时候预测 next token 只有 label 会参与损失计算；reasoning 版本的 system prompt 会要求模型先输出 reasoning 再输出 label，completion 包含了 reasoning 和 label，在训练的时候预测 next token 的损失是同时包含了 reasoning 和 label
+所以今天需要修改 train 的脚本就可以，不需要修改数据，让训练的时候正确的构造两条样本即可，严格复现论文的训练逻辑：1.首先就是数据构造，对于一条样本，构造两个训练样本，其中的 label-only 版本就是 system prompt 要求只输出 label，completion 也只有 label，在训练的时候预测 next token 只有 label 会参与损失计算；reasoning 版本的 system prompt 会要求模型先输出 reasoning 再输出 label，completion 包含了 reasoning 和 label，在训练的时候预测 next token 的损失是同时包含了 reasoning 和 label 2. 然后就是之前构造训练 batch 的时候没有严格绑定一条样本的 2个 view，使得 shuffle 的时候同一个样本的 2个 view 会跑到别的 batch 训练里面。

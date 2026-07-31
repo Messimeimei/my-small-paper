@@ -20,7 +20,21 @@
 
 ```json
 {
-  "note": "See run-local snapshot for effective settings."
+  "experiment": "rw_gen_positioning_type#qwen3_4b#ft#paper_align#on_label_only",
+  "dataset": "/root/my-small-paper/data/rw_gen_positioning_type/label_only/test_label_only.jsonl",
+  "samples": 204,
+  "score_sets": [
+    0,
+    1
+  ],
+  "adapter": "/root/autodl-tmp/train_outputs/rw_gen_positioning_type/paper_align/rw_gen_positioning_type#qwen3_4b#paper_align__seed42__2026-07-31_14-47-02/adapter",
+  "train_logic_run": "rw_gen_positioning_type#qwen3_4b#paper_align__seed42__2026-07-31_14-47-02",
+  "seed": 42,
+  "rollouts": 1,
+  "batch_size": 64,
+  "max_model_len": 8192,
+  "max_tokens": 32,
+  "enable_thinking": false
 }
 ```
 

@@ -395,6 +395,10 @@ def render_evaluation_analysis(records: dict[tuple[str, str], dict[str, Any]]) -
         code for code in EVAL_CONDITIONS if any(records.get((task, code)) for task in TRAINABLE_TASKS)
     ]
     condition_text = "、".join(present_conditions) if present_conditions else "（尚无结果）"
+    coverage_text = "；".join(
+        f"{code} {sum((task, code) in records for task in TRAINABLE_TASKS)}/{len(TRAINABLE_TASKS)}"
+        for code in EVAL_CONDITIONS
+    )
     align_notes: list[str] = []
     if not any(code in {"AL", "AC"} for code in present_conditions):
         align_notes.append(
@@ -419,13 +423,15 @@ def render_evaluation_analysis(records: dict[tuple[str, str], dict[str, Any]]) -
 
 当前覆盖条件：{condition_text}。
 
+各条件任务覆盖数：{coverage_text}。未满 `7/7` 的条件仅代表当前已有任务，不应视为完整七任务结论。
+
 配置文件命名规则：`{{train}}_on_{{test}}.yaml`，例如 `base_on_cot.yaml`、`ft_cot_on_label_only.yaml`。
 
 {render_condition_legend()}
 Label-only 与 CoT 测试集按任务逐 ID、逐标签配对，因此交叉评测差值不受测试样本变化影响。{align_note}
 ## 2. 完整结果
 
-下表单元格均为 `Accuracy / Macro-F1`，单位为 `%`。最后一行为 7 个任务的非加权宏平均。
+下表单元格均为 `Accuracy / Macro-F1`，单位为 `%`。最后一行为各条件在已有任务上的非加权宏平均；任务覆盖数见上文。
 
 {render_main_table(records)}
 ## 3. 跨格式迁移
@@ -440,7 +446,7 @@ Label-only 与 CoT 测试集按任务逐 ID、逐标签配对，因此交叉评�
 {render_ordinal_table(records)}
 ## 5. 格式稳定性与效率
 
-下表为 7 个任务的非加权宏平均。`samples/s` 基于各结果中的 GPU 推理时间计算。
+下表按各条件当前已有任务做非加权宏平均。`samples/s` 基于各结果中的 GPU 推理时间计算；任务覆盖数见上文。
 
 {render_efficiency_table(records)}
 ## 6. 使用说明
