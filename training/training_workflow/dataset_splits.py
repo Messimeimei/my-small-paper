@@ -9,7 +9,7 @@ import random
 from pathlib import Path
 from typing import Any
 
-from metrics_utils import SCORE_RE
+from shared.metrics import SCORE_RE
 
 
 def parse_train_label(row: dict[str, Any], line_number: int) -> int:
@@ -49,7 +49,10 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
                 if (
                     not isinstance(score_sets, list)
                     or not score_sets
-                    or any(isinstance(value, bool) or not isinstance(value, int) for value in score_sets)
+                    or any(
+                        isinstance(value, bool) or not isinstance(value, int)
+                        for value in score_sets
+                    )
                 ):
                     raise ValueError(f"Invalid score_sets at {path}:{line_number}")
                 if declared_score_sets is None:

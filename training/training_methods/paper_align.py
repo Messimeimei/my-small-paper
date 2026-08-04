@@ -10,11 +10,12 @@ from datasets import Dataset
 from peft import LoraConfig
 from trl import SFTConfig
 
-from generative_trainer import CompactTrainLogCallback, JsonlLogCallback
-from metrics_utils import REASONING_RE, SCORE_RE
-from supervision.align import build_standard_eval_dataset
-from supervision.base import TrainingBuildContext
-from trainers.paper_align_trainer import PaperAlignGenerativeEvalSFTTrainer
+from training_workflow.generation_validation import CompactTrainLogCallback, JsonlLogCallback
+from training_methods.legacy_align import build_standard_eval_dataset
+from training_methods.interfaces import TrainingBuildContext
+from training_methods.sft_config import build_sft_config_kwargs
+from training_methods.paper_align_data import completion_content, validate_and_pair_rows
+from custom_trainers.paper_align_trainer import PaperAlignGenerativeEvalSFTTrainer
 
 
 @dataclass(frozen=True)
@@ -35,67 +36,6 @@ def resolve_align_coefficients(config: dict[str, Any]) -> AlignCoefficients:
     return AlignCoefficients(label=label / total, rationale=rationale / total)
 
 
-def _completion_content(row: dict[str, Any]) -> str:
-    return str(row["completion"][0]["content"])
-
-
-def validate_and_pair_rows(
-    cot_rows: list[dict[str, Any]],
-    label_rows: list[dict[str, Any]],
-) -> list[tuple[dict[str, Any], dict[str, Any]]]:
-    """Pair CoT and label-only rows and enforce the paper's two-view contract."""
-    labels_by_id = {row["id"]: row for row in label_rows}
-    cot_ids = {row["id"] for row in cot_rows}
-    if len(labels_by_id) != len(label_rows) or cot_ids != set(labels_by_id):
-        missing = sorted(cot_ids - set(labels_by_id))[:5]
-        extra = sorted(set(labels_by_id) - cot_ids)[:5]
-        raise ValueError(
-            "paper_align datasets must have identical unique IDs; "
-            f"missing_label_ids={missing}, extra_label_ids={extra}"
-        )
-
-    pairs: list[tuple[dict[str, Any], dict[str, Any]]] = []
-    for cot_row in cot_rows:
-        label_row = labels_by_id[cot_row["id"]]
-        if cot_row["label"] != label_row["label"]:
-            raise ValueError(f"Label mismatch for paper_align id={cot_row['id']}")
-        if cot_row["prompt"][1:] != label_row["prompt"][1:]:
-            raise ValueError(f"User/context prompt mismatch for id={cot_row['id']}")
-        if cot_row["prompt"][0] == label_row["prompt"][0]:
-            raise ValueError(
-                f"Direct and Reason system prompts must differ for id={cot_row['id']}"
-            )
-
-        cot_completion = _completion_content(cot_row)
-        label_completion = _completion_content(label_row)
-        reasoning_match = REASONING_RE.search(cot_completion)
-        cot_score_match = SCORE_RE.search(cot_completion)
-        label_score_match = SCORE_RE.search(label_completion)
-        if (
-            reasoning_match is None
-            or cot_score_match is None
-            or reasoning_match.start() > cot_score_match.start()
-        ):
-            raise ValueError(
-                f"Reason view must contain reasoning before score for id={cot_row['id']}"
-            )
-        if (
-            REASONING_RE.search(label_completion) is not None
-            or label_score_match is None
-        ):
-            raise ValueError(
-                f"Direct view must contain score only for id={cot_row['id']}"
-            )
-        expected_score = cot_row["label"]
-        if (
-            int(cot_score_match.group(1)) != expected_score
-            or int(label_score_match.group(1)) != expected_score
-        ):
-            raise ValueError(
-                f"Completion score does not match label for id={cot_row['id']}"
-            )
-        pairs.append((label_row, cot_row))
-    return pairs
 
 
 def _tokenize_view(
@@ -111,7 +51,7 @@ def _tokenize_view(
     )
     prompt_ids = tokenizer(prompt_text, add_special_tokens=False)["input_ids"]
     completion_ids = tokenizer(
-        _completion_content(row), add_special_tokens=False
+        completion_content(row), add_special_tokens=False
     )["input_ids"]
     if tokenizer.eos_token_id is not None:
         completion_ids.append(tokenizer.eos_token_id)
@@ -247,10 +187,6 @@ class PaperAlignStrategy:
         generation = config.get("generation", {})
         coeffs = resolve_align_coefficients(config)
         max_length = int(training.get("max_length", 8192))
-        report_to = training.get("report_to", "none")
-        if report_to == "none":
-            report_to = []
-
         train_dataset = build_paired_align_dataset(
             context.train_rows,
             context.label_train_rows,
@@ -263,41 +199,11 @@ class PaperAlignStrategy:
             max_length=max_length,
         )
         sft_config = SFTConfig(
-            output_dir=str(context.run_directory / "checkpoints"),
-            logging_dir=str(context.run_directory / "tensorboard"),
-            run_name=context.run_id,
-            seed=context.seed,
-            data_seed=context.seed,
-            max_length=max_length,
-            completion_only_loss=False,
-            packing=False,
-            remove_unused_columns=False,
-            dataset_kwargs={"skip_prepare_dataset": True},
-            per_device_train_batch_size=int(
-                training.get("per_device_train_batch_size", 1)
-            ),
-            per_device_eval_batch_size=int(
-                training.get("per_device_eval_batch_size", 1)
-            ),
-            gradient_accumulation_steps=int(
-                training.get("gradient_accumulation_steps", 16)
-            ),
-            learning_rate=float(training.get("learning_rate", 1e-4)),
-            lr_scheduler_type=str(training.get("lr_scheduler_type", "cosine")),
-            warmup_ratio=float(training.get("warmup_ratio", 0.03)),
-            num_train_epochs=float(training.get("num_train_epochs", 3)),
-            max_grad_norm=float(training.get("max_grad_norm", 0.3)),
-            bf16=bool(training.get("bf16", True)),
-            fp16=not bool(training.get("bf16", True)),
-            gradient_checkpointing=bool(training.get("gradient_checkpointing", True)),
-            gradient_checkpointing_kwargs={"use_reentrant": False},
-            logging_strategy="steps",
-            logging_steps=int(training.get("logging_steps", 10)),
-            eval_strategy="epoch",
-            save_strategy="epoch",
-            load_best_model_at_end=False,
-            save_total_limit=1,
-            report_to=report_to,
+            **build_sft_config_kwargs(
+                context,
+                max_length=max_length,
+                pretokenized=True,
+            )
         )
         return PaperAlignGenerativeEvalSFTTrainer(
             model=model,

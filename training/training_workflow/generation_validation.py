@@ -15,11 +15,11 @@ import torch
 from transformers import TrainerCallback
 from trl import SFTTrainer
 
-_TRAINING_DIR = Path(__file__).resolve().parent
+_TRAINING_DIR = Path(__file__).resolve().parents[1]
 if str(_TRAINING_DIR) not in sys.path:
     sys.path.insert(0, str(_TRAINING_DIR))
 
-from metrics_utils import classification_metrics, extract_score, token_stats
+from shared.metrics import classification_metrics, extract_score, token_stats
 
 
 def utc_now() -> str:

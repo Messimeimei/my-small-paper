@@ -1,11 +1,12 @@
-"""Shared supervision strategy interface."""
+"""Interfaces and build context shared by training methods."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
-from generative_trainer import GenerativeEvalSFTTrainer
+if TYPE_CHECKING:
+    from training_workflow.generation_validation import GenerativeEvalSFTTrainer
 
 
 @dataclass

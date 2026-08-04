@@ -10,15 +10,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from data_utils import (
+from training_workflow.dataset_splits import (
     label_counts,
     load_or_create_split,
     load_rows,
     score_sets,
     split_rows,
 )
-from metrics_utils import infer_supervision_mode, infer_task_name, short_model_name
-from run_utils import (
+from shared.metrics import infer_supervision_mode, infer_task_name, short_model_name
+from training_workflow.run_lifecycle import (
     begin_attempt,
     create_run_directory,
     default_split_path,
@@ -34,8 +34,9 @@ from run_utils import (
     write_json,
     write_jsonl,
 )
-from supervision import get_supervision_strategy, resolve_training_method
-from supervision.base import TrainingBuildContext
+from training_methods import get_supervision_strategy, resolve_training_method
+from training_methods.interfaces import TrainingBuildContext
+from training_methods.paper_align_data import validate_and_pair_rows
 
 
 def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
@@ -67,22 +68,14 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
         label_dataset_path = resolve_path(config["label_dataset_path"])
         label_dataset_hash = sha256_file(label_dataset_path)
         label_rows = load_rows(label_dataset_path)
-        from supervision.paper_align import validate_and_pair_rows
-
         validate_and_pair_rows(rows, label_rows)
     supervision_mode = (
-        training_method
-        if training_method in {
-            "legacy_align",
-            "paper_align",
-            "raft_without_cot",
-            "cot_raft",
-        }
-        else dataset_supervision_mode
+        dataset_supervision_mode
+        if training_method == "standard"
+        else training_method
     )
     model_short = short_model_name(model_path)
     run_tag = f"{task_name}|{supervision_mode}|{model_short}"
-
     split = load_or_create_split(
         rows,
         labels,
@@ -247,7 +240,7 @@ def run_training(context: dict[str, Any]) -> None:
         write_json(run_directory / "data_summary.json", context["data_summary"])
         manifest = {"run_id": run_id, "mode": "fresh", **environment_metadata}
     else:
-        from run_utils import read_json
+        from training_workflow.run_lifecycle import read_json
 
         manifest = read_json(run_directory / "manifest.json")
         manifest["last_environment"] = environment_metadata
@@ -329,9 +322,13 @@ def run_training(context: dict[str, Any]) -> None:
         )
 
         trainable_parameters = sum(
-            parameter.numel() for parameter in trainer.model.parameters() if parameter.requires_grad
+            parameter.numel()
+            for parameter in trainer.model.parameters()
+            if parameter.requires_grad
         )
-        total_parameters = sum(parameter.numel() for parameter in trainer.model.parameters())
+        total_parameters = sum(
+            parameter.numel() for parameter in trainer.model.parameters()
+        )
         manifest["parameters"] = {
             "trainable": trainable_parameters,
             "total": total_parameters,
@@ -366,7 +363,8 @@ def run_training(context: dict[str, Any]) -> None:
                     path_relocation["new"],
                 )
         logger.info(
-            "[%s] Trainable parameters=%d (%.4f%%); save_strategy=epoch; retaining final checkpoint only",
+            "[%s] Trainable parameters=%d (%.4f%%); save_strategy=epoch; "
+            "retaining final checkpoint only",
             context["run_tag"],
             trainable_parameters,
             manifest["parameters"]["trainable_percent"],

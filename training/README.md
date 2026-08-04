@@ -82,8 +82,66 @@ supervision:
 
 不再提供含义不明确的 `align.yaml`；训练时必须显式选择 `legacy_align.yaml` 或 `paper_align.yaml`。
 
-代码结构：`train.py`（CLI）→ `pipeline.py`（编排）→
-`supervision/{standard,raft_without_cot,cot_raft,align,paper_align}.py`（策略）。
+代码按职责分层，顶层只保留稳定的命令入口：
+
+```text
+training/
+├── train.py / evaluate.py       # CLI 兼容入口
+├── shared/                      # 训练和评测共同使用的无状态代码
+│   ├── project_io.py            # 项目根路径、JSON IO、UTC 时间
+│   └── metrics.py               # 分类指标、分数解析、任务识别
+├── training_workflow/           # 一次训练从数据到产物的完整流程
+│   ├── dataset_splits.py        # 数据读取和固定 train/validation 划分
+│   ├── generation_validation.py # 训练期生成验证与 Trainer callbacks
+│   ├── run_lifecycle.py         # run 目录、manifest、checkpoint 和断点续训
+│   └── training_pipeline.py     # 训练总编排
+├── training_methods/            # 可插拔训练方法
+│   ├── interfaces.py            # 训练方法接口和上下文
+│   ├── registry.py              # 方法名到实现类的延迟加载注册表
+│   ├── sft_config.py            # 各方法共享的 SFT 参数
+│   └── standard_sft.py / *_raft.py / *_align.py
+├── custom_trainers/             # 自定义损失的 Trainer 实现
+└── evaluation/                  # 评测流程
+    ├── cli_config.py            # CLI/YAML 解析和参数校验
+    ├── dataset_loading.py       # 测试数据读取与 rollout 指标聚合
+    ├── model_loading.py         # adapter 选择、模型合并和 vLLM 初始化
+    ├── methods/                 # greedy、RAIL、CoT-RAIL 方法及注册表
+    ├── inference_loops.py       # 具体批量推理循环
+    ├── result_records.py        # 历史结果发现、规范化与聚合
+    └── report_generation.py     # Markdown 汇总报告生成
+```
+
+依赖方向保持为“入口 → workflow → training_methods/evaluation → shared”；
+`training_workflow/` 与 `evaluation/` 不互相依赖。训练命令仍由
+`training/train.py` 启动，评测命令仍由 `training/evaluate.py` 启动。
+
+### 扩展训练与评测方法
+
+新增训练方法时，公共流水线不应感知具体损失：
+
+1. 在 `training_methods/<method>.py` 实现 `SupervisionStrategy`，负责数据构造、
+   collator 与 Trainer 装配；复用 `training_methods/sft_config.py` 的公共训练参数。
+   自定义损失放在 `custom_trainers/`。
+2. 在 `training_methods/registry.py` 增加一个延迟加载的 `StrategySpec`，并声明允许的
+   dataset supervision mode。注册表导入本身不会加载 torch、TRL 或模型代码。
+3. YAML 使用 `supervision.method: <method>`；方法专属参数继续放在 `supervision`
+   对象内。只要沿用单数据集契约，就不需要修改
+   `training_workflow/training_pipeline.py`。
+
+新增评测方法时，评测流水线同样保持不变：
+
+1. 在 `evaluation/methods/` 新建 `EvaluationMethod` 子类；只需实现
+   `run_rollout()`，按需覆盖 `prepare()`、记录构造、汇总指标和元数据方法。
+2. 在 `evaluation/methods/registry.py` 注册实例。CLI 的 `inference_mode` 选项会
+   自动来自注册表，`evaluation/evaluation_pipeline.py` 无需增加 `if/elif` 分支。
+3. 方法专属参数可写入 YAML 的 `method_options` 对象，或通过
+   `--method_options '{"key": "value"}'` 传入。
+
+轻量架构回归测试不会加载 GPU 训练栈：
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s training/tests -v
+```
 
 ## 1. 数据检查
 

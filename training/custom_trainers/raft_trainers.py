@@ -9,8 +9,8 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
-from generative_trainer import GenerativeEvalSFTTrainer
-from metrics_utils import classification_metrics, token_stats
+from training_workflow.generation_validation import GenerativeEvalSFTTrainer
+from shared.metrics import classification_metrics, token_stats
 
 
 def resolve_score_token_ids(tokenizer: Any, score_values: list[int]) -> list[int]:

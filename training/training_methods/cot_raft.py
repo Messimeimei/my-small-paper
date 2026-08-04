@@ -9,10 +9,11 @@ from datasets import Dataset
 from peft import LoraConfig
 from trl import SFTConfig
 
-from generative_trainer import CompactTrainLogCallback, JsonlLogCallback
-from metrics_utils import SCORE_RE
-from supervision.base import TrainingBuildContext
-from trainers.raft_trainer import CotRaftTrainer, resolve_score_token_ids
+from training_workflow.generation_validation import CompactTrainLogCallback, JsonlLogCallback
+from shared.metrics import SCORE_RE
+from training_methods.interfaces import TrainingBuildContext
+from training_methods.sft_config import build_sft_config_kwargs
+from custom_trainers.raft_trainers import CotRaftTrainer, resolve_score_token_ids
 
 
 def tokenize_cot_raft_row(
@@ -181,10 +182,6 @@ class CotRaftStrategy:
         if raft_weight < 0:
             raise ValueError("supervision.raft_weight must be non-negative.")
         max_length = int(training.get("max_length", 8192))
-        report_to = training.get("report_to", "none")
-        if report_to == "none":
-            report_to = []
-
         score_token_ids = resolve_score_token_ids(tokenizer, context.labels)
         context.logger.info(
             "CoT-RAFT score mapping: %s; raft_weight=%s",
@@ -206,39 +203,11 @@ class CotRaftStrategy:
             score_values=context.labels,
         )
         sft_config = SFTConfig(
-            output_dir=str(context.run_directory / "checkpoints"),
-            logging_dir=str(context.run_directory / "tensorboard"),
-            run_name=context.run_id,
-            seed=context.seed,
-            data_seed=context.seed,
-            max_length=max_length,
-            completion_only_loss=False,
-            packing=False,
-            remove_unused_columns=False,
-            dataset_kwargs={"skip_prepare_dataset": True},
-            per_device_train_batch_size=int(
-                training.get("per_device_train_batch_size", 1)
-            ),
-            per_device_eval_batch_size=int(training.get("per_device_eval_batch_size", 1)),
-            gradient_accumulation_steps=int(
-                training.get("gradient_accumulation_steps", 16)
-            ),
-            learning_rate=float(training.get("learning_rate", 1e-4)),
-            lr_scheduler_type=str(training.get("lr_scheduler_type", "cosine")),
-            warmup_ratio=float(training.get("warmup_ratio", 0.03)),
-            num_train_epochs=float(training.get("num_train_epochs", 3)),
-            max_grad_norm=float(training.get("max_grad_norm", 0.3)),
-            bf16=bool(training.get("bf16", True)),
-            fp16=not bool(training.get("bf16", True)),
-            gradient_checkpointing=bool(training.get("gradient_checkpointing", True)),
-            gradient_checkpointing_kwargs={"use_reentrant": False},
-            logging_strategy="steps",
-            logging_steps=int(training.get("logging_steps", 10)),
-            eval_strategy="epoch",
-            save_strategy="epoch",
-            load_best_model_at_end=False,
-            save_total_limit=1,
-            report_to=report_to,
+            **build_sft_config_kwargs(
+                context,
+                max_length=max_length,
+                pretokenized=True,
+            )
         )
         return CotRaftTrainer(
             model=model,

@@ -13,8 +13,6 @@ _TRAINING_DIR = Path(__file__).resolve().parent
 if str(_TRAINING_DIR) not in sys.path:
     sys.path.insert(0, str(_TRAINING_DIR))
 
-from pipeline import prepare_run_context, run_training
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -48,6 +46,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     args = parse_args()
+    from training_workflow.training_pipeline import prepare_run_context, run_training
+
     context = prepare_run_context(args)
 
     if args.dry_run:

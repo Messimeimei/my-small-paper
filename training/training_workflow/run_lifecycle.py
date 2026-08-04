@@ -1,4 +1,4 @@
-"""Run directories, resume, manifest, and shared I/O helpers."""
+"""Training run directories, manifests, checkpoints, and resume validation."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from typing import Any
 import yaml
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CHECKPOINT_RE = re.compile(r"checkpoint-(\d+)$")
 REQUIRED_RESUME_FILES = {
     "optimizer.pt",
