@@ -1,47 +1,20 @@
 // ========== 评测 ==========
-// 基座 × CoT 测试
 CUDA_VISIBLE_DEVICES=0 python training/evaluate.py \
-  --config eval_output/configs/rev_util_verifiability/ft_paper_align_on_cot.yaml
-
-// 基座 × Label-only 测试
-CUDA_VISIBLE_DEVICES=0 python training/evaluate.py \
-  --config eval_output/configs/rev_util_verifiability/ft_paper_align_on_label_only.yaml
-
-// CoT SFT × CoT 测试
-CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
-  --config eval_output/configs/rw_gen_positioning_type/ft_cot_on_cot.yaml
-
-// Label-only SFT × Label-only 测试
-CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
-  --config eval_output/configs/rw_gen_positioning_type/ft_label_only_on_label_only.yaml
-
-// ========== 2×2 交叉评测（不重训）==========
-// Label-only SFT × CoT 测试 prompt（max_tokens=512）
-CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
-  --config eval_output/configs/rev_util_actionability/ft_label_only_on_cot.yaml
-
-// CoT SFT × Label-only 测试 prompt（max_tokens=32）
-CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
-  --config eval_output/configs/rev_util_actionability/ft_cot_on_label_only.yaml
-
-// Align SFT × CoT / Label-only 测试
-CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
-  --config eval_output/configs/rev_util_actionability/ft_align_on_cot.yaml
+  --config eval_output/configs/rev_util_actionability/paper_align/greedy_on_cot.yaml
 
 CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
-  --config eval_output/configs/rev_util_actionability/ft_align_on_label_only.yaml
+  --config eval_output/configs/rev_util_actionability/label_only/greedy_on_label_only.yaml
 
-// 其余任务同理，把路径里的 task 名换掉即可
 
 // ========== 训练 ==========
 CUDA_VISIBLE_DEVICES=0 \
 python \
   training/train.py \
-  --config training/configs/rw_gen_coherence/paper_align.yaml \
+  --config training/configs/rev_util_grounding_specificity/cot_raft.yaml \
   --seed 42
 
 CUDA_VISIBLE_DEVICES=1 \
 python \
   training/train.py \
-  --config training/configs/rw_gen_coherence/label_only.yaml \
-  --seed 42
+  --config training/configs/rw_gen_positioning_type/paper_align.yaml \
+  --seed 43

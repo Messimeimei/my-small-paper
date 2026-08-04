@@ -17,11 +17,9 @@ from data_utils import (
     score_sets,
     split_rows,
 )
-from logic_snapshot import write_training_logic_snapshot
 from metrics_utils import infer_supervision_mode, infer_task_name, short_model_name
 from run_utils import (
     begin_attempt,
-    best_checkpoint_epoch,
     create_run_directory,
     default_split_path,
     disable_incompatible_torchao,
@@ -74,7 +72,12 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
         validate_and_pair_rows(rows, label_rows)
     supervision_mode = (
         training_method
-        if training_method in {"legacy_align", "paper_align"}
+        if training_method in {
+            "legacy_align",
+            "paper_align",
+            "raft_without_cot",
+            "cot_raft",
+        }
         else dataset_supervision_mode
     )
     model_short = short_model_name(model_path)
@@ -239,9 +242,6 @@ def run_training(context: dict[str, Any]) -> None:
             "bf16_supported": torch.cuda.is_bf16_supported(),
         },
     }
-    environment_metadata["logic"] = write_training_logic_snapshot(
-        run_directory, {**context, "run_id": run_id}
-    )
     if resume_checkpoint is None:
         write_json(run_directory / "resolved_config.json", context["resolved_config"])
         write_json(run_directory / "data_summary.json", context["data_summary"])
@@ -366,7 +366,7 @@ def run_training(context: dict[str, Any]) -> None:
                     path_relocation["new"],
                 )
         logger.info(
-            "[%s] Trainable parameters=%d (%.4f%%); save_strategy=best by eval_generation_accuracy",
+            "[%s] Trainable parameters=%d (%.4f%%); save_strategy=epoch; retaining final checkpoint only",
             context["run_tag"],
             trainable_parameters,
             manifest["parameters"]["trainable_percent"],
@@ -388,7 +388,14 @@ def run_training(context: dict[str, Any]) -> None:
         write_json(run_directory / "validation_metrics.json", validation_metrics)
         write_jsonl(run_directory / "validation_predictions.jsonl", predictions)
 
-        best_epoch = best_checkpoint_epoch(trainer.state)
+        final_checkpoint = (
+            run_directory / "checkpoints" / f"checkpoint-{trainer.state.global_step}"
+        ).resolve()
+        if not final_checkpoint.is_dir():
+            raise RuntimeError(f"Final checkpoint was not saved: {final_checkpoint}")
+        final_epoch = (
+            float(trainer.state.epoch) if trainer.state.epoch is not None else None
+        )
         summary = {
             "run_id": run_id,
             "run_tag": context["run_tag"],
@@ -397,11 +404,15 @@ def run_training(context: dict[str, Any]) -> None:
             "training_method": context["training_method"],
             "model_name_or_path": str(model_path),
             "seed": args.seed,
-            "best_checkpoint": trainer.state.best_model_checkpoint,
-            "best_checkpoint_epoch": best_epoch,
-            "best_checkpoint_step": trainer.state.best_global_step,
-            "best_generation_accuracy": trainer.state.best_metric,
-            "metric_for_best_model": "eval_generation_accuracy",
+            "checkpoint_retention": "last",
+            "final_checkpoint": str(final_checkpoint),
+            "final_checkpoint_epoch": final_epoch,
+            "final_checkpoint_step": int(trainer.state.global_step),
+            "final_generation_accuracy": validation_metrics["accuracy"],
+            "adapter_selection": "final_checkpoint",
+            "adapter_source_checkpoint": str(final_checkpoint),
+            "adapter_source_checkpoint_epoch": final_epoch,
+            "adapter_source_checkpoint_step": int(trainer.state.global_step),
             "train_metrics": train_result.metrics,
             "language_model_validation": language_model_metrics,
             "generation_validation": validation_metrics,
@@ -414,11 +425,11 @@ def run_training(context: dict[str, Any]) -> None:
         finish_attempt(manifest, status="completed")
         write_json(run_directory / "manifest.json", manifest)
         logger.info(
-            "[%s] Completed run %s | best_epoch=%s best_acc=%s",
+            "[%s] Completed run %s | final_epoch=%s final_acc=%s",
             context["run_tag"],
             run_id,
-            best_epoch,
-            trainer.state.best_metric,
+            final_epoch,
+            validation_metrics["accuracy"],
         )
         logger.info("[%s] Validation metrics: %s", context["run_tag"], validation_metrics)
     except BaseException as error:

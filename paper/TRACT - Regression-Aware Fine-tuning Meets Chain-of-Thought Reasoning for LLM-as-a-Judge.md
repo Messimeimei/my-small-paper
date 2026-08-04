@@ -47,7 +47,7 @@ L=L_{\text{CE}}(s,y^*)+\lambda(\hat y-y^*)^2
 - RAFT 负责让期望分数接近真实分数；
 - \lambda 控制回归目标权重，论文默认设为 1。
 
-需要注意：论文文字有时说“CE 只学习 CoT”，但公式中的 CE 是 -\log p([s,y^*]\mid x)，实际上也包含最终分数 token。因此它不是用 RAFT 替代 CE，而是 **完整序列 CE 加回归损失**。
+需要注意：论文公式把 CE 写成 `-\log p([s,y^*]\mid x)`，形式上包含最终分数 token，但正文又称其为 “CE over the CoT”。官方发布代码采用后一种语义：先把数字分数 token 从 CE labels 中屏蔽，再单独用 RAFT 回归损失训练该位置。因此它不是用 RAFT 取代全部 CE，而是 **解释与格式 CE 加分数回归损失**。
 
 推理时，模型先生成 CoT，遇到固定结束语 `So the overall score is` 后，不直接贪心生成一个整数，而是读取 1–5 五个分数的概率并计算期望值。这称为 **CoT-RAIL**。
 
@@ -162,12 +162,199 @@ Mistral-7B 平均 Pearson：
 
 
 
+## 论文、官方代码与当前仓库实现对照
+
+### 先区分训练和推理术语
+
+- **RAFT**：不使用 CoT 的回归感知训练目标。
+- **RAIL**：与 RAFT 对应的期望分数推理方法。
+- **CoT-RAFT**：同时使用解释文本 CE 和分数 RAFT MSE 的训练目标。
+- **CoT-RAIL**：先生成 CoT，再根据该 CoT 后面的分数概率计算期望分数。
+- **TRACT**：包含两次独立 CoT-RAFT 训练和中间 self-CoT 数据生成的完整方法。
+
+因此，RAFT/CoT-RAFT 描述训练，RAIL/CoT-RAIL 描述推理；greedy decoding 是另一种推理方式，不是一种训练方法。
+
+### 三种实现共有的分数期望
+
+当前仓库先在完整词表上计算 softmax：
+
+$$
+p=\operatorname{softmax}(z)
+$$
+
+再抽取合法分数 token 的概率，计算：
+
+$$
+\hat y=\sum_{k\in\mathcal Y}k\cdot p(\operatorname{token}(k))
+$$
+
+最后使用：
+
+$$
+L_{\text{RAFT}}=(\hat y-y)^2
+$$
+
+这里不会在合法分数集合内二次归一化。如果 `1` 到 `5` 的总概率质量只有 0.7，剩余 0.3 不会重新分给五个分数。这一点与 TRACT 官方推理代码一致，也是当前训练和 RAIL/CoT-RAIL 推理共同采用的定义。
+
+当前实现位于 [`training/trainers/raft_trainer.py`](../training/trainers/raft_trainer.py)，论文定义见 [§2.3 Regression-Aware Fine-Tuning](https://arxiv.org/html/2503.04381v2#S2.SS3)。
+
+### 当前 RaftWithoutCot
+
+训练数据形如：
+
+```text
+prompt
+→ <score>5</score>
+```
+
+训练步骤如下：
+
+1. 根据当前 tokenizer 动态解析每个合法分数的 token ID，并要求每个分数恰好占一个 token。
+2. 在 completion 中定位唯一的数字分数 token。
+3. 取数字前一个位置的 logits，即根据 `prompt + <score>` 预测数字。
+4. 在完整词表上计算 softmax，再计算合法分数的原始概率加权和。
+5. 只优化分数期望与 gold label 之间的 MSE。
+
+其损失只有：
+
+$$
+L=L_{\text{RAFT}}
+$$
+
+数字后面的 `</score>`、EOS 以及 `<score>` 本身都不参加 CE，因为该 Trainer 完全没有 CE loss。它只学习“已经给定 `<score>` 前缀后，分数概率应该如何分布”，不负责学习自由生成解释或分数包装格式。
+
+训练期间的验证也不做自由文本生成，而是强制提供 `<score>` 前缀，直接执行 RAIL。连续期望分数用于 MSE/MAE；为了计算 Accuracy、Macro-F1 和 QWK，当前评估代码额外把连续值映射到最近的合法标签。
+
+它与论文的关系是：
+
+- 方法上对应论文中的 **RAFT baseline**，不是 TRACT。
+- 论文和官方 score-only RAIL 近似计算 $p(y\mid x)$；当前仓库计算 $p(y\mid x,\texttt{<score>})$，回归思想相同，但分数位置的条件上下文不同。
+- TRACT 官方仓库没有发布独立、完整的 `RaftWithoutCotTrainer`；当前版本是本仓库依据论文公式实现的 score-only RAFT。
+
+### 当前 CotRaft
+
+训练数据形如：
+
+```text
+prompt
+→ <reasoning>教师解释</reasoning><score>5</score>
+```
+
+当前 CoT 数据来自教师模型，例如 `deepseek-v4-pro`，不是当前 Qwen 模型在 Stage 1 后自生成的 CoT。
+
+预处理会使用 `<score>...</score>` 的结构位置精确标记数字 token，并要求：
+
+- 每条 completion 恰好有一个 `<score>` block；
+- block 内数字等于 gold label；
+- 数字恰好占一个 tokenizer token；
+- 截断后该数字仍然存在。
+
+训练目标是：
+
+$$
+L=L_{\text{LM}}+\lambda L_{\text{RAFT}}
+$$
+
+当前 `lambda = 1.0`。各 token 的监督关系为：
+
+```text
+<reasoning>...</reasoning><score>  5  </score><eos>
+|-------------- CE -------------| MSE |---- CE ----|
+```
+
+- `L_LM` 覆盖解释、`<reasoning>`/`<score>` 包装、`</score>` 和 EOS，但屏蔽数字分数。
+- `L_RAFT` 只作用在数字分数位置。
+- 训练分数时使用 teacher forcing，实际优化的是 $p(y\mid x,s_{teacher},\texttt{<score>})$。
+
+当前每个 epoch 内的验证仍然使用 greedy 完整生成并解析 `<score>`，不是 CoT-RAIL。独立运行 `training/evaluate.py --inference_mode cot_rail` 时，才会先生成解释直到 `<score>`，再执行一次单 token 概率探测。如果第一阶段没有生成 `<score>`，该样本的 CoT-RAIL 结果就是无效值。
+
+当前 `cot_raft` 与论文的关系是：
+
+- loss 结构与官方代码表达的 CoT-RAFT 一致；
+- 数据上只对应使用外部教师 CoT 的单阶段训练；
+- 更接近论文的 Stage 1 或 “CoT-RAFT with annotation CoT” 消融；
+- 不能直接称为完整 TRACT。
+
+### 完整 TRACT 缺少的 Stage 2
+
+论文完整流程是：
+
+```text
+Stage 1
+原始底模 p0
++ 教师标注 CoT
++ gold score
+→ CoT-RAFT
+→ p_s
+
+Self-CoT 数据生成
+p_s 为每个训练输入生成 CoT 和预测分数
+→ 丢弃预测分数
+→ 保留 self-CoT
+→ 配回原始 gold score
+
+Stage 2
+重新加载原始底模 p0
++ self-CoT
++ 原始 gold score
+→ 再做一次 CoT-RAFT
+→ p_TRACT
+```
+
+Stage 2 必须重新从 `p0` 初始化，不能从 `p_s` checkpoint 继续训练。当前仓库没有把 self-CoT 生成、丢弃预测分数、配回 gold label、重新初始化底模和第二次训练串成这条流水线，所以当前 `cot_raft` adapter 不是 `p_TRACT`。
+
+论文算法见 [§3.2 与 Algorithm 1](https://arxiv.org/html/2503.04381v2#S3.SS2)，官方仓库也把训练过程明确拆成 [Stage 1、self-CoT 生成和 Stage 2](https://github.com/d223302/TRACT#fine-tuning)。
+
+### 官方发布代码的实际行为与问题
+
+官方 [`custom_loss.py`](https://github.com/d223302/TRACT/blob/dcb7a649a899274f2c072f7884dc94ad77a6ea19/finetuning_utils/cot_with_raft/custom_loss.py) 表达的目标行为是：
+
+1. 把 completion 倒数第二个有效 token 当成数字分数。
+2. 从 CE labels 中屏蔽这个数字。
+3. 在数字前一个位置取 logits。
+4. 对完整词表做 softmax，不对分数候选重新归一化。
+5. 计算 `LM loss + 1.0 * score MSE`。
+
+但官方仓库当前发布版本不是可以直接照搬的干净参考实现：
+
+- [`custom_processor.py`](https://github.com/d223302/TRACT/blob/dcb7a649a899274f2c072f7884dc94ad77a6ea19/finetuning_utils/cot_with_raft/custom_processor.py) 已提前屏蔽数字并单独保存 `score_labels`，但 `custom_loss.py` 又尝试从未屏蔽的 `labels` 中读取数字。
+- [`workflow.py`](https://github.com/d223302/TRACT/blob/dcb7a649a899274f2c072f7884dc94ad77a6ea19/finetuning_utils/cot_with_raft/workflow.py) 导入了自定义 collator，却实际实例化普通 SFT collator。
+- 分数 token ID 硬编码为 Mistral 或 Llama 的 `1` 到 `5`。
+- 在 `num_items_in_batch` 存在时，代码会对已经取 mean 的 MSE 再除一次 batch size，源码本身也留有 TODO。
+
+相比之下，当前仓库在单阶段 loss 的工程实现上更稳健：动态解析分数 token ID，使用 `<score>` 的显式结构 mask 定位数字，并采用正常的 batch mean。不过这些工程修正不等于补齐了 TRACT Stage 2。
+
+### 训练配置差异
+
+| 项目 | 当前仓库 | 论文报告设置 |
+| --- | --- | --- |
+| 底模 | Qwen3-4B | Mistral-7B / Llama-3.1-8B |
+| CoT 教师 | DeepSeek 教师数据 | GPT-4 annotation CoT，随后 self-CoT |
+| LoRA rank | 16 | 8 |
+| Learning rate | `1e-4` | `1e-5` |
+| Epoch | 3 | 2 |
+| 有效 batch | 16 | 8 |
+| CoT-RAFT 阶段数 | 1 | 2 |
+| checkpoint | 每个 epoch 保存，只保留最后一个；adapter 来自最终 checkpoint | 官方配置按 steps 保存，论文不以当前仓库的保留策略为方法组成部分 |
+
+因此，当前实验与论文不能被视为严格复现。模型、教师 CoT、训练超参数和最关键的 Stage 2 都不同。
+
+### 最简洁的方法定位
+
+| 当前名称 | CoT 来源 | 训练目标 | 训练期验证 | 准确定位 |
+| --- | --- | --- | --- | --- |
+| `raft_without_cot` | 无 | 仅分数期望 MSE | RAIL | 论文 RAFT baseline |
+| `cot_raft` | DeepSeek 教师 CoT | 解释/格式 CE + 分数 MSE | Greedy | 单阶段 CoT-RAFT，接近 TRACT Stage 1 |
+| 完整 TRACT | Stage 1 教师 CoT；Stage 2 self-CoT | 两次从 `p0` 开始的 CoT-RAFT | 最终使用 CoT-RAIL | 当前尚未实现 |
+
+最终结论：当前 `raft_without_cot` 基本对齐论文 RAFT 基线，但使用了显式 `<score>` 条件前缀；当前 `cot_raft` 基本对齐官方代码意图中的单阶段 CoT-RAFT loss，但不等于完整 TRACT。
+
 ## 与当前研究的关系
 
 当前理解有两个地方需要校正：
 
 1. **TRACT 不是用 CoT-RAFT 取代 CE。**
-  CoT-RAFT 本身就是“完整序列 CE + 期望分数平方误差”。
+  CoT-RAFT 本身就是“解释与格式 CE + 期望分数平方误差”；按官方代码行为，数字分数 token 本身从 CE 中屏蔽。
 2. **第二阶段不是继续训练第一阶段模型。**
   第一阶段模型只负责生成学生自己的 CoT；最终训练必须重新从 base model 开始。
 

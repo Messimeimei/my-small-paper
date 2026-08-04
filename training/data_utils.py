@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import random
@@ -78,6 +79,18 @@ def score_sets(rows: list[dict[str, Any]]) -> list[int]:
     return sorted({row["label"] for row in rows})
 
 
+def split_content_sha256(rows: list[dict[str, Any]]) -> str:
+    """Fingerprint only the sample identities and labels relevant to a fixed split."""
+    payload = [
+        {"id": row["id"], "label": row["label"]}
+        for row in sorted(rows, key=lambda row: row["id"])
+    ]
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def validation_counts(
     rows: list[dict[str, Any]], labels: list[int], ratio: float
 ) -> dict[int, int]:
@@ -105,14 +118,27 @@ def load_or_create_split(
     write_json,
 ) -> dict[str, Any]:
     all_ids = {row["id"] for row in rows}
+    content_hash = split_content_sha256(rows)
     if split_path.is_file():
         split = json.loads(split_path.read_text(encoding="utf-8"))
-        if split.get("dataset_sha256") != dataset_hash:
-            raise ValueError(f"Dataset hash no longer matches fixed split: {split_path}")
         train_ids = set(split.get("train_ids", []))
         validation_ids = set(split.get("validation_ids", []))
         if train_ids & validation_ids or train_ids | validation_ids != all_ids:
             raise ValueError(f"Invalid ID coverage in fixed split: {split_path}")
+        expected_content_hash = split.get("id_label_sha256")
+        if expected_content_hash is not None and expected_content_hash != content_hash:
+            raise ValueError(
+                f"Sample IDs or labels no longer match fixed split: {split_path}"
+            )
+        metadata_changed = False
+        if expected_content_hash is None:
+            split["id_label_sha256"] = content_hash
+            metadata_changed = True
+        if split.get("dataset_sha256") != dataset_hash:
+            split["dataset_sha256"] = dataset_hash
+            metadata_changed = True
+        if metadata_changed:
+            write_json(split_path, split)
         return split
 
     if not 0 < validation_ratio < 1:
@@ -134,6 +160,7 @@ def load_or_create_split(
     split = {
         "schema_version": 1,
         "dataset_sha256": dataset_hash,
+        "id_label_sha256": content_hash,
         "split_seed": split_seed,
         "validation_ratio": validation_ratio,
         "train_ids": train_ids,

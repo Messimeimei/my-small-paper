@@ -83,6 +83,8 @@ class CompactTrainLogCallback(TrainerCallback):
             "eval_generation_format_valid_rate",
             "eval_generation_mae",
             "eval_generation_qwk",
+            "cot_raft_lm_loss",
+            "cot_raft_score_loss",
             "learning_rate",
             "epoch",
         ):
@@ -252,9 +254,8 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
             self.validation_dataset_path, self.validation_rows, self.score_sets
         )
 
-    def evaluate(self, *args, metric_key_prefix: str = "eval", **kwargs):  # noqa: ANN002
-        metrics = super().evaluate(*args, metric_key_prefix=metric_key_prefix, **kwargs)
-        validation_metrics, predictions = generate_validation(
+    def _run_generation_validation(self):
+        return generate_validation(
             self.model,
             self.processing_class,
             self.validation_rows,
@@ -264,6 +265,10 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
             score_sets=self.score_sets,
             logger=self.logger,
         )
+
+    def evaluate(self, *args, metric_key_prefix: str = "eval", **kwargs):  # noqa: ANN002
+        metrics = super().evaluate(*args, metric_key_prefix=metric_key_prefix, **kwargs)
+        validation_metrics, predictions = self._run_generation_validation()
         metric_names = {
             f"{metric_key_prefix}_generation_accuracy": validation_metrics["accuracy"],
             f"{metric_key_prefix}_generation_macro_f1": validation_metrics["macro_f1"],
@@ -297,9 +302,7 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
                 for key, value in metrics.items()
                 if isinstance(value, (int, float, str, bool)) or value is None
             },
-            "selected_by": "eval_generation_accuracy",
-            "best_metric_so_far": self.state.best_metric,
-            "best_global_step_so_far": self.state.best_global_step,
+            "checkpoint_retention": "last",
         }
         write_json(eval_root / f"step_{step:06d}__epoch_{epoch_tag}.metrics.json", payload)
         write_json(eval_root / "latest.metrics.json", payload)
@@ -310,7 +313,7 @@ class GenerativeEvalSFTTrainer(SFTTrainer):
         write_jsonl(eval_root / "latest.predictions.jsonl", predictions)
         self.logger.info(
             "Generation val @ epoch=%s step=%d: acc=%.4f macro_f1=%.4f valid=%.4f "
-            "(checkpointing by accuracy)",
+            "(retaining last checkpoint)",
             epoch_value,
             step,
             validation_metrics["accuracy"],

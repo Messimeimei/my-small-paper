@@ -1,76 +1,49 @@
-"""Rebuild eval_output/evaluation_analysis.md from per-run metrics.json files."""
+"""Rebuild eval_output/results/evaluation_analysis.md from per-run metrics.json files."""
 
 from __future__ import annotations
 
 import json
+import math
+import re
+import statistics
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from metrics_utils import criterion_title, infer_eval_condition
 
-EVAL_CONDITIONS: tuple[str, ...] = (
-    "B-L",
-    "B-C",
-    "LL",
-    "LC",
-    "CL",
-    "CC",
-    "AL",
-    "AC",
-    "PAL",
-    "PAC",
+EVAL_CONDITIONS = (
+    "B-L", "B-C", "LL", "LC", "CL", "CC", "PAL", "PAC",
+    "LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R",
 )
-
-TRAINABLE_CONDITIONS: tuple[str, ...] = (
-    "LL",
-    "LC",
-    "CL",
-    "CC",
-    "AL",
-    "AC",
-    "PAL",
-    "PAC",
-)
-
-# Legacy condition codes from older runs.
+# Only conditions included in the current report are normalized here.
 LEGACY_CONDITION_ALIASES = {
-    "B-S": "B-L",
-    "S-S": "LL",
-    "L-L": "LL",
-    "C→S": "CL",
-    "C→L": "CL",
-    "S→C": "LC",
-    "L→C": "LC",
-    "C-C": "CC",
-    "A-A": "AC",
-    "A-C": "AC",
-    "A→S": "AL",
-    "A→L": "AL",
+    "B-S": "B-L", "S-S": "LL", "L-L": "LL", "C→S": "CL", "C→L": "CL",
+    "S→C": "LC", "L→C": "LC", "C-C": "CC",
 }
 
-CONDITION_META: dict[str, tuple[str, str, str]] = {
+CONDITION_META = {
     "B-L": ("Base", "Label-only", "基座模型直接输出标签"),
     "B-C": ("Base", "CoT", "基座模型先输出推理再输出标签"),
     "LL": ("Label-only SFT", "Label-only", "同格式 Label-only 微调与测试"),
     "LC": ("Label-only SFT", "CoT", "Label-only adapter 交叉测试 CoT prompt"),
     "CL": ("CoT SFT", "Label-only", "CoT adapter 交叉测试 Label-only prompt"),
     "CC": ("CoT SFT", "CoT", "同格式 CoT 微调与测试"),
-    "AL": ("Align SFT", "Label-only", "Align adapter 交叉测试 Label-only prompt"),
-    "AC": ("Align SFT", "CoT", "Align adapter 在 CoT 测试 prompt 上评测"),
-    "PAL": (
-        "Paper Align SFT",
-        "Label-only",
-        "Paper Align adapter 交叉测试 Label-only prompt",
-    ),
-    "PAC": (
-        "Paper Align SFT",
-        "CoT",
-        "Paper Align adapter 在 CoT 测试 prompt 上评测",
+    "PAL": ("Paper Align SFT", "Label-only", "Paper Align adapter 交叉测试 Label-only prompt"),
+    "PAC": ("Paper Align SFT", "CoT", "Paper Align adapter 在 CoT 测试 prompt 上评测"),
+    "LL-R": ("Label-only CE", "RAIL", "Label-only adapter 使用官方完整词表概率加权和"),
+    "RAFT-G": ("RAFT without CoT", "Greedy", "RAFT adapter 使用原自由生成"),
+    "RAFT-R": ("RAFT without CoT", "RAIL", "RAFT adapter 使用官方完整词表概率加权和"),
+    "CC-R": ("CoT CE", "CoT-RAIL", "CoT CE adapter 先生成解释再使用官方完整词表概率加权和"),
+    "COT-RAFT-G": ("CoT-RAFT", "Greedy", "CoT-RAFT adapter 使用原自由生成"),
+    "COT-RAFT-R": (
+        "CoT-RAFT",
+        "CoT-RAIL",
+        "CoT-RAFT adapter 先生成解释再使用官方完整词表概率加权和",
     ),
 }
 
-TRAINABLE_TASKS: tuple[str, ...] = (
+TRAINABLE_TASKS = (
     "rev_util_actionability",
     "rev_util_grounding_specificity",
     "rev_util_helpfulness",
@@ -79,15 +52,26 @@ TRAINABLE_TASKS: tuple[str, ...] = (
     "rw_gen_positioning_check",
     "rw_gen_positioning_type",
 )
+ORDINAL_TASKS = frozenset(TRAINABLE_TASKS[:4])
 
-ORDINAL_TASKS: frozenset[str] = frozenset(
-    {
-        "rev_util_actionability",
-        "rev_util_grounding_specificity",
-        "rev_util_helpfulness",
-        "rev_util_verifiability",
-    }
-)
+RecordKey = tuple[str, str, str]
+Records = dict[RecordKey, dict[str, Any]]
+SEED_PATTERN = re.compile(r"(?:^|[_#])seed_?(\d+)(?:[_#]|$)", re.IGNORECASE)
+RECORD_CACHE_NAME = "evaluation_analysis_records.json"
+RAIL_CONDITIONS = frozenset({"LL-R", "RAFT-R", "CC-R", "COT-RAFT-R"})
+OFFICIAL_RAIL_NORMALIZATION = "full_vocab_raw"
+CONDITION_INFERENCE = {
+    "B-L": "Greedy", "B-C": "Greedy", "LL": "Greedy", "LC": "Greedy",
+    "CL": "Greedy", "CC": "Greedy", "PAL": "Greedy", "PAC": "Greedy",
+    "LL-R": "RAIL", "RAFT-G": "Greedy", "RAFT-R": "RAIL",
+    "CC-R": "CoT-RAIL", "COT-RAFT-G": "Greedy", "COT-RAFT-R": "CoT-RAIL",
+}
+CONDITION_DATA = {
+    "B-L": "Label-only", "B-C": "CoT", "LL": "Label-only", "LC": "CoT",
+    "CL": "Label-only", "CC": "CoT", "PAL": "Label-only", "PAC": "CoT",
+    "LL-R": "Label-only", "RAFT-G": "Label-only", "RAFT-R": "Label-only",
+    "CC-R": "CoT", "COT-RAFT-G": "CoT", "COT-RAFT-R": "CoT",
+}
 
 
 def utc_now() -> str:
@@ -97,33 +81,45 @@ def utc_now() -> str:
 def normalize_condition(code: str | None) -> str | None:
     if code is None:
         return None
-    return LEGACY_CONDITION_ALIASES.get(code, code)
+    normalized = LEGACY_CONDITION_ALIASES.get(code, code)
+    return normalized if normalized in EVAL_CONDITIONS else None
 
 
-def format_pct(value: float | None) -> str:
-    if value is None:
-        return "—"
-    return f"{100 * value:.1f}"
+def exp_name_with_seed(exp_name: str, train_seed: str) -> str:
+    base_name = re.sub(r"#seed_(?:\d+|base)$", "", exp_name)
+    return f"{base_name}#seed_{train_seed}"
 
 
-def format_cell(acc: float | None, f1: float | None) -> str:
-    if acc is None and f1 is None:
-        return "—"
-    if acc is None:
-        return f"— / {format_pct(f1)}"
-    if f1 is None:
-        return f"{format_pct(acc)} / —"
-    return f"{format_pct(acc)} / {format_pct(f1)}"
+def as_float(value: Any) -> float | None:
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
-def format_mae_qwk(mae: float | None, qwk: float | None) -> str:
-    if mae is None and qwk is None:
-        return "—"
-    if mae is None:
-        return f"— / {qwk:.3f}" if qwk is not None else "—"
-    if qwk is None:
-        return f"{mae:.3f} / —"
-    return f"{mae:.3f} / {qwk:.3f}"
+def extract_train_seed(metrics: dict[str, Any], condition: str) -> str:
+    """Extract the training seed without confusing it with the eval seed."""
+    if condition.startswith("B-"):
+        return "base"
+    full_config = metrics.get("full_config") or {}
+    train_run = full_config.get("train_run") or {}
+    for candidate in (
+        metrics.get("train_seed"),
+        train_run.get("train_seed"),
+        (train_run.get("train_resolved_config") or {}).get("seed"),
+    ):
+        if candidate is not None:
+            return str(candidate)
+    for value in (
+        metrics.get("adapter"),
+        train_run.get("train_run_id"),
+        train_run.get("train_run_directory"),
+        metrics.get("exp_name"),
+    ):
+        match = SEED_PATTERN.search(str(value or ""))
+        if match:
+            return match.group(1)
+    return "unknown"
 
 
 def load_metrics(path: Path) -> dict[str, Any] | None:
@@ -134,254 +130,417 @@ def load_metrics(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
+def pearson_coefficient(labels: list[float], predictions: list[float]) -> float | None:
+    """Return Pearson correlation, or None when fewer than two varying pairs exist."""
+    if len(labels) != len(predictions) or len(labels) < 2:
+        return None
+    label_mean = statistics.fmean(labels)
+    prediction_mean = statistics.fmean(predictions)
+    label_ss = sum((value - label_mean) ** 2 for value in labels)
+    prediction_ss = sum((value - prediction_mean) ** 2 for value in predictions)
+    if label_ss == 0 or prediction_ss == 0:
+        return None
+    covariance = sum(
+        (label - label_mean) * (prediction - prediction_mean)
+        for label, prediction in zip(labels, predictions, strict=True)
+    )
+    return covariance / math.sqrt(label_ss * prediction_ss)
+
+
+def prediction_pearson(prediction_path: Path) -> float | None:
+    """Calculate mean discrete-prediction Pearson correlation across rollouts."""
+    try:
+        rows = [
+            json.loads(line)
+            for line in prediction_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    except (OSError, json.JSONDecodeError):
+        return None
+    rollout_count = max(
+        (len(row.get("rollout_predictions") or []) for row in rows),
+        default=0,
+    )
+    correlations: list[float] = []
+    for rollout_index in range(rollout_count):
+        pairs = [
+            (as_float(row.get("label")), as_float(row["rollout_predictions"][rollout_index]))
+            for row in rows
+            if rollout_index < len(row.get("rollout_predictions") or [])
+        ]
+        valid_pairs = [
+            (label, prediction)
+            for label, prediction in pairs
+            if label is not None and prediction is not None
+        ]
+        labels = [label for label, _ in valid_pairs]
+        predictions = [prediction for _, prediction in valid_pairs]
+        correlation = pearson_coefficient(labels, predictions)
+        if correlation is not None:
+            correlations.append(correlation)
+    return statistics.fmean(correlations) if correlations else None
+
+
 def extract_run_record(metrics: dict[str, Any], metrics_path: Path) -> dict[str, Any] | None:
     exp_name = str(metrics.get("exp_name") or metrics_path.parent.name)
     task = str(metrics.get("task") or metrics_path.parent.parent.name)
-    supervision_mode = str(
-        metrics.get("supervision_mode")
-        or metrics.get("evaluation_mode")
-        or "cot"
-    )
+    mode = str(metrics.get("supervision_mode") or metrics.get("evaluation_mode") or "cot")
     adapter = metrics.get("adapter")
     full_config = metrics.get("full_config") or {}
     train_config = full_config.get("train_config")
     if isinstance(train_config, dict):
         train_config = train_config.get("experiment_name") or json.dumps(train_config)
-    condition = normalize_condition(
-        infer_eval_condition(
-            exp_name=exp_name,
-            supervision_mode=supervision_mode,
-            adapter=str(adapter) if adapter is not None else None,
-            train_config=str(train_config) if train_config is not None else None,
-        )
-    )
+    condition = normalize_condition(metrics.get("eval_condition"))
     if condition is None:
+        condition = normalize_condition(
+            infer_eval_condition(
+                exp_name=exp_name,
+                supervision_mode=mode,
+                adapter=str(adapter) if adapter is not None else None,
+                train_config=str(train_config) if train_config is not None else None,
+            )
+        )
+    if condition is None or task not in TRAINABLE_TASKS:
         return None
 
     aggregate = metrics.get("aggregate") or {}
+    probability_normalization = metrics.get(
+        "probability_normalization",
+        aggregate.get("probability_normalization"),
+    )
+    if (
+        condition in RAIL_CONDITIONS
+        and probability_normalization != OFFICIAL_RAIL_NORMALIZATION
+    ):
+        return None
     accuracy = metrics.get("test_accuracy", aggregate.get("accuracy"))
     macro_f1 = metrics.get("test_macro_f1", aggregate.get("macro_f1"))
-    if accuracy is None and macro_f1 is None:
+    qwk = metrics.get("test_qwk", aggregate.get("qwk"))
+    primary = qwk if task in ORDINAL_TASKS else macro_f1
+    if accuracy is None and primary is None:
         return None
 
+    pearson = metrics.get("test_pearson", aggregate.get("pearson"))
+    if pearson is None:
+        pearson = prediction_pearson(metrics_path.with_name("predictions.jsonl"))
     tokens = aggregate.get("tokens") or {}
-    finished_at = metrics.get("finished_at_utc") or ""
     return {
         "task": task,
         "condition": condition,
+        "train_seed": extract_train_seed(metrics, condition),
         "exp_name": exp_name,
         "metrics_path": str(metrics_path),
-        "finished_at_utc": finished_at,
+        "finished_at_utc": metrics.get("finished_at_utc") or "",
         "n_samples": aggregate.get("samples"),
-        "accuracy": float(accuracy) if accuracy is not None else None,
-        "macro_f1": float(macro_f1) if macro_f1 is not None else None,
-        "mae": metrics.get("test_mae", aggregate.get("mae")),
-        "qwk": metrics.get("test_qwk", aggregate.get("qwk")),
-        "format_valid_rate": metrics.get("format_valid_rate", aggregate.get("format_valid_rate")),
-        "avg_output_tokens": metrics.get("avg_output_tokens", tokens.get("avg_output_tokens")),
-        "avg_reasoning_tokens": metrics.get(
-            "avg_reasoning_tokens", tokens.get("avg_reasoning_tokens")
+        "accuracy": as_float(accuracy),
+        "macro_f1": as_float(macro_f1),
+        "mae": as_float(metrics.get("test_mae", aggregate.get("mae"))),
+        "qwk": as_float(qwk),
+        "pearson": as_float(pearson),
+        "rail_mae": as_float(metrics.get("test_rail_mae", aggregate.get("rail_mae"))),
+        "rail_rmse": as_float(metrics.get("test_rail_rmse", aggregate.get("rail_rmse"))),
+        "probability_normalization": probability_normalization,
+        "score_prefix_valid_rate": as_float(
+            metrics.get(
+                "score_prefix_valid_rate",
+                aggregate.get("score_prefix_valid_rate"),
+            )
         ),
-        "samples_per_sec": aggregate.get("samples_per_sec"),
-        "gpu_time_sec": metrics.get("gpu_time_sec", aggregate.get("gpu_time_sec")),
+        "reasoning_valid_rate": as_float(
+            metrics.get("reasoning_valid_rate", aggregate.get("reasoning_valid_rate"))
+        ),
+        "avg_score_probability_mass": as_float(
+            metrics.get(
+                "avg_score_probability_mass",
+                aggregate.get("avg_score_probability_mass"),
+            )
+        ),
+        "format_valid_rate": as_float(metrics.get("format_valid_rate", aggregate.get("format_valid_rate"))),
+        "avg_output_tokens": as_float(metrics.get("avg_output_tokens", tokens.get("avg_output_tokens"))),
+        "avg_reasoning_tokens": as_float(metrics.get("avg_reasoning_tokens", tokens.get("avg_reasoning_tokens"))),
+        "samples_per_sec": as_float(aggregate.get("samples_per_sec")),
+        "gpu_time_sec": as_float(metrics.get("gpu_time_sec", aggregate.get("gpu_time_sec"))),
     }
 
 
-def collect_eval_records(output_root: Path) -> dict[tuple[str, str], dict[str, Any]]:
-    """Return latest metrics record per (task, condition)."""
-    records: dict[tuple[str, str], dict[str, Any]] = {}
-    if not output_root.is_dir():
-        return records
+def load_record_cache(output_root: Path) -> Records:
+    """Load historical records so overwritten eval directories do not lose seeds."""
+    payload = load_metrics(output_root / RECORD_CACHE_NAME) or {}
+    records: Records = {}
+    for record in payload.get("records") or []:
+        if not isinstance(record, dict):
+            continue
+        task = str(record.get("task") or "")
+        condition = normalize_condition(record.get("condition"))
+        train_seed = str(record.get("train_seed") or "unknown")
+        old_exp_name = str(record.get("exp_name") or "")
+        seeded_exp_name = exp_name_with_seed(old_exp_name, train_seed)
+        metrics_path = Path(str(record.get("metrics_path") or ""))
+        if old_exp_name and metrics_path.parent.name == old_exp_name:
+            record["metrics_path"] = str(
+                metrics_path.parent.parent / seeded_exp_name / metrics_path.name
+            )
+        record["exp_name"] = seeded_exp_name
+        if task not in TRAINABLE_TASKS or condition is None:
+            continue
+        if (
+            condition in RAIL_CONDITIONS
+            and record.get("probability_normalization")
+            != OFFICIAL_RAIL_NORMALIZATION
+        ):
+            continue
+        record["condition"] = condition
+        record["train_seed"] = train_seed
+        records[(task, condition, train_seed)] = record
+    return records
 
-    for metrics_path in sorted(output_root.glob("*/*/metrics.json")):
-        if metrics_path.parent.parent.name == "configs":
+
+def collect_eval_records(output_root: Path) -> Records:
+    """Return the latest record per (task, condition, training seed)."""
+    if not output_root.is_dir():
+        return {}
+    records = load_record_cache(output_root)
+    for metrics_path in sorted(output_root.rglob("metrics.json")):
+        if "configs" in metrics_path.parts:
             continue
         metrics = load_metrics(metrics_path)
-        if metrics is None:
-            continue
-        record = extract_run_record(metrics, metrics_path)
+        record = extract_run_record(metrics, metrics_path) if metrics is not None else None
         if record is None:
             continue
-        key = (record["task"], record["condition"])
+        key = (record["task"], record["condition"], record["train_seed"])
         existing = records.get(key)
-        if existing is None or str(record["finished_at_utc"]) >= str(
-            existing.get("finished_at_utc") or ""
-        ):
+        if existing is None or str(record["finished_at_utc"]) >= str(existing.get("finished_at_utc") or ""):
             records[key] = record
     return records
 
 
-def mean_of(values: list[float | None]) -> float | None:
-    present = [value for value in values if value is not None]
+def seed_sort_key(seed: str) -> tuple[int, int | str]:
+    if seed == "base":
+        return (0, 0)
+    try:
+        return (1, int(seed))
+    except ValueError:
+        return (2, seed)
+
+
+def records_for(records: Records, task: str, condition: str) -> list[dict[str, Any]]:
+    grouped = (
+        record for (record_task, record_condition, _), record in records.items()
+        if record_task == task and record_condition == condition
+    )
+    return sorted(grouped, key=lambda record: seed_sort_key(str(record["train_seed"])))
+
+
+def present_values(records: Iterable[dict[str, Any]], metric: str) -> list[float]:
+    return [float(record[metric]) for record in records if record.get(metric) is not None]
+
+
+def mean_of(values: Iterable[float | None]) -> float | None:
+    present = [float(value) for value in values if value is not None]
+    return statistics.fmean(present) if present else None
+
+
+def metric_stats(values: Iterable[float]) -> tuple[float | None, float | None, float | None]:
+    present = list(values)
+    if not present:
+        return None, None, None
+    if len(present) == 1:
+        return present[0], None, None
+    return statistics.fmean(present), statistics.stdev(present), statistics.variance(present)
+
+
+def primary_metric(task: str) -> str:
+    return "qwk" if task in ORDINAL_TASKS else "macro_f1"
+
+
+def metric_specs(task: str) -> tuple[tuple[str, str, bool, bool], ...]:
+    """Return metric key, display name, percentage flag, and direction."""
+    if task in ORDINAL_TASKS:
+        return (
+            ("qwk", "QWK", False, True),
+            ("accuracy", "Accuracy (%)", True, True),
+            ("pearson", "Pearson", False, True),
+            ("macro_f1", "Macro-F1", False, True),
+            ("mae", "MAE", False, False),
+        )
+    return (
+        ("accuracy", "Accuracy (%)", True, True),
+        ("macro_f1", "Macro-F1", False, True),
+        ("pearson", "Pearson", False, True),
+    )
+
+
+def format_stats_cell(
+    values: Iterable[float],
+    *,
+    percent: bool = False,
+    underline: bool = False,
+) -> str:
+    mean, std, variance = metric_stats(values)
+    if mean is None:
+        return "—"
+    if percent:
+        rendered = f"{100 * mean:.1f}"
+        if std is not None and variance is not None:
+            rendered += f" ± {100 * std:.1f} (var={10000 * variance:.4f})"
+    else:
+        rendered = f"{mean:.3f}"
+        if std is not None and variance is not None:
+            rendered += f" ± {std:.3f} (var={variance:.6f})"
+    return f"<u>{rendered}</u>" if underline else rendered
+
+
+def metric_means(
+    grouped_conditions: list[tuple[str, list[dict[str, Any]]]],
+    metric: str,
+) -> dict[str, float | None]:
+    return {
+        condition: mean_of(present_values(grouped, metric))
+        for condition, grouped in grouped_conditions
+    }
+
+
+def best_metric_value(
+    means: dict[str, float | None],
+    *,
+    higher_is_better: bool,
+) -> float | None:
+    present = [value for value in means.values() if value is not None]
     if not present:
         return None
-    return sum(present) / len(present)
+    return max(present) if higher_is_better else min(present)
 
 
-def render_condition_legend() -> str:
-    lines = [
-        "| 记号 | 训练方式 | 测试 prompt | 含义 |",
-        "| --- | --- | --- | --- |",
-    ]
-    for code in EVAL_CONDITIONS:
-        train, test, desc = CONDITION_META[code]
-        lines.append(f"| {code} | {train} | {test} | {desc} |")
-    return "\n".join(lines) + "\n"
-
-
-def render_main_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
-    headers = ["任务", "N", *EVAL_CONDITIONS]
-    lines = [
-        "| " + " | ".join(headers) + " |",
-        "| " + " | ".join(["---"] + ["---:"] * (len(headers) - 1)) + " |",
-    ]
-    macro_acc: dict[str, list[float | None]] = {code: [] for code in EVAL_CONDITIONS}
-    macro_f1: dict[str, list[float | None]] = {code: [] for code in EVAL_CONDITIONS}
-
-    for task in TRAINABLE_TASKS:
-        title = criterion_title(task)
-        n_value = "—"
-        cells = [title, n_value]
-        for code in EVAL_CONDITIONS:
-            record = records.get((task, code))
-            if record is not None and n_value == "—" and record.get("n_samples") is not None:
-                n_value = str(int(record["n_samples"]))
-            if record is None:
-                cells.append("—")
-                continue
-            cells.append(format_cell(record.get("accuracy"), record.get("macro_f1")))
-            macro_acc[code].append(record.get("accuracy"))
-            macro_f1[code].append(record.get("macro_f1"))
-        cells[1] = n_value
-        lines.append("| " + " | ".join(cells) + " |")
-
-    macro_cells = ["**任务宏平均**", ""]
-    for code in EVAL_CONDITIONS:
-        macro_cells.append(
-            format_cell(mean_of(macro_acc[code]), mean_of(macro_f1[code]))
-        )
-    lines.append("| " + " | ".join(macro_cells) + " |")
-    return "\n".join(lines) + "\n"
-
-
-def render_migration_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
-    lines = [
-        "| 任务 | CL 相对 LL | LC 相对 CC | AL 相对 LL | PAL 相对 LL |",
-        "| --- | ---: | ---: | ---: | ---: |",
-    ]
-    deltas_cl: list[float] = []
-    deltas_lc: list[float] = []
-    deltas_al: list[float] = []
-    deltas_pal: list[float] = []
-
-    def delta(left: str, right: str) -> tuple[str, float | None]:
-        left_rec = records.get((task, left))
-        right_rec = records.get((task, right))
-        if (
-            left_rec is None
-            or right_rec is None
-            or left_rec.get("accuracy") is None
-            or right_rec.get("accuracy") is None
-        ):
-            return "—", None
-        value = 100 * (left_rec["accuracy"] - right_rec["accuracy"])
-        return f"{value:+.1f} pp", value
-
-    for task in TRAINABLE_TASKS:
-        title = criterion_title(task)
-        d_cl, v_cl = delta("CL", "LL")
-        d_lc, v_lc = delta("LC", "CC")
-        d_al, v_al = delta("AL", "LL")
-        d_pal, v_pal = delta("PAL", "LL")
-        if v_cl is not None:
-            deltas_cl.append(v_cl)
-        if v_lc is not None:
-            deltas_lc.append(v_lc)
-        if v_al is not None:
-            deltas_al.append(v_al)
-        if v_pal is not None:
-            deltas_pal.append(v_pal)
-        lines.append(f"| {title} | {d_cl} | {d_lc} | {d_al} | {d_pal} |")
-
-    avg_cl = mean_of(deltas_cl)
-    avg_lc = mean_of(deltas_lc)
-    avg_al = mean_of(deltas_al)
-    avg_pal = mean_of(deltas_pal)
-    lines.append(
-        "| **平均** | "
-        f"{f'{avg_cl:+.1f} pp' if avg_cl is not None else '—'} | "
-        f"{f'{avg_lc:+.1f} pp' if avg_lc is not None else '—'} | "
-        f"{f'{avg_al:+.1f} pp' if avg_al is not None else '—'} | "
-        f"{f'{avg_pal:+.1f} pp' if avg_pal is not None else '—'} |"
+def is_best_value(value: float | None, best: float | None) -> bool:
+    return (
+        value is not None
+        and best is not None
+        and math.isclose(value, best, rel_tol=0.0, abs_tol=1e-12)
     )
+
+
+def render_single_task_table(records: Records, task: str) -> str:
+    grouped_conditions = [
+        (condition, grouped)
+        for condition in EVAL_CONDITIONS
+        if (grouped := records_for(records, task, condition))
+    ]
+    if not grouped_conditions:
+        return "当前没有可用结果。\n"
+
+    specs = metric_specs(task)
+    means = {
+        metric: metric_means(grouped_conditions, metric)
+        for metric, _, _, _ in specs
+    }
+    best = {
+        metric: best_metric_value(means[metric], higher_is_better=higher_is_better)
+        for metric, _, _, higher_is_better in specs
+    }
+    headers = [
+        "条件",
+        "训练方式",
+        "推理方式",
+        "测试数据",
+        "训练 seed",
+        "N",
+        *(display for _, display, _, _ in specs),
+    ]
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---", "---", "---", "---", "---", "---:"] + ["---:"] * len(specs)) + " |",
+    ]
+    for condition, grouped in grouped_conditions:
+        sample_counts = sorted({
+            int(record["n_samples"])
+            for record in grouped
+            if record.get("n_samples") is not None
+        })
+        sample_text = ", ".join(map(str, sample_counts)) if sample_counts else "—"
+        values = [
+            condition,
+            CONDITION_META[condition][0],
+            CONDITION_INFERENCE[condition],
+            CONDITION_DATA[condition],
+            ", ".join(str(record["train_seed"]) for record in grouped),
+            sample_text,
+        ]
+        for metric, _, percent, _ in specs:
+            value = means[metric][condition]
+            values.append(
+                format_stats_cell(
+                    present_values(grouped, metric),
+                    percent=percent,
+                    underline=is_best_value(value, best[metric]),
+                )
+            )
+        lines.append("| " + " | ".join(values) + " |")
     return "\n".join(lines) + "\n"
 
 
-def render_ordinal_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
-    headers = ["任务", *[f"{code} MAE / QWK" for code in TRAINABLE_CONDITIONS]]
+def best_task_condition(
+    records: Records,
+    task: str,
+) -> tuple[str, list[dict[str, Any]]] | None:
+    metric = primary_metric(task)
+    candidates = [
+        (condition, grouped, mean_of(present_values(grouped, metric)))
+        for condition in EVAL_CONDITIONS
+        if (grouped := records_for(records, task, condition))
+    ]
+    present = [candidate for candidate in candidates if candidate[2] is not None]
+    if not present:
+        return None
+    best_mean = max(value for _, _, value in present)
+    condition, grouped, _ = next(
+        candidate
+        for candidate in present
+        if math.isclose(candidate[2], best_mean, rel_tol=0.0, abs_tol=1e-12)
+    )
+    return condition, grouped
+
+
+def render_summary_table(records: Records) -> str:
+    headers = [
+        "任务",
+        "主指标",
+        "最优条件",
+        "训练方式",
+        "推理方式",
+        "测试数据",
+        "训练 seed",
+        "主指标结果",
+        "Accuracy (%)",
+        "Pearson",
+    ]
     lines = [
         "| " + " | ".join(headers) + " |",
-        "| " + " | ".join(["---"] + ["---:"] * (len(headers) - 1)) + " |",
+        "| " + " | ".join(["---"] * 7 + ["---:"] * 3) + " |",
     ]
     for task in TRAINABLE_TASKS:
-        if task not in ORDINAL_TASKS:
+        selected = best_task_condition(records, task)
+        primary = primary_metric(task)
+        primary_name = "QWK" if primary == "qwk" else "Macro-F1"
+        if selected is None:
+            lines.append(
+                f"| {criterion_title(task)} | {primary_name} | — | — | — | — | — | — | — | — |"
+            )
             continue
-        title = criterion_title(task)
-        cells = [title]
-        for code in TRAINABLE_CONDITIONS:
-            record = records.get((task, code))
-            if record is None:
-                cells.append("—")
-            else:
-                cells.append(format_mae_qwk(record.get("mae"), record.get("qwk")))
-        lines.append("| " + " | ".join(cells) + " |")
-    return "\n".join(lines) + "\n"
-
-
-def render_efficiency_table(records: dict[tuple[str, str], dict[str, Any]]) -> str:
-    headers = ["条件", "格式有效率", "平均输出 token", "平均 reasoning token", "平均 samples/s"]
-    lines = [
-        "| " + " | ".join(headers) + " |",
-        "| " + " | ".join(["---"] + ["---:"] * (len(headers) - 1)) + " |",
-    ]
-    for code in EVAL_CONDITIONS:
-        valid_rates: list[float] = []
-        output_tokens: list[float] = []
-        reasoning_tokens: list[float] = []
-        samples_per_sec: list[float] = []
-        for task in TRAINABLE_TASKS:
-            record = records.get((task, code))
-            if record is None:
-                continue
-            if record.get("format_valid_rate") is not None:
-                valid_rates.append(float(record["format_valid_rate"]))
-            if record.get("avg_output_tokens") is not None:
-                output_tokens.append(float(record["avg_output_tokens"]))
-            if record.get("avg_reasoning_tokens") is not None:
-                reasoning_tokens.append(float(record["avg_reasoning_tokens"]))
-            if record.get("samples_per_sec") is not None:
-                samples_per_sec.append(float(record["samples_per_sec"]))
-            elif (
-                record.get("gpu_time_sec")
-                and record.get("n_samples")
-                and float(record["gpu_time_sec"]) > 0
-            ):
-                samples_per_sec.append(
-                    float(record["n_samples"]) / float(record["gpu_time_sec"])
-                )
+        condition, grouped = selected
         lines.append(
             "| "
             + " | ".join(
                 [
-                    code,
-                    format_pct(mean_of(valid_rates)),
-                    f"{mean_of(output_tokens):.1f}" if mean_of(output_tokens) is not None else "—",
-                    f"{mean_of(reasoning_tokens):.1f}"
-                    if mean_of(reasoning_tokens) is not None
-                    else "—",
-                    f"{mean_of(samples_per_sec):.1f}"
-                    if mean_of(samples_per_sec) is not None
-                    else "—",
+                    criterion_title(task),
+                    primary_name,
+                    condition,
+                    CONDITION_META[condition][0],
+                    CONDITION_INFERENCE[condition],
+                    CONDITION_DATA[condition],
+                    ", ".join(str(record["train_seed"]) for record in grouped),
+                    format_stats_cell(present_values(grouped, primary), underline=True),
+                    format_stats_cell(present_values(grouped, "accuracy"), percent=True),
+                    format_stats_cell(present_values(grouped, "pearson")),
                 ]
             )
             + " |"
@@ -389,95 +548,83 @@ def render_efficiency_table(records: dict[tuple[str, str], dict[str, Any]]) -> s
     return "\n".join(lines) + "\n"
 
 
-def render_evaluation_analysis(records: dict[tuple[str, str], dict[str, Any]]) -> str:
-    run_count = len(records)
+def render_evaluation_analysis(records: Records) -> str:
     present_conditions = [
-        code for code in EVAL_CONDITIONS if any(records.get((task, code)) for task in TRAINABLE_TASKS)
+        condition
+        for condition in EVAL_CONDITIONS
+        if any(records_for(records, task, condition) for task in TRAINABLE_TASKS)
     ]
     condition_text = "、".join(present_conditions) if present_conditions else "（尚无结果）"
-    coverage_text = "；".join(
-        f"{code} {sum((task, code) in records for task in TRAINABLE_TASKS)}/{len(TRAINABLE_TASKS)}"
-        for code in EVAL_CONDITIONS
-    )
-    align_notes: list[str] = []
-    if not any(code in {"AL", "AC"} for code in present_conditions):
-        align_notes.append(
-            "\n> Align 列（AL / AC）会在运行 "
-            "`eval_output/configs/<task>/ft_align_on_*.yaml` 后自动填入。\n"
+    task_sections = []
+    for section_number, task in enumerate(TRAINABLE_TASKS, start=2):
+        primary_name = "QWK" if task in ORDINAL_TASKS else "Macro-F1"
+        metric_note = (
+            "QWK、Accuracy、Pearson、Macro-F1 和 MAE"
+            if task in ORDINAL_TASKS
+            else "Accuracy、Macro-F1 和 Pearson"
         )
-    if not any(code in {"PAL", "PAC"} for code in present_conditions):
-        align_notes.append(
-            "\n> Paper Align 列（PAL / PAC）会在运行 "
-            "`eval_output/configs/<task>/ft_paper_align_on_*.yaml` 后自动填入。\n"
+        task_sections.append(
+            f"## {section_number}. {criterion_title(task)}\n\n"
+            f"主指标为 {primary_name}；本任务展示 {metric_note}。\n\n"
+            f"{render_single_task_table(records, task)}"
         )
-    align_note = "".join(align_notes)
 
     return f"""# Qwen3-4B 评测结果分析
 
-> 自动生成于 {utc_now()}；扫描到 {run_count} 条有效 `metrics.json` 记录。
+> 自动生成于 {utc_now()}；当前纳入 {len(records)} 条按任务、条件和训练 seed 去重后的有效记录。
 > 本文件由 `training/evaluate.py` 在每次评测后重建。
 
-## 1. 分析范围与记号
-
-本报告直接读取 `eval_output/<task>/<exp_name>/metrics.json`，按实验目录归档，避免不同训练方式互相覆盖。
+## 1. 统计口径
 
 当前覆盖条件：{condition_text}。
 
-各条件任务覆盖数：{coverage_text}。未满 `7/7` 的条件仅代表当前已有任务，不应视为完整七任务结论。
+有序任务以 QWK 为主指标，并同时展示 Accuracy、Pearson、Macro-F1 和 MAE；二分类任务以 Macro-F1 为主指标，并展示 Accuracy 与 Pearson。Pearson 使用离散预测与真实标签计算：先分别计算每个 rollout 的 Pearson 系数，再按照现有评测口径对 rollout 取均值。
 
-配置文件命名规则：`{{train}}_on_{{test}}.yaml`，例如 `base_on_cot.yaml`、`ft_cot_on_label_only.yaml`。
+同一任务和方法存在多个训练 seed 时，指标在对应方法行内展示为 `均值 ± 样本标准差 (var=样本方差)`，标准差和方差均使用 `n-1`；单 seed 只展示该次结果。Accuracy 使用百分数，方差单位为百分点平方。
 
-{render_condition_legend()}
-Label-only 与 CoT 测试集按任务逐 ID、逐标签配对，因此交叉评测差值不受测试样本变化影响。{align_note}
-## 2. 完整结果
+每个任务表内的最优值使用下划线标出；QWK、Accuracy、Pearson、Macro-F1 取最高值，MAE 取最低值。RAIL 结果仅纳入 `probability_normalization=full_vocab_raw` 的官方口径。
 
-下表单元格均为 `Accuracy / Macro-F1`，单位为 `%`。最后一行为各条件在已有任务上的非加权宏平均；任务覆盖数见上文。
+{chr(10).join(task_sections)}
+## 9. 七任务汇总
 
-{render_main_table(records)}
-## 3. 跨格式迁移
+每个任务按其主指标选择最优条件；下表汇总该条件的主指标、Accuracy 和 Pearson。
 
-这里比较同一个测试 prompt 下不同训练格式 adapter 的差异（单位：Accuracy 百分点）。
-
-{render_migration_table(records)}
-## 4. 有序评分指标
-
-四个评审意见任务是 1–5 分有序分类。除 Accuracy 和 Macro-F1 外，使用 MAE 与 QWK 衡量距离和顺序质量。MAE 越低越好，QWK 越高越好。
-
-{render_ordinal_table(records)}
-## 5. 格式稳定性与效率
-
-下表按各条件当前已有任务做非加权宏平均。`samples/s` 基于各结果中的 GPU 推理时间计算；任务覆盖数见上文。
-
-{render_efficiency_table(records)}
-## 6. 使用说明
-
-| 配置文件 | 含义 |
-| --- | --- |
-| `base_on_cot.yaml` | Base × CoT 测试 |
-| `base_on_label_only.yaml` | Base × Label-only 测试 |
-| `ft_cot_on_cot.yaml` | CoT SFT × CoT 测试 |
-| `ft_label_only_on_label_only.yaml` | Label-only SFT × Label-only 测试 |
-| `ft_cot_on_label_only.yaml` | CoT SFT × Label-only 测试（交叉） |
-| `ft_label_only_on_cot.yaml` | Label-only SFT × CoT 测试（交叉） |
-| `ft_align_on_cot.yaml` | Align SFT × CoT 测试 |
-| `ft_align_on_label_only.yaml` | Align SFT × Label-only 测试（交叉） |
-| `ft_paper_align_on_cot.yaml` | Paper Align SFT × CoT 测试 |
-| `ft_paper_align_on_label_only.yaml` | Paper Align SFT × Label-only 测试（交叉） |
+{render_summary_table(records)}
+## 10. 重建报告
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python training/evaluate.py \\
-  --config eval_output/configs/rev_util_actionability/ft_paper_align_on_cot.yaml
+python training/evaluate.py --refresh-analysis-only --output_path eval_output/results
 ```
-
-每次评测完成后，本文件会自动刷新；详细逐样本结果仍在对应实验目录的 `metrics.json` 与 `predictions.jsonl`。
 """
 
 
 def update_evaluation_analysis(output_root: Path) -> Path:
     records = collect_eval_records(output_root)
-    analysis_path = output_root / "evaluation_analysis.md"
-    analysis_path.write_text(
-        render_evaluation_analysis(records),
+    ordered_records = [
+        records[key]
+        for key in sorted(
+            records,
+            key=lambda key: (
+                TRAINABLE_TASKS.index(key[0]),
+                EVAL_CONDITIONS.index(key[1]),
+                seed_sort_key(key[2]),
+            ),
+        )
+    ]
+    cache_path = output_root / RECORD_CACHE_NAME
+    cache_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 3,
+                "updated_at_utc": utc_now(),
+                "records": ordered_records,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
+    analysis_path = output_root / "evaluation_analysis.md"
+    analysis_path.write_text(render_evaluation_analysis(records), encoding="utf-8")
     return analysis_path

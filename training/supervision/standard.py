@@ -62,11 +62,9 @@ class StandardStrategy:
             logging_strategy="steps",
             logging_steps=int(training.get("logging_steps", 10)),
             eval_strategy="epoch",
-            save_strategy="best",
-            load_best_model_at_end=True,
-            metric_for_best_model="eval_generation_accuracy",
-            greater_is_better=True,
-            save_total_limit=int(training.get("save_total_limit", 2)),
+            save_strategy="epoch",
+            load_best_model_at_end=False,
+            save_total_limit=1,
             report_to=report_to,
         )
         return GenerativeEvalSFTTrainer(

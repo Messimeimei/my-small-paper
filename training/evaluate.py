@@ -6,11 +6,12 @@ With an adapter path, merges LoRA into a temporary full model then loads with
 plain vLLM (vLLM 0.8.4 + cachetools>=6 breaks enable_lora in spawned workers).
 The merged weights are deleted after evaluation finishes (or on failure).
 
-Prefer YAML under eval_output/configs/<task>/{base,ft}_on_{cot,label_only}.yaml
-via --config; CLI flags override config values. Supports
+Prefer YAML under eval_output/configs/<task>/<train_method>/ via --config;
+CLI flags override config values. Free greedy generation, score-only RAIL, and two-stage CoT-RAIL
+are supported. Supports
 data/<task>/{cot,label_only}/test_*.jsonl (labels field) and legacy JSON.
 
-Writes to eval_output/<task>/<exp_name>/ (metrics.json, predictions.jsonl,
+Writes to eval_output/results/<task>/<exp_name>/ (metrics.json, predictions.jsonl,
 resolved_config.json) and rebuilds eval_output/evaluation_analysis.md from all
 discovered metrics.json files (no comparison_table.md).
 """
@@ -21,8 +22,10 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import math
 import os
 import random
+import re
 import shutil
 import sys
 import time
@@ -39,8 +42,8 @@ if str(_TRAINING_DIR) not in sys.path:
     sys.path.insert(0, str(_TRAINING_DIR))
 
 from eval_analysis import update_evaluation_analysis
-from logic_snapshot import write_inference_logic_snapshot
 from metrics_utils import (
+    REASONING_RE,
     classification_metrics,
     criterion_title,
     extract_score,
@@ -74,13 +77,19 @@ DEFAULT_MERGE_CACHE = (
 )
 DEFAULT_EVAL_OUTPUT_ROOT = PROJECT_ROOT / "eval_output"
 DEFAULT_MERGE_RETENTION_DAYS = 0
+RAIL_PROBABILITY_NORMALIZATION = "full_vocab_raw"
+RAIL_IMPLEMENTATION = "tract_official_release"
+RAIL_EXPECTATION_FORMULA = "sum(score * p_full_vocab(score))"
+RAIL_DISCRETE_DECODING = "nearest_legal_score_tie_low"
 
 # YAML keys -> argparse destinations (same names as CLI flags without --).
 CONFIG_KEYS = {
     "exp_name",
     "model_name",
     "adapter",
+    "train_seed",
     "dataset_file",
+    "inference_mode",
     "output_path",
     "max_model_len",
     "max_tokens",
@@ -165,8 +174,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--config",
         default=None,
         help=(
-            "Eval YAML under eval_output/configs/<task>/"
-            "e.g. base_on_cot.yaml, ft_cot_on_label_only.yaml. "
+            "Eval YAML under eval_output/configs/<task>/<train_method>/; "
+            "e.g. base/greedy_on_cot.yaml, cot/greedy_on_label_only.yaml. "
             "CLI flags override values from the config."
         ),
     )
@@ -185,9 +194,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--adapter",
         default=config_defaults.get("adapter"),
         help=(
-            "LoRA adapter/ or checkpoints/checkpoint-* path. "
+            "LoRA adapter/checkpoint path, or a training-method output root "
+            "whose latest completed adapter is selected by --train_seed. "
             "Omit, or pass none/None/NONE, to evaluate the base model only."
         ),
+    )
+    parser.add_argument(
+        "--train_seed",
+        type=int,
+        default=(
+            int(config_defaults["train_seed"])
+            if config_defaults.get("train_seed") is not None
+            else None
+        ),
+        help="Training seed used when --adapter points to a method output root.",
     )
     parser.add_argument(
         "--dataset_file",
@@ -212,16 +232,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=int(config_defaults.get("max_tokens", 512)),
     )
     parser.add_argument(
+        "--inference_mode",
+        choices=("greedy", "rail", "cot_rail"),
+        default=str(config_defaults.get("inference_mode", "greedy")),
+        help=(
+            "greedy preserves free generation; rail applies the released TRACT "
+            "full-vocabulary scorer after a direct <score> prefix; cot_rail first "
+            "generates CoT to <score>, then applies the same scorer."
+        ),
+    )
+    parser.add_argument(
         "--temp",
         type=float,
         default=float(config_defaults.get("temp", 0.0)),
-        help="Must be 0: every rollout uses greedy decoding.",
+        help="Must be 0: evaluation is deterministic.",
     )
     parser.add_argument(
         "--top_p",
         type=float,
         default=float(config_defaults.get("top_p", 1.0)),
-        help="Must be 1.0: nucleus sampling is disabled for greedy decoding.",
+        help="Must be 1.0: evaluation is deterministic.",
     )
     parser.add_argument(
         "--seed",
@@ -290,14 +320,69 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return args
 
 
-def normalize_adapter(value: str | None) -> Path | None:
-    """Return adapter path, or None for base-only eval (omit / none / None / NONE)."""
+def has_adapter_weights(path: Path) -> bool:
+    return any(
+        (path / name).is_file()
+        for name in ("adapter_model.safetensors", "adapter_model.bin")
+    )
+
+
+def training_run_seed(run_directory: Path) -> int | None:
+    summary_path = run_directory / "summary.json"
+    if summary_path.is_file():
+        try:
+            value = read_json(summary_path).get("seed")
+            return int(value) if value is not None else None
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return None
+    match = re.search(r"(?:^|__)seed(\d+)(?:__|$)", run_directory.name, re.I)
+    return int(match.group(1)) if match else None
+
+
+def normalize_adapter(
+    value: str | None, *, train_seed: int | None = None
+) -> Path | None:
+    """Resolve a direct adapter or the latest completed run under a method root."""
     if value is None:
         return None
     text = str(value).strip()
     if not text or text.lower() == "none":
         return None
-    return resolve_path(text)
+    path = resolve_path(text)
+    if not path.is_dir():
+        raise SystemExit(f"Adapter path does not exist or is not a directory: {path}")
+    if has_adapter_weights(path):
+        return path
+
+    run_adapter = path / "adapter"
+    if has_adapter_weights(run_adapter):
+        run_seed = training_run_seed(path)
+        if train_seed is not None and run_seed is not None and run_seed != train_seed:
+            raise SystemExit(
+                f"Adapter run seed is {run_seed}, but --train_seed={train_seed}: {path}"
+            )
+        return run_adapter.resolve()
+
+    candidates: list[tuple[float, str, Path]] = []
+    for run_directory in path.iterdir():
+        if not run_directory.is_dir():
+            continue
+        candidate = run_directory / "adapter"
+        summary_path = run_directory / "summary.json"
+        if not has_adapter_weights(candidate) or not summary_path.is_file():
+            continue
+        run_seed = training_run_seed(run_directory)
+        if train_seed is not None and run_seed != train_seed:
+            continue
+        candidates.append(
+            (summary_path.stat().st_mtime, run_directory.name, candidate.resolve())
+        )
+    if not candidates:
+        seed_text = f" for training seed {train_seed}" if train_seed is not None else ""
+        raise SystemExit(f"No completed adapter found under {path}{seed_text}.")
+    selected = max(candidates)[2]
+    print(f"selected completed adapter: {selected}", flush=True)
+    return selected
 
 
 def set_seed(seed: int) -> None:
@@ -466,12 +551,38 @@ def mean_rollout_metrics(
         "score_sets": score_sets,
         "per_class": {},
     }
-    for metric in ("accuracy", "macro_f1", "format_valid_rate", "mae", "qwk"):
-        if metric not in rollout_metrics[0] and metric in {"mae", "qwk"}:
+    scalar_metrics = (
+        "accuracy",
+        "macro_f1",
+        "format_valid_rate",
+        "mae",
+        "qwk",
+        "rail_mae",
+        "rail_mse",
+        "rail_rmse",
+        "avg_score_probability_mass",
+        "score_prefix_valid_rate",
+        "reasoning_valid_rate",
+    )
+    for metric in scalar_metrics:
+        if not any(metric in rollout for rollout in rollout_metrics):
             continue
         mean, std = summarize([rollout.get(metric) for rollout in rollout_metrics])
         aggregate[metric] = mean
         aggregate[f"{metric}_std"] = std
+    for field in (
+        "probability_normalization",
+        "candidate_renormalization",
+        "rail_implementation",
+        "rail_expectation_formula",
+        "discrete_decoding",
+    ):
+        values = {rollout.get(field) for rollout in rollout_metrics}
+        values.discard(None)
+        if len(values) > 1:
+            raise ValueError(f"Rollouts disagree on {field}: {sorted(values)}")
+        if values:
+            aggregate[field] = values.pop()
 
     for label in score_sets:
         label_key = str(label)
@@ -513,6 +624,132 @@ def format_prompts(
         )
         for prompt in prompts
     ]
+
+
+def format_rail_prompts(
+    tokenizer,
+    prompts: list[list[dict[str, Any]]],
+) -> list[str]:
+    kwargs: dict[str, Any] = {}
+    if chat_template_supports_thinking(tokenizer):
+        kwargs["enable_thinking"] = False
+    return [
+        tokenizer.apply_chat_template(
+            [*prompt, {"role": "assistant", "content": "<score>"}],
+            tokenize=False,
+            add_generation_prompt=False,
+            continue_final_message=True,
+            **kwargs,
+        )
+        for prompt in prompts
+    ]
+
+
+def resolve_score_token_ids(tokenizer, score_sets: list[int]) -> list[int]:
+    token_ids: list[int] = []
+    for score in score_sets:
+        encoded = tokenizer.encode(str(score), add_special_tokens=False)
+        if len(encoded) != 1:
+            raise SystemExit(
+                f"RAIL requires score {score!r} to be exactly one tokenizer token; "
+                f"got token IDs {encoded}."
+            )
+        token_ids.append(int(encoded[0]))
+    if len(set(token_ids)) != len(token_ids):
+        raise SystemExit(
+            f"RAIL score tokens must be unique: scores={score_sets}, token_ids={token_ids}"
+        )
+    return token_ids
+
+
+def official_rail_statistics(
+    score_logprobs: dict[int, float],
+) -> dict[str, Any]:
+    """Apply the released TRACT RAIL scorer to full-vocabulary log-probs.
+
+    Each value is already a log probability under the complete vocabulary.
+    TRACT selects the legal score-token probabilities and computes their raw
+    weighted sum; it does not renormalize the selected candidates.
+    """
+    if not score_logprobs:
+        raise ValueError("RAIL requires at least one score candidate.")
+    if any(
+        math.isnan(value) or value == math.inf
+        for value in score_logprobs.values()
+    ):
+        raise ValueError(f"RAIL received invalid log probabilities: {score_logprobs}")
+
+    probabilities = {
+        score: math.exp(logprob)
+        for score, logprob in score_logprobs.items()
+    }
+    probability_mass = math.fsum(probabilities.values())
+    if probability_mass > 1.0 + 1e-6:
+        raise ValueError(
+            "RAIL legal score probability mass exceeds one; the supplied values "
+            f"are not full-vocabulary log probabilities: {probability_mass}"
+        )
+    expected_score = math.fsum(
+        score * probability for score, probability in probabilities.items()
+    )
+    return {
+        "expected_score": expected_score,
+        "score_probabilities": probabilities,
+        "score_probability_mass": probability_mass,
+    }
+
+
+def nearest_legal_score(expected_score: float, score_sets: list[int]) -> int:
+    """Map a continuous score to the nearest label, breaking ties downward."""
+    return min(
+        sorted(score_sets),
+        key=lambda score: (abs(score - expected_score), score),
+    )
+
+
+def extract_requested_logprobs(
+    request_output,
+    score_sets: list[int],
+    score_token_ids: list[int],
+) -> dict[int, float]:
+    generated = request_output.outputs[0]
+    if not generated.logprobs:
+        raise RuntimeError("vLLM did not return token log probabilities for RAIL.")
+    first_position = generated.logprobs[0]
+    result: dict[int, float] = {}
+    for score, token_id in zip(score_sets, score_token_ids, strict=True):
+        entry = first_position.get(token_id)
+        if entry is None:
+            raise RuntimeError(
+                f"vLLM omitted requested score token {score!r} (token ID {token_id})."
+            )
+        value = getattr(entry, "logprob", entry)
+        result[score] = float(value)
+    return result
+
+
+def build_rail_sampling_params(score_token_ids: list[int], seed: int):
+    _, SamplingParams = _import_vllm()
+    return SamplingParams(
+        max_tokens=1,
+        temperature=0.0,
+        top_p=1.0,
+        seed=seed,
+        logprobs=len(score_token_ids),
+        logprob_token_ids=score_token_ids,
+    )
+
+
+def build_cot_rail_sampling_params(max_tokens: int, seed: int):
+    _, SamplingParams = _import_vllm()
+    return SamplingParams(
+        max_tokens=max_tokens,
+        temperature=0.0,
+        top_p=1.0,
+        seed=seed,
+        stop=["<score>"],
+        include_stop_str_in_output=True,
+    )
 
 
 def disable_incompatible_torchao() -> str | None:
@@ -691,7 +928,7 @@ def init_vllm(
 
 
 def load_train_run_metadata(adapter: Path | None) -> dict[str, Any]:
-    """Pull best-checkpoint epoch / config from a training run directory if present."""
+    """Pull exported-checkpoint metadata from a training run directory."""
     if adapter is None:
         return {}
     run_dir = adapter.parent if adapter.name == "adapter" else adapter
@@ -703,25 +940,47 @@ def load_train_run_metadata(adapter: Path | None) -> dict[str, Any]:
     config_path = run_dir / "resolved_config.json"
     if summary_path.is_file():
         summary = read_json(summary_path)
+        uses_adapter_source = summary.get("adapter_source_checkpoint") is not None
+        uses_final_checkpoint = summary.get("final_checkpoint") is not None
         meta.update(
             {
-                "best_checkpoint": summary.get("best_checkpoint"),
-                "best_checkpoint_epoch": summary.get("best_checkpoint_epoch"),
-                "best_checkpoint_step": summary.get("best_checkpoint_step"),
-                "best_generation_accuracy": summary.get("best_generation_accuracy"),
+                "checkpoint": summary.get("adapter_source_checkpoint")
+                or summary.get("final_checkpoint")
+                or summary.get("best_checkpoint"),
+                "checkpoint_epoch": summary.get("adapter_source_checkpoint_epoch")
+                if uses_adapter_source
+                else (
+                    summary.get("final_checkpoint_epoch")
+                    if uses_final_checkpoint
+                    else summary.get("best_checkpoint_epoch")
+                ),
+                "checkpoint_step": summary.get("adapter_source_checkpoint_step")
+                if uses_adapter_source
+                else (
+                    summary.get("final_checkpoint_step")
+                    if uses_final_checkpoint
+                    else summary.get("best_checkpoint_step")
+                ),
+                "generation_accuracy": summary.get("final_generation_accuracy")
+                if uses_final_checkpoint
+                else summary.get("best_generation_accuracy"),
+                "checkpoint_retention": summary.get("checkpoint_retention")
+                or "best",
+                "adapter_selection": summary.get("adapter_selection")
+                or ("final_checkpoint" if uses_final_checkpoint else "best_checkpoint"),
                 "train_run_id": summary.get("run_id"),
                 "train_seed": summary.get("seed"),
             }
         )
-    if state_path.is_file() and meta.get("best_checkpoint_epoch") is None:
+    if state_path.is_file() and meta.get("checkpoint_epoch") is None:
         state = read_json(state_path)
-        meta.setdefault("best_checkpoint_step", state.get("best_global_step"))
-        meta.setdefault("best_generation_accuracy", state.get("best_metric"))
+        meta.setdefault("checkpoint_step", state.get("best_global_step"))
+        meta.setdefault("generation_accuracy", state.get("best_metric"))
         best_step = state.get("best_global_step")
         for row in reversed(state.get("log_history") or []):
             if best_step is not None and int(row.get("step", -1)) == int(best_step):
                 if "epoch" in row:
-                    meta["best_checkpoint_epoch"] = float(row["epoch"])
+                    meta["checkpoint_epoch"] = float(row["epoch"])
                 break
     if config_path.is_file():
         meta["train_resolved_config"] = read_json(config_path)
@@ -743,10 +1002,43 @@ def resolved_eval_config(args: argparse.Namespace, *, adapter: Path | None) -> d
         "exp_name": args.exp_name,
         "model_name": str(resolve_path(args.model_name)),
         "adapter": str(adapter) if adapter is not None else None,
+        "adapter_request": args.adapter,
+        "train_seed": args.train_seed,
         "dataset_file": str(resolve_path(args.dataset_file)),
         "output_path": str(resolve_path(args.output_path)),
         "max_model_len": args.max_model_len,
         "max_tokens": args.max_tokens,
+        "effective_max_tokens": 1 if args.inference_mode == "rail" else args.max_tokens,
+        "reasoning_max_tokens": (
+            args.max_tokens if args.inference_mode == "cot_rail" else None
+        ),
+        "score_probe_max_tokens": (
+            1 if args.inference_mode in {"rail", "cot_rail"} else None
+        ),
+        "inference_mode": args.inference_mode,
+        "probability_normalization": (
+            RAIL_PROBABILITY_NORMALIZATION
+            if args.inference_mode in {"rail", "cot_rail"}
+            else None
+        ),
+        "candidate_renormalization": (
+            False if args.inference_mode in {"rail", "cot_rail"} else None
+        ),
+        "rail_implementation": (
+            RAIL_IMPLEMENTATION
+            if args.inference_mode in {"rail", "cot_rail"}
+            else None
+        ),
+        "rail_expectation_formula": (
+            RAIL_EXPECTATION_FORMULA
+            if args.inference_mode in {"rail", "cot_rail"}
+            else None
+        ),
+        "discrete_decoding": (
+            RAIL_DISCRETE_DECODING
+            if args.inference_mode in {"rail", "cot_rail"}
+            else None
+        ),
         "temp": args.temp,
         "top_p": args.top_p,
         "seed": args.seed,
@@ -832,6 +1124,341 @@ def run_rollout(
     return predictions, metrics
 
 
+def run_rail_rollout(
+    llm,
+    sampling_params,
+    rows: list[dict[str, Any]],
+    score_sets: list[int],
+    score_token_ids: list[int],
+    args: argparse.Namespace,
+    rollout_index: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Apply official full-vocabulary RAIL after the fixed <score> prefix."""
+    tokenizer = llm.get_tokenizer()
+    predictions: list[dict[str, Any]] = []
+    generated_token_counts: list[int] = []
+    started = time.perf_counter()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        gpu_started = time.perf_counter()
+    else:
+        gpu_started = started
+
+    for start in range(0, len(rows), args.batch_size):
+        batch = rows[start : start + args.batch_size]
+        texts = format_rail_prompts(tokenizer, [row["prompt"] for row in batch])
+        completions = llm.generate(texts, sampling_params, use_tqdm=False)
+        for row, completion in zip(batch, completions, strict=True):
+            generated = completion.outputs[0]
+            score_logprobs = extract_requested_logprobs(
+                completion, score_sets, score_token_ids
+            )
+            statistics = official_rail_statistics(score_logprobs)
+            expected_score = float(statistics["expected_score"])
+            prediction = nearest_legal_score(expected_score, score_sets)
+            generated_token_counts.append(len(generated.token_ids))
+            predictions.append(
+                {
+                    "id": row["id"],
+                    "label": row["label"],
+                    "prediction": prediction,
+                    "correct": prediction == row["label"],
+                    "output": f"<score>{expected_score:.6f}</score>",
+                    "raw_output": generated.text,
+                    "generated_token_ids": list(generated.token_ids),
+                    "expected_score": expected_score,
+                    "score_probability_mass": float(
+                        statistics["score_probability_mass"]
+                    ),
+                    "score_probabilities": {
+                        str(score): float(probability)
+                        for score, probability in statistics[
+                            "score_probabilities"
+                        ].items()
+                    },
+                    "score_logprobs": {
+                        str(score): float(logprob)
+                        for score, logprob in score_logprobs.items()
+                    },
+                    "task": row.get("task"),
+                    "aspect": row.get("aspect"),
+                }
+            )
+        done = min(start + args.batch_size, len(rows))
+        print(f"[rail rollout {rollout_index}] {done}/{len(rows)}", flush=True)
+
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    gpu_elapsed = time.perf_counter() - gpu_started
+    elapsed = time.perf_counter() - started
+    metrics = classification_metrics(predictions, score_sets)
+    squared_errors = [
+        (row["expected_score"] - row["label"]) ** 2 for row in predictions
+    ]
+    absolute_errors = [
+        abs(row["expected_score"] - row["label"]) for row in predictions
+    ]
+    metrics.update(
+        {
+            "rail_mae": sum(absolute_errors) / len(absolute_errors),
+            "rail_mse": sum(squared_errors) / len(squared_errors),
+            "rail_rmse": math.sqrt(sum(squared_errors) / len(squared_errors)),
+            "avg_score_probability_mass": sum(
+                row["score_probability_mass"] for row in predictions
+            )
+            / len(predictions),
+            "probability_normalization": RAIL_PROBABILITY_NORMALIZATION,
+            "candidate_renormalization": False,
+            "rail_implementation": RAIL_IMPLEMENTATION,
+            "rail_expectation_formula": RAIL_EXPECTATION_FORMULA,
+            "discrete_decoding": RAIL_DISCRETE_DECODING,
+            "score_prefix": "<score>",
+            "elapsed_sec": round(elapsed, 3),
+            "gpu_time_sec": round(gpu_elapsed, 3),
+            "samples_per_sec": round(len(rows) / max(elapsed, 1e-9), 3),
+            "tokens": {
+                "avg_output_tokens": sum(generated_token_counts)
+                / len(generated_token_counts),
+                "avg_reasoning_tokens": 0.0,
+                "total_output_tokens": sum(generated_token_counts),
+                "total_reasoning_tokens": 0,
+                "samples": len(predictions),
+            },
+        }
+    )
+    return predictions, metrics
+
+
+def run_cot_rail_rollout(
+    llm,
+    cot_sampling_params,
+    score_sampling_params,
+    rows: list[dict[str, Any]],
+    score_sets: list[int],
+    score_token_ids: list[int],
+    args: argparse.Namespace,
+    rollout_index: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Generate reasoning to <score>, then apply official full-vocabulary RAIL."""
+    tokenizer = llm.get_tokenizer()
+    predictions: list[dict[str, Any]] = []
+    output_token_counts: list[int] = []
+    reasoning_token_counts: list[int] = []
+    started = time.perf_counter()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        gpu_started = time.perf_counter()
+    else:
+        gpu_started = started
+
+    for start in range(0, len(rows), args.batch_size):
+        batch = rows[start : start + args.batch_size]
+        base_texts = format_prompts(
+            tokenizer,
+            [row["prompt"] for row in batch],
+            enable_thinking=False,
+        )
+        cot_completions = llm.generate(
+            base_texts,
+            cot_sampling_params,
+            use_tqdm=False,
+        )
+
+        stage_rows: list[dict[str, Any]] = []
+        score_prompts: list[str] = []
+        score_indexes: list[int] = []
+        for index, (row, base_text, completion) in enumerate(
+            zip(batch, base_texts, cot_completions, strict=True)
+        ):
+            generated = completion.outputs[0]
+            cot_output = generated.text
+            stop_reason = getattr(generated, "stop_reason", None)
+            prefix_reached = (
+                stop_reason == "<score>" and cot_output.endswith("<score>")
+            )
+            reasoning_match = REASONING_RE.search(cot_output)
+            reasoning_text = (
+                reasoning_match.group(1).strip() if reasoning_match is not None else ""
+            )
+            reasoning_valid = bool(reasoning_text)
+            stage_rows.append(
+                {
+                    "row": row,
+                    "cot_output": cot_output,
+                    "cot_generated_token_ids": list(generated.token_ids),
+                    "cot_finish_reason": getattr(generated, "finish_reason", None),
+                    "cot_stop_reason": stop_reason,
+                    "score_prefix_reached": prefix_reached,
+                    "reasoning_valid": reasoning_valid,
+                    "reasoning_tokens": len(
+                        tokenizer.encode(reasoning_text, add_special_tokens=False)
+                    ),
+                }
+            )
+            if prefix_reached:
+                score_indexes.append(index)
+                score_prompts.append(base_text + cot_output)
+
+        score_completions = (
+            llm.generate(score_prompts, score_sampling_params, use_tqdm=False)
+            if score_prompts
+            else []
+        )
+        score_by_index = dict(zip(score_indexes, score_completions, strict=True))
+
+        for index, stage in enumerate(stage_rows):
+            row = stage["row"]
+            cot_ids = stage["cot_generated_token_ids"]
+            score_completion = score_by_index.get(index)
+            if score_completion is None:
+                output_token_counts.append(len(cot_ids))
+                reasoning_token_counts.append(stage["reasoning_tokens"])
+                predictions.append(
+                    {
+                        "id": row["id"],
+                        "label": row["label"],
+                        "prediction": None,
+                        "correct": False,
+                        "output": stage["cot_output"],
+                        "raw_output": stage["cot_output"],
+                        "cot_output": stage["cot_output"],
+                        "cot_generated_token_ids": cot_ids,
+                        "cot_finish_reason": stage["cot_finish_reason"],
+                        "cot_stop_reason": stage["cot_stop_reason"],
+                        "score_prefix_reached": False,
+                        "reasoning_valid": stage["reasoning_valid"],
+                        "score_probe_text": None,
+                        "score_probe_token_ids": None,
+                        "expected_score": None,
+                        "score_probability_mass": None,
+                        "score_probabilities": None,
+                        "score_logprobs": None,
+                        "task": row.get("task"),
+                        "aspect": row.get("aspect"),
+                    }
+                )
+                continue
+
+            score_generated = score_completion.outputs[0]
+            score_logprobs = extract_requested_logprobs(
+                score_completion,
+                score_sets,
+                score_token_ids,
+            )
+            statistics = official_rail_statistics(score_logprobs)
+            expected_score = float(statistics["expected_score"])
+            prediction = nearest_legal_score(expected_score, score_sets)
+            probe_ids = list(score_generated.token_ids)
+            output_token_counts.append(len(cot_ids) + len(probe_ids))
+            reasoning_token_counts.append(stage["reasoning_tokens"])
+            predictions.append(
+                {
+                    "id": row["id"],
+                    "label": row["label"],
+                    "prediction": prediction,
+                    "correct": prediction == row["label"],
+                    "output": (
+                        stage["cot_output"] + f"{expected_score:.6f}</score>"
+                    ),
+                    "raw_output": stage["cot_output"] + score_generated.text,
+                    "cot_output": stage["cot_output"],
+                    "cot_generated_token_ids": cot_ids,
+                    "cot_finish_reason": stage["cot_finish_reason"],
+                    "cot_stop_reason": stage["cot_stop_reason"],
+                    "score_prefix_reached": True,
+                    "reasoning_valid": stage["reasoning_valid"],
+                    "score_probe_text": score_generated.text,
+                    "score_probe_token_ids": probe_ids,
+                    "expected_score": expected_score,
+                    "score_probability_mass": float(
+                        statistics["score_probability_mass"]
+                    ),
+                    "score_probabilities": {
+                        str(score): float(probability)
+                        for score, probability in statistics[
+                            "score_probabilities"
+                        ].items()
+                    },
+                    "score_logprobs": {
+                        str(score): float(logprob)
+                        for score, logprob in score_logprobs.items()
+                    },
+                    "task": row.get("task"),
+                    "aspect": row.get("aspect"),
+                }
+            )
+
+        done = min(start + args.batch_size, len(rows))
+        print(f"[cot-rail rollout {rollout_index}] {done}/{len(rows)}", flush=True)
+
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    gpu_elapsed = time.perf_counter() - gpu_started
+    elapsed = time.perf_counter() - started
+    metrics = classification_metrics(predictions, score_sets)
+    valid = [row for row in predictions if row["expected_score"] is not None]
+    squared_errors = [
+        (row["expected_score"] - row["label"]) ** 2 for row in valid
+    ]
+    absolute_errors = [
+        abs(row["expected_score"] - row["label"]) for row in valid
+    ]
+    sample_count = len(predictions)
+    valid_count = len(valid)
+    metrics.update(
+        {
+            "rail_mae": (
+                sum(absolute_errors) / valid_count if valid_count else None
+            ),
+            "rail_mse": (
+                sum(squared_errors) / valid_count if valid_count else None
+            ),
+            "rail_rmse": (
+                math.sqrt(sum(squared_errors) / valid_count)
+                if valid_count
+                else None
+            ),
+            "avg_score_probability_mass": (
+                sum(row["score_probability_mass"] for row in valid) / valid_count
+                if valid_count
+                else None
+            ),
+            "score_prefix_valid_rate": (
+                valid_count / sample_count if sample_count else 0.0
+            ),
+            "reasoning_valid_rate": (
+                sum(bool(row["reasoning_valid"]) for row in predictions) / sample_count
+                if sample_count
+                else 0.0
+            ),
+            "probability_normalization": RAIL_PROBABILITY_NORMALIZATION,
+            "candidate_renormalization": False,
+            "rail_implementation": RAIL_IMPLEMENTATION,
+            "rail_expectation_formula": RAIL_EXPECTATION_FORMULA,
+            "discrete_decoding": RAIL_DISCRETE_DECODING,
+            "score_prefix": "<score>",
+            "cot_stop_strings": ["<score>"],
+            "elapsed_sec": round(elapsed, 3),
+            "gpu_time_sec": round(gpu_elapsed, 3),
+            "samples_per_sec": round(sample_count / max(elapsed, 1e-9), 3),
+            "tokens": {
+                "avg_output_tokens": (
+                    sum(output_token_counts) / sample_count if sample_count else None
+                ),
+                "avg_reasoning_tokens": (
+                    sum(reasoning_token_counts) / sample_count
+                    if sample_count
+                    else None
+                ),
+                "total_output_tokens": sum(output_token_counts),
+                "total_reasoning_tokens": sum(reasoning_token_counts),
+                "samples": sample_count,
+            },
+        }
+    )
+    return predictions, metrics
+
+
 def main() -> None:
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     args = parse_args()
@@ -845,14 +1472,18 @@ def main() -> None:
     if args.batch_size < 1:
         raise SystemExit("--batch_size must be >= 1")
     if args.temp != 0:
-        raise SystemExit("--temp must be 0 because rollout evaluation uses greedy decoding")
+        raise SystemExit("--temp must be 0 because evaluation is deterministic")
     if args.top_p != 1:
-        raise SystemExit("--top_p must be 1.0 because rollout evaluation is greedy")
+        raise SystemExit("--top_p must be 1.0 because evaluation is deterministic")
+    if args.inference_mode in {"rail", "cot_rail"} and args.enable_thinking:
+        raise SystemExit(
+            "RAIL modes require --disable_thinking so their score boundary is stable"
+        )
     if not 0 < args.gpu_memory_utilization <= 1:
         raise SystemExit("--gpu_memory_utilization must be in (0, 1]")
 
     model_name = resolve_path(args.model_name)
-    adapter = normalize_adapter(args.adapter)
+    adapter = normalize_adapter(args.adapter, train_seed=args.train_seed)
     dataset_file = resolve_path(args.dataset_file)
     merge_cache = resolve_path(args.merge_cache)
     output_root = resolve_path(args.output_path)
@@ -878,16 +1509,6 @@ def main() -> None:
     criterion = criterion_title(str(aspect))
     run_tag = f"{task_name}|{supervision_mode}|{short_model_name(model_name)}"
     train_meta = load_train_run_metadata(adapter)
-    write_inference_logic_snapshot(
-        out_dir,
-        args=args,
-        dataset_file=dataset_file,
-        sample_count=len(rows),
-        score_sets=score_sets,
-        supervision_mode=supervision_mode,
-        adapter=adapter,
-        train_meta=train_meta,
-    )
 
     cleanup_merged_cache(merge_cache, args.merge_retention_days)
     # Also sweep the legacy project-local merge dir if it still holds leftovers.
@@ -926,18 +1547,63 @@ def main() -> None:
             seed=args.seed,
             gpu_memory_utilization=args.gpu_memory_utilization,
         )
+        score_token_ids: list[int] | None = None
+        score_sampling_params = None
+        cot_sampling_params = None
+        if args.inference_mode in {"rail", "cot_rail"}:
+            score_token_ids = resolve_score_token_ids(llm.get_tokenizer(), score_sets)
+            score_sampling_params = build_rail_sampling_params(
+                score_token_ids, args.seed
+            )
+            if args.inference_mode == "rail":
+                sampling_params = score_sampling_params
+            else:
+                cot_sampling_params = build_cot_rail_sampling_params(
+                    args.max_tokens, args.seed
+                )
+            print(
+                f"[{run_tag}] RAIL score tokens: "
+                f"{dict(zip(score_sets, score_token_ids, strict=True))}",
+                flush=True,
+            )
 
         rollout_metrics = []
         rollout_predictions: list[list[dict[str, Any]]] = []
         for rollout_index in range(1, args.rollout + 1):
-            predictions, metrics = run_rollout(
-                llm,
-                sampling_params,
-                rows,
-                score_sets,
-                args,
-                rollout_index=rollout_index,
-            )
+            if args.inference_mode == "rail":
+                assert score_token_ids is not None
+                predictions, metrics = run_rail_rollout(
+                    llm,
+                    sampling_params,
+                    rows,
+                    score_sets,
+                    score_token_ids,
+                    args,
+                    rollout_index=rollout_index,
+                )
+            elif args.inference_mode == "cot_rail":
+                assert score_token_ids is not None
+                assert cot_sampling_params is not None
+                assert score_sampling_params is not None
+                predictions, metrics = run_cot_rail_rollout(
+                    llm,
+                    cot_sampling_params,
+                    score_sampling_params,
+                    rows,
+                    score_sets,
+                    score_token_ids,
+                    args,
+                    rollout_index=rollout_index,
+                )
+            else:
+                predictions, metrics = run_rollout(
+                    llm,
+                    sampling_params,
+                    rows,
+                    score_sets,
+                    args,
+                    rollout_index=rollout_index,
+                )
             rollout_predictions.append(predictions)
             rollout_metrics.append(metrics)
             print(
@@ -953,20 +1619,94 @@ def main() -> None:
         for index, row in enumerate(rows):
             scores = [preds[index]["prediction"] for preds in rollout_predictions]
             outputs = [preds[index]["output"] for preds in rollout_predictions]
+            raw_outputs = [
+                preds[index].get("raw_output", preds[index]["output"])
+                for preds in rollout_predictions
+            ]
             correct = [score == row["label"] for score in scores]
-            prediction_records.append(
-                {
-                    "id": row["id"],
-                    "label": row["label"],
-                    "rollout_predictions": scores,
-                    "rollout_correct": correct,
-                    "mean_correct": sum(correct) / len(correct),
-                    "outputs": outputs,
-                    "raw_outputs": outputs,
-                    "task": row.get("task"),
-                    "aspect": row.get("aspect"),
-                }
-            )
+            record = {
+                "id": row["id"],
+                "label": row["label"],
+                "rollout_predictions": scores,
+                "rollout_correct": correct,
+                "mean_correct": sum(correct) / len(correct),
+                "outputs": outputs,
+                "raw_outputs": raw_outputs,
+                "task": row.get("task"),
+                "aspect": row.get("aspect"),
+            }
+            if args.inference_mode in {"rail", "cot_rail"}:
+                expected_scores = [
+                    preds[index]["expected_score"] for preds in rollout_predictions
+                ]
+                valid_expected_scores = [
+                    score for score in expected_scores if score is not None
+                ]
+                record.update(
+                    {
+                        "probability_normalization": RAIL_PROBABILITY_NORMALIZATION,
+                        "candidate_renormalization": False,
+                        "rail_implementation": RAIL_IMPLEMENTATION,
+                        "rail_expectation_formula": RAIL_EXPECTATION_FORMULA,
+                        "discrete_decoding": RAIL_DISCRETE_DECODING,
+                        "rollout_expected_scores": expected_scores,
+                        "expected_score": (
+                            float(np.mean(valid_expected_scores))
+                            if valid_expected_scores
+                            else None
+                        ),
+                        "rollout_score_probability_masses": [
+                            preds[index]["score_probability_mass"]
+                            for preds in rollout_predictions
+                        ],
+                        "rollout_score_probabilities": [
+                            preds[index]["score_probabilities"]
+                            for preds in rollout_predictions
+                        ],
+                        "rollout_score_logprobs": [
+                            preds[index]["score_logprobs"]
+                            for preds in rollout_predictions
+                        ],
+                    }
+                )
+                if args.inference_mode == "cot_rail":
+                    record.update(
+                        {
+                            "rollout_cot_outputs": [
+                                preds[index]["cot_output"]
+                                for preds in rollout_predictions
+                            ],
+                            "rollout_cot_generated_token_ids": [
+                                preds[index]["cot_generated_token_ids"]
+                                for preds in rollout_predictions
+                            ],
+                            "rollout_score_probe_texts": [
+                                preds[index]["score_probe_text"]
+                                for preds in rollout_predictions
+                            ],
+                            "rollout_score_probe_token_ids": [
+                                preds[index]["score_probe_token_ids"]
+                                for preds in rollout_predictions
+                            ],
+                            "rollout_score_prefix_reached": [
+                                preds[index]["score_prefix_reached"]
+                                for preds in rollout_predictions
+                            ],
+                            "rollout_reasoning_valid": [
+                                preds[index]["reasoning_valid"]
+                                for preds in rollout_predictions
+                            ],
+                            "rollout_cot_finish_reasons": [
+                                preds[index]["cot_finish_reason"]
+                                for preds in rollout_predictions
+                            ],
+                            "rollout_cot_stop_reasons": [
+                                preds[index]["cot_stop_reason"]
+                                for preds in rollout_predictions
+                            ],
+                        }
+                    )
+            prediction_records.append(record)
         aggregate_metrics = mean_rollout_metrics(rollout_metrics, score_sets)
         avg_output_tokens = None
         avg_reasoning_tokens = None
@@ -1002,6 +1742,29 @@ def main() -> None:
             adapter=str(adapter) if adapter is not None else None,
             train_config=train_config_path,
         )
+        configured_method = ((train_config or {}).get("supervision") or {}).get(
+            "method"
+        )
+        is_raft_without_cot = (
+            configured_method == "raft_without_cot"
+            or "raft_without_cot" in args.exp_name.lower()
+        )
+        is_cot_raft = (
+            configured_method == "cot_raft"
+            or "cot_raft" in args.exp_name.lower()
+        )
+        if is_cot_raft:
+            eval_condition = (
+                "COT-RAFT-R"
+                if args.inference_mode == "cot_rail"
+                else "COT-RAFT-G"
+            )
+        elif is_raft_without_cot:
+            eval_condition = (
+                "RAFT-R" if args.inference_mode == "rail" else "RAFT-G"
+            )
+        elif args.inference_mode in {"rail", "cot_rail"}:
+            eval_condition = f"{eval_condition}-R" if eval_condition else "RAIL"
 
         full_config = resolved_eval_config(args, adapter=adapter)
         full_config["train_config"] = train_config
@@ -1025,25 +1788,81 @@ def main() -> None:
             "dataset_file": str(dataset_file),
             "score_sets": score_sets,
             "seed": args.seed,
+            "train_seed_requested": args.train_seed,
             "rollout": args.rollout,
-            "decoding": "greedy",
+            "inference_mode": args.inference_mode,
+            "decoding": {
+                "greedy": "greedy",
+                "rail": "rail_full_vocab_raw_expected_score",
+                "cot_rail": "cot_rail_full_vocab_raw_expected_score",
+            }[args.inference_mode],
             "temp": 0.0,
             "top_p": 1.0,
             "max_model_len": args.max_model_len,
-            "max_tokens": args.max_tokens,
+            "configured_max_tokens": args.max_tokens,
+            "max_tokens": 1 if args.inference_mode == "rail" else args.max_tokens,
+            "reasoning_max_tokens": (
+                args.max_tokens if args.inference_mode == "cot_rail" else None
+            ),
+            "score_probe_max_tokens": (
+                1 if args.inference_mode in {"rail", "cot_rail"} else None
+            ),
+            "cot_stop_strings": (
+                ["<score>"] if args.inference_mode == "cot_rail" else None
+            ),
+            "score_token_ids": (
+                dict(zip(score_sets, score_token_ids, strict=True))
+                if score_token_ids is not None
+                else None
+            ),
+            "probability_normalization": (
+                RAIL_PROBABILITY_NORMALIZATION
+                if args.inference_mode in {"rail", "cot_rail"}
+                else None
+            ),
+            "candidate_renormalization": (
+                False if args.inference_mode in {"rail", "cot_rail"} else None
+            ),
+            "rail_implementation": (
+                RAIL_IMPLEMENTATION
+                if args.inference_mode in {"rail", "cot_rail"}
+                else None
+            ),
+            "rail_expectation_formula": (
+                RAIL_EXPECTATION_FORMULA
+                if args.inference_mode in {"rail", "cot_rail"}
+                else None
+            ),
+            "discrete_decoding": (
+                RAIL_DISCRETE_DECODING
+                if args.inference_mode in {"rail", "cot_rail"}
+                else None
+            ),
             "batch_size": args.batch_size,
             "gpu_memory_utilization": args.gpu_memory_utilization,
             "enable_thinking": args.enable_thinking,
             "finished_at_utc": utc_now(),
             "aggregation": "mean_over_rollouts",
-            "best_checkpoint_epoch": train_meta.get("best_checkpoint_epoch"),
-            "best_checkpoint_step": train_meta.get("best_checkpoint_step"),
-            "best_generation_accuracy": train_meta.get("best_generation_accuracy"),
+            "checkpoint_retention": train_meta.get("checkpoint_retention"),
+            "adapter_selection": train_meta.get("adapter_selection"),
+            "checkpoint_epoch": train_meta.get("checkpoint_epoch"),
+            "checkpoint_step": train_meta.get("checkpoint_step"),
+            "generation_accuracy": train_meta.get("generation_accuracy"),
             "test_accuracy": aggregate_metrics.get("accuracy"),
             "test_macro_f1": aggregate_metrics.get("macro_f1"),
             "test_mae": aggregate_metrics.get("mae"),
             "test_qwk": aggregate_metrics.get("qwk"),
+            "test_rail_mae": aggregate_metrics.get("rail_mae"),
+            "test_rail_mse": aggregate_metrics.get("rail_mse"),
+            "test_rail_rmse": aggregate_metrics.get("rail_rmse"),
+            "avg_score_probability_mass": aggregate_metrics.get(
+                "avg_score_probability_mass"
+            ),
             "format_valid_rate": aggregate_metrics.get("format_valid_rate"),
+            "score_prefix_valid_rate": aggregate_metrics.get(
+                "score_prefix_valid_rate"
+            ),
+            "reasoning_valid_rate": aggregate_metrics.get("reasoning_valid_rate"),
             "avg_output_tokens": avg_output_tokens,
             "avg_reasoning_tokens": avg_reasoning_tokens,
             "gpu_time_sec": aggregate_metrics.get("gpu_time_sec"),
@@ -1083,7 +1902,7 @@ def main() -> None:
             f"[{run_tag}] tokens: output={avg_output_tokens} "
             f"reasoning={avg_reasoning_tokens} "
             f"gpu_s={aggregate_metrics.get('gpu_time_sec')} "
-            f"best_epoch={train_meta.get('best_checkpoint_epoch')}",
+            f"checkpoint_epoch={train_meta.get('checkpoint_epoch')}",
             flush=True,
         )
         print(f"wrote {out_dir / 'resolved_config.json'}")

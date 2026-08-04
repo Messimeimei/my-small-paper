@@ -1,7 +1,7 @@
 # Minimal LoRA Training
 
 该目录提供可复现的 LoRA SFT 入口：读取 `data/<task>/{cot,label_only}/train_*.jsonl`（Label-only 数据在 `label_only/` 目录），
-固定分层划分、按 **生成式 validation accuracy** 保存最佳 checkpoint，并写出完整
+固定分层划分、每个 epoch 保存且仅保留最后一个 checkpoint，并写出完整
 manifest / summary。生成式验证使用训练模型与同一张 GPU。
 
 ## 0. 数据与配置
@@ -18,6 +18,8 @@ data/<task>/label_only/train_label_only.jsonl   # Label-only 训练数据
 ```text
 training/configs/<task>/cot.yaml
 training/configs/<task>/label_only.yaml
+training/configs/<task>/raft_without_cot.yaml
+training/configs/<task>/cot_raft.yaml
 training/configs/<task>/legacy_align.yaml
 training/configs/<task>/paper_align.yaml
 ```
@@ -30,8 +32,38 @@ training/configs/<task>/paper_align.yaml
 | 方式 | 配置 | 说明 |
 |------|------|------|
 | **standard**（默认） | 不写 `supervision` | 对一条完整 completion 计算平均 CE |
+| **raft_without_cot** | `supervision.method: raft_without_cot` | Label-only 输入；合法分数 token 的概率期望与真实分数做 MSE |
+| **cot_raft** | supervision.method: cot_raft | CoT 输入；解释与格式用 CE，最终数字用 RAFT MSE |
 | **legacy_align** | `supervision.method: legacy_align` | 冻结保留的旧实现：同一 CoT prompt 对应 score-only / reasoning-only 两个独立 view |
 | **paper_align** | `supervision.method: paper_align` | 按 ID 配对 Direct 与 Reason view；两个 view 强制同 batch，分别平均 CE 后加权 |
+
+RAFT without CoT 读取与 standard label-only 完全相同的样本，但不计算 completion
+交叉熵。设合法分值集合为 Y，在数值标签前一位置对完整词表 logits 做 softmax，
+再取每个分数 token 的概率并计算：
+
+```text
+y_hat = sum(y in Y) p(token=str(y) | x) * y
+L_RAFT = mean((gold - y_hat)^2)
+```
+
+这里按论文作者公开实现，分数 token 概率不在 Y 内二次归一化；也不加入预测方差项。
+代码会从 tokenizer 动态解析分数 token ID，要求每个合法分数恰好对应一个 token。
+验证采用配套的 RAIL：给 assistant 补上 `<score>` 前缀后做一次前向计算，记录连续
+`expected_score`、各分数概率和概率总质量，再映射到最近的合法标签计算 Accuracy、
+Macro-F1 以及有序任务的 QWK。指标名 `eval_generation_accuracy` 为兼容历史日志与结果而保留，
+不再用于选择 checkpoint，RAFT 路径本身不调用 `model.generate()`。
+
+CoT-RAFT 直接读取同一任务的 cot/train_cot.jsonl，不需要生成新数据。预处理器
+按最终 <score>...</score> 的字符区间记录唯一 score mask，因此 reasoning
+里出现其他 0–5 数字不会被误认成标签。训练目标为：
+
+    L_CoT-RAFT = CE(completion tokens except the numeric score)
+               + raft_weight * mean((gold - y_hat)^2)
+
+默认 raft_weight 为 1.0。这里选择论文作者发布代码的实际行为：数字 score
+不参与 CE，解释、reasoning/score 标签和 EOS 仍参与 CE；论文 Eq. 4 的字面
+写法会让 score 同时参与 CE，与发布代码存在差异。回归期望与 RAFT without CoT
+一样，训练时使用完整词表 softmax 后的合法数字原始概率，不做候选内二次归一化。
 
 `paper_align` 必须同时配置：
 
@@ -46,13 +78,12 @@ supervision:
 
 每个 paper-align dataset item 是一个源样本 pair。collator 将其展开为
 `label-only prompt -> score` 和 `CoT prompt -> reasoning + score` 两条序列，
-保证同一 ID 的两条序列处于同一 micro-batch。验证和最佳 checkpoint 选择使用
-label-only Direct prompt。详细版本定义见 `training/ALIGN_METHODS.md`。
+保证同一 ID 的两条序列处于同一 micro-batch。验证使用 label-only Direct prompt。
 
 不再提供含义不明确的 `align.yaml`；训练时必须显式选择 `legacy_align.yaml` 或 `paper_align.yaml`。
 
 代码结构：`train.py`（CLI）→ `pipeline.py`（编排）→
-`supervision/{standard,align,paper_align}.py`（策略）。
+`supervision/{standard,raft_without_cot,cot_raft,align,paper_align}.py`（策略）。
 
 ## 1. 数据检查
 
@@ -84,6 +115,17 @@ python \
   --fresh
 ```
 
+RAFT without CoT 的启动方式相同，例如：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+python \
+  training/train.py \
+  --config training/configs/rw_gen_coherence/raft_without_cot.yaml \
+  --seed 42 \
+  --fresh
+```
+
 每次运行会建立独立目录：
 
 ```text
@@ -95,21 +137,21 @@ train_outputs/<task>/<mode>/<experiment>__seed<seed>__<北京时间>/
 ├── train_history.jsonl
 ├── tensorboard/
 ├── trainer_state.json
-├── checkpoints/          # save_strategy=best，仅在 generation acc 创新高时保存
-├── adapter/              # 训练结束时的最佳 LoRA（按 eval_generation_accuracy）
+├── checkpoints/          # 每个 epoch 保存，始终只保留最后一个完整 checkpoint
+├── adapter/              # 从最终训练状态导出的 LoRA
 ├── validation_metrics.json
 ├── validation_predictions.jsonl
-└── summary.json          # 含 best_checkpoint_epoch / best_generation_accuracy
+└── summary.json          # 含 final_checkpoint_epoch / final_generation_accuracy
 ```
 
 - `manifest.json`：运行状态、时间、命令、代码版本和依赖版本。
 - `train_history.jsonl`：每个 logging step 的 loss、学习率和梯度范数。
 - `tensorboard/`：训练/验证 loss、学习率、梯度范数及最终生成式验证指标。
-- `checkpoints/`：按 **accuracy** 变好时保存（不是按 eval_loss）；`save_total_limit` 限制数量。
-- `adapter/`：`load_best_model_at_end` 后保存的最佳 LoRA adapter。
+- `checkpoints/`：每个 epoch 保存一次，`save_total_limit=1`，仅保留 step 最大的完整 checkpoint。
+- `adapter/`：训练结束后直接从最终模型状态导出，不回载较早 checkpoint。
 - `validation_metrics.json`：生成式 Accuracy、macro-F1、格式有效率；1–5 分任务另含 MAE/QWK；以及 token 统计。
 - `validation_predictions.jsonl`：每条验证样本的标签、预测和原始输出。
-- `summary.json`：记录 `best_checkpoint_epoch`、完整配置与 seed。
+- `summary.json`：记录最终 checkpoint、adapter 来源、完整配置与 seed。
 
 ## 3. 断点续训
 
@@ -144,44 +186,72 @@ python \
 - 复用原 run 目录，追加 `train.log`、`train_history.jsonl` 和 TensorBoard 事件；
 - 恢复 LoRA 权重、optimizer、scheduler、RNG、global step 和已训练数据位置；
 - 校验模型、数据 hash、固定划分、LoRA 和 optimizer 相关训练配置；
-- 允许 run 目录移动，并修复旧的最佳 checkpoint 绝对路径；
+- 允许 run 目录移动，并兼容修复旧 run 的最佳 checkpoint 绝对路径；
 - 要求模型、数据、固定划分、LoRA、目标 epoch 和 optimizer / scheduler 相关配置不变；
 - 在 `manifest.json` 的 `attempt_history` 中分别保留失败和恢复记录。
 
 若要放弃断点状态重新训练，使用上一节的 `--fresh`。新 run 使用独立目录，不会覆盖
 旧 checkpoint。旧参数名 `--resume-from-checkpoint` 仍作为 `--resume` 的兼容别名。
 
-每个 epoch 结束时，脚本先计算 validation loss，再在当前训练 GPU 上逐批执行
-`model.generate()`，记录 Accuracy、macro-F1、格式有效率（1–5 分另含 MAE/QWK）
-和逐样本输出。**仅当 `eval_generation_accuracy` 创新高时才写 checkpoint**
-（`save_strategy=best`），训练结束按该指标加载最佳权重并保存到 `adapter/`。
+每个 epoch 结束时，脚本先计算 validation loss。standard/Align/CoT-RAFT 路径在当前训练 GPU
+逐批执行 `model.generate()`；RAFT without CoT 路径执行上面的 score-only RAIL 概率期望。两者都记录
+Accuracy、macro-F1（1–5 分另含 MAE/QWK）和逐样本输出。RAFT 还记录连续分数的
+`rail_mse`、`rail_mae` 与合法分数概率质量。**每个 epoch 都写 checkpoint**（`save_strategy=epoch`），并通过
+`save_total_limit=1` 仅保留最后一个完整 checkpoint；训练结束不回载 best，直接把最终权重保存到 `adapter/`。
 
 ## 4. 评测
 
-评测配置按任务放在 `eval_output/configs/<task>/`（每个可训练任务 8 份），结果写到
-`eval_output/<task>/<exp_name>/`：
+评测配置按任务和训练方式放在 `eval_output/configs/<task>/<train_method>/`，结果写到
+`eval_output/results/<task>/<exp_name>/`：
 
 ```text
 eval_output/configs/<task>/
-  base_on_cot.yaml / base_on_label_only.yaml
-  ft_cot_on_cot.yaml / ft_label_only_on_label_only.yaml
-  ft_cot_on_label_only.yaml / ft_label_only_on_cot.yaml
-  ft_align_on_cot.yaml / ft_align_on_label_only.yaml
-eval_output/<task>/<exp_name>/
+  base/
+    greedy_on_cot.yaml
+    greedy_on_label_only.yaml
+  cot/
+    greedy_on_cot.yaml
+    greedy_on_label_only.yaml
+    rail_on_cot.yaml
+  label_only/
+    greedy_on_cot.yaml
+    greedy_on_label_only.yaml
+    rail_on_label_only.yaml
+  align/
+    greedy_on_cot.yaml
+    greedy_on_label_only.yaml
+  paper_align/
+    greedy_on_cot.yaml
+    greedy_on_label_only.yaml
+  cot_raft/
+    greedy_on_cot.yaml
+    rail_on_cot.yaml
+  raft_without_cot/
+    greedy_on_label_only.yaml
+    rail_on_label_only.yaml
+eval_output/results/<task>/<exp_name>/
   resolved_config.json / metrics.json / predictions.jsonl
 ```
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 \
 python training/evaluate.py \
-  --config eval_output/configs/rw_gen_coherence/base_on_cot.yaml
+  --config eval_output/configs/rw_gen_coherence/base/greedy_on_cot.yaml
 
 CUDA_VISIBLE_DEVICES=0 \
 python training/evaluate.py \
-  --config eval_output/configs/rev_util_actionability/ft_cot_on_cot.yaml
+  --config eval_output/configs/rev_util_actionability/cot/greedy_on_cot.yaml
 ```
 
-`metrics.json` 含：best checkpoint epoch（若能从训练 run 读到）、test Acc/Macro-F1、
+CoT-RAIL 先生成到 `<score>`，再用第二次单 token 调用读取所有合法数字的
+log-prob；未生成该前缀的样本记为 invalid，不会强行补前缀。`inference_mode: rail` 的 score-only 路径与 `cot_rail` 的两阶段路径使用同一个官方 TRACT
+scorer。vLLM 返回的是完整词表 softmax 下的 log-prob，脚本直接计算
+`sum(score * exp(logprob_score))`，不在合法候选内二次归一化，也不再记录非官方
+预测方差。结果明确记录 `probability_normalization: full_vocab_raw`、合法分数
+token 的原始概率质量和连续期望。TRACT 官方只评测连续值；本项目为保留 QWK、
+Macro-F1 与 Accuracy，额外把连续值映射到最近合法标签，平局取较小标签。
+
+`metrics.json` 含：adapter 来源 checkpoint 及其 epoch（若能从训练 run 读到）、test Acc/Macro-F1、
 MAE/QWK（1–5）、格式有效率、平均 reasoning/output token、GPU 时间、seed 与完整配置。
 汇总分析写入 `eval_output/evaluation_analysis.md`（每次评测后自动重建）。
 

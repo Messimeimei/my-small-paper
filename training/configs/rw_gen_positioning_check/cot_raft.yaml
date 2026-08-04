@@ -1,0 +1,40 @@
+experiment_name: rw_gen_positioning_check#qwen3_4b#cot_raft
+model_name_or_path: model/Qwen3-4B
+dataset_path: data/rw_gen_positioning_check/cot/train_cot.jsonl
+split_path: data/rw_gen_positioning_check/cot/splits/train_cot_seed20260720.json
+output_root: train_outputs/rw_gen_positioning_check/cot_raft
+
+split_seed: 20260720
+validation_ratio: 0.10
+
+lora:
+  target_modules: all-linear
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+
+training:
+  max_length: 8192
+  learning_rate: 0.0001
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  max_grad_norm: 0.3
+  bf16: true
+  gradient_checkpointing: true
+  attn_implementation: sdpa
+  logging_steps: 10
+  save_total_limit: 1
+  report_to: tensorboard
+
+supervision:
+  method: cot_raft
+  raft_weight: 1.0
+
+generation:
+  batch_size: 8
+  max_new_tokens: 512
