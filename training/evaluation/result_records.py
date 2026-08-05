@@ -14,8 +14,8 @@ from shared.metrics import criterion_title
 from evaluation.condition_labels import infer_eval_condition
 
 EVAL_CONDITIONS = (
-    "B-L", "B-C", "LL", "LC", "CL", "CC", "PAL", "PAC",
-    "LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R",
+    "B-L", "B-C", "SciRM-L", "SciRM-C", "LL", "LC", "CL", "CC",
+    "PAL", "PAC", "LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R",
 )
 # Only conditions included in the current report are normalized here.
 LEGACY_CONDITION_ALIASES = {
@@ -24,8 +24,10 @@ LEGACY_CONDITION_ALIASES = {
 }
 
 CONDITION_META = {
-    "B-L": ("Base", "Label-only", "基座模型直接输出标签"),
-    "B-C": ("Base", "CoT", "基座模型先输出推理再输出标签"),
+    "B-L": ("Qwen3-4B Base", "Label-only", "Qwen3-4B 基座模型直接输出标签"),
+    "B-C": ("Qwen3-4B Base", "CoT", "Qwen3-4B 基座模型先输出推理再输出标签"),
+    "SciRM-L": ("SciRM-7B RL", "Label-only", "SciRM-7B 强化学习模型直接输出标签"),
+    "SciRM-C": ("SciRM-7B RL", "CoT", "SciRM-7B 强化学习模型先输出推理再输出标签"),
     "LL": ("Label-only SFT", "Label-only", "同格式 Label-only 微调与测试"),
     "LC": ("Label-only SFT", "CoT", "Label-only adapter 交叉测试 CoT prompt"),
     "CL": ("CoT SFT", "Label-only", "CoT adapter 交叉测试 Label-only prompt"),
@@ -62,13 +64,15 @@ RECORD_CACHE_NAME = "evaluation_analysis_records.json"
 RAIL_CONDITIONS = frozenset({"LL-R", "RAFT-R", "CC-R", "COT-RAFT-R"})
 OFFICIAL_RAIL_NORMALIZATION = "full_vocab_raw"
 CONDITION_INFERENCE = {
-    "B-L": "Greedy", "B-C": "Greedy", "LL": "Greedy", "LC": "Greedy",
+    "B-L": "Greedy", "B-C": "Greedy", "SciRM-L": "Greedy", "SciRM-C": "Greedy",
+    "LL": "Greedy", "LC": "Greedy",
     "CL": "Greedy", "CC": "Greedy", "PAL": "Greedy", "PAC": "Greedy",
     "LL-R": "RAIL", "RAFT-G": "Greedy", "RAFT-R": "RAIL",
     "CC-R": "CoT-RAIL", "COT-RAFT-G": "Greedy", "COT-RAFT-R": "CoT-RAIL",
 }
 CONDITION_DATA = {
-    "B-L": "Label-only", "B-C": "CoT", "LL": "Label-only", "LC": "CoT",
+    "B-L": "Label-only", "B-C": "CoT", "SciRM-L": "Label-only", "SciRM-C": "CoT",
+    "LL": "Label-only", "LC": "CoT",
     "CL": "Label-only", "CC": "CoT", "PAL": "Label-only", "PAC": "CoT",
     "LL-R": "Label-only", "RAFT-G": "Label-only", "RAFT-R": "Label-only",
     "CC-R": "CoT", "COT-RAFT-G": "CoT", "COT-RAFT-R": "CoT",
@@ -100,7 +104,7 @@ def as_float(value: Any) -> float | None:
 
 def extract_train_seed(metrics: dict[str, Any], condition: str) -> str:
     """Extract the training seed without confusing it with the eval seed."""
-    if condition.startswith("B-"):
+    if condition.startswith("B-") or condition.startswith("SciRM-"):
         return "base"
     full_config = metrics.get("full_config") or {}
     train_run = full_config.get("train_run") or {}
@@ -192,15 +196,20 @@ def extract_run_record(metrics: dict[str, Any], metrics_path: Path) -> dict[str,
     if isinstance(train_config, dict):
         train_config = train_config.get("experiment_name") or json.dumps(train_config)
     condition = normalize_condition(metrics.get("eval_condition"))
-    if condition is None:
-        condition = normalize_condition(
-            infer_eval_condition(
-                exp_name=exp_name,
-                supervision_mode=mode,
-                adapter=str(adapter) if adapter is not None else None,
-                train_config=str(train_config) if train_config is not None else None,
-            )
+    inferred_condition = normalize_condition(
+        infer_eval_condition(
+            exp_name=exp_name,
+            supervision_mode=mode,
+            adapter=str(adapter) if adapter is not None else None,
+            train_config=str(train_config) if train_config is not None else None,
         )
+    )
+    # SciRM results created before the dedicated conditions existed were persisted
+    # as B-L/B-C. Prefer the model-specific inference for those stale records.
+    if inferred_condition in {"SciRM-L", "SciRM-C"}:
+        condition = inferred_condition
+    elif condition is None:
+        condition = inferred_condition
     if condition is None or task not in TRAINABLE_TASKS:
         return None
 
@@ -281,6 +290,15 @@ def load_record_cache(output_root: Path) -> Records:
         condition = normalize_condition(record.get("condition"))
         train_seed = str(record.get("train_seed") or "unknown")
         old_exp_name = str(record.get("exp_name") or "")
+        inferred_condition = normalize_condition(
+            infer_eval_condition(
+                exp_name=old_exp_name,
+                supervision_mode="cot",
+                adapter=None,
+            )
+        )
+        if inferred_condition in {"SciRM-L", "SciRM-C"}:
+            condition = inferred_condition
         seeded_exp_name = exp_name_with_seed(old_exp_name, train_seed)
         metrics_path = Path(str(record.get("metrics_path") or ""))
         if old_exp_name and metrics_path.parent.name == old_exp_name:

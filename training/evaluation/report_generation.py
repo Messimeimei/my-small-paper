@@ -32,6 +32,15 @@ from evaluation.result_records import (
 )
 
 
+METHOD_AVERAGE_METRICS = (
+    ("qwk", "平均 QWK", False),
+    ("accuracy", "平均 Accuracy (%)", True),
+    ("pearson", "平均 Pearson", False),
+    ("macro_f1", "平均 Macro-F1", False),
+    ("mae", "平均 MAE", False),
+)
+
+
 def render_single_task_table(records: Records, task: str) -> str:
     grouped_conditions = [
         (condition, grouped)
@@ -165,6 +174,77 @@ def render_summary_table(records: Records) -> str:
     return "\n".join(lines) + "\n"
 
 
+def method_metric_task_means(
+    records: Records,
+    condition: str,
+    metric: str,
+) -> list[float]:
+    """Return per-task means so every task has equal weight across seeds."""
+    applicable_tasks = (
+        ORDINAL_TASKS if metric in {"qwk", "mae"} else TRAINABLE_TASKS
+    )
+    task_means = []
+    for task in TRAINABLE_TASKS:
+        if task not in applicable_tasks:
+            continue
+        grouped = records_for(records, task, condition)
+        task_mean = mean_of(present_values(grouped, metric))
+        if task_mean is not None:
+            task_means.append(task_mean)
+    return task_means
+
+
+def format_method_average(values: list[float], *, percent: bool = False) -> str:
+    mean = mean_of(values)
+    if mean is None:
+        return "—"
+    rendered = f"{100 * mean:.1f}" if percent else f"{mean:.3f}"
+    return f"{rendered} (n={len(values)})"
+
+
+def render_method_average_table(records: Records) -> str:
+    conditions = [
+        condition
+        for condition in EVAL_CONDITIONS
+        if any(records_for(records, task, condition) for task in TRAINABLE_TASKS)
+    ]
+    if not conditions:
+        return "当前没有可用结果。\n"
+
+    headers = [
+        "条件",
+        "训练方式",
+        "推理方式",
+        "测试数据",
+        "任务覆盖",
+        *(display for _, display, _ in METHOD_AVERAGE_METRICS),
+    ]
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * 4 + ["---:"] * 6) + " |",
+    ]
+    for condition in conditions:
+        covered_tasks = sum(
+            bool(records_for(records, task, condition)) for task in TRAINABLE_TASKS
+        )
+        values = [
+            condition,
+            CONDITION_META[condition][0],
+            CONDITION_INFERENCE[condition],
+            CONDITION_DATA[condition],
+            f"{covered_tasks}/{len(TRAINABLE_TASKS)}",
+        ]
+        for metric, _, percent in METHOD_AVERAGE_METRICS:
+            values.append(
+                format_method_average(
+                    method_metric_task_means(records, condition, metric),
+                    percent=percent,
+                )
+            )
+        lines.append("| " + " | ".join(values) + " |")
+    return "\n".join(lines) + "\n"
+
+
 def render_evaluation_analysis(records: Records) -> str:
     present_conditions = [
         condition
@@ -186,7 +266,7 @@ def render_evaluation_analysis(records: Records) -> str:
             f"{render_single_task_table(records, task)}"
         )
 
-    return f"""# Qwen3-4B 评测结果分析
+    return f"""# Qwen3-4B 与 SciRM-7B 评测结果分析
 
 > 自动生成于 {utc_now()}；当前纳入 {len(records)} 条按任务、条件和训练 seed 去重后的有效记录。
 > 本文件由 `training/evaluate.py` 在每次评测后重建。
@@ -194,6 +274,9 @@ def render_evaluation_analysis(records: Records) -> str:
 ## 1. 统计口径
 
 当前覆盖条件：{condition_text}。
+
+其中 B-L/B-C 为 Qwen3-4B 基座模型，SciRM-L/SciRM-C 为经过强化学习训练的
+SciRM-7B；后缀 L/C 分别表示 Label-only/CoT 测试数据与 prompt。
 
 有序任务以 QWK 为主指标，并同时展示 Accuracy、Pearson、Macro-F1 和 MAE；
 二分类任务以 Macro-F1 为主指标，并展示 Accuracy 与 Pearson。Pearson 使用离散预测与
@@ -212,7 +295,14 @@ MAE 取最低值。RAIL 结果仅纳入 `probability_normalization=full_vocab_ra
 每个任务按其主指标选择最优条件；下表汇总该条件的主指标、Accuracy 和 Pearson。
 
 {render_summary_table(records)}
-## 10. 重建报告
+## 10. 各方法跨任务平均指标
+
+先对同一任务、同一方法的多个训练 seed 求均值，再对任务等权求宏平均，避免多 seed 的
+任务获得更高权重。QWK 和 MAE 仅适用于 4 个有序任务，其他指标适用于全部 7 个任务；
+每个指标后的 `n` 是实际参与该指标平均的任务数，`任务覆盖` 则表示该方法已有结果的任务数。
+
+{render_method_average_table(records)}
+## 11. 重建报告
 
 ```bash
 python training/evaluate.py --refresh-analysis-only --output_path eval_output/results
@@ -238,7 +328,7 @@ def update_evaluation_analysis(output_root: Path) -> Path:
     cache_path.write_text(
         json.dumps(
             {
-                "schema_version": 3,
+                "schema_version": 4,
                 "updated_at_utc": utc_now(),
                 "records": ordered_records,
             },

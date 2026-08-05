@@ -13,6 +13,7 @@ def infer_eval_condition(
     """Map one evaluation run to a stable matrix code such as B-L or PAC."""
     text = (exp_name or "").lower()
     config_path = (train_config or "").lower().replace("\\", "/")
+    is_scirm = "scirm" in text or "scirm" in config_path
     is_base = (
         adapter is None
         or str(adapter).strip().lower() in {"", "none"}
@@ -26,7 +27,9 @@ def infer_eval_condition(
     else:
         test_mode = "label_only" if supervision_mode == "label_only" else "cot"
 
-    if is_base:
+    if is_scirm:
+        train_mode = "SciRM"
+    elif is_base:
         train_mode = "B"
     elif (
         "paper_align" in text
@@ -58,6 +61,8 @@ def infer_eval_condition(
     return {
         ("B", "label_only"): "B-L",
         ("B", "cot"): "B-C",
+        ("SciRM", "label_only"): "SciRM-L",
+        ("SciRM", "cot"): "SciRM-C",
         ("L", "label_only"): "LL",
         ("L", "cot"): "LC",
         ("C", "label_only"): "CL",
