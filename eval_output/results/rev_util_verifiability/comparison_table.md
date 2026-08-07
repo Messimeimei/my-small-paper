@@ -1,5 +1,10 @@
-> **🟦 label_only**　**🟧 cot**　｜　base 列不加标记
+## Verifiability
 
-| Criterion | base-label_only Acc | base-cot Acc | 🟦 label_only Acc | 🟧 cot Acc | base-label_only F1 | base-cot F1 | 🟦 label_only F1 | 🟧 cot F1 | base-label_only samp/s | base-cot samp/s | 🟦 label_only samp/s | 🟧 cot samp/s |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Verifiability | 6.6 | 47.8 | **🟦 42.3** | **🟧 55.5** | 9.0 | 42.6 | **🟦 38.4** | **🟧 48.6** | 154.2 | 18.2 | **🟦 153.4** | **🟧 21.5** |
+| Id | Train | Prompt | Accuracy (%) | Macro-F1 | Samples/s |
+| --- | --- | --- | ---: | ---: | ---: |
+| **Baselines** |  |  |  |  |  |
+| B-L | Base | Label-only | 6.6 | 9.0 | **154.2** |
+| B-C | Base | CoT | <u>47.8</u> | <u>42.6</u> | 18.2 |
+| **Fine-tuned** |  |  |  |  |  |
+| FT-L | Fine-tuned | Label-only | 42.3 | 38.4 | <u>153.4</u> |
+| FT-C | Fine-tuned | CoT | **55.5** | **48.6** | 21.5 |

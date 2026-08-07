@@ -111,7 +111,7 @@ class EvaluationMethodTests(unittest.TestCase):
             analysis = analysis_path.read_text(encoding="utf-8")
             self.assertIn("| B-L | Qwen3-4B Base |", analysis)
             self.assertIn("| SciRM-L | SciRM-7B RL |", analysis)
-            self.assertIn("## 10. 各方法跨任务平均指标", analysis)
+            self.assertIn("## 8. Cross-task method averages", analysis)
 
     def test_method_averages_weight_tasks_equally_after_averaging_seeds(self) -> None:
         records = {

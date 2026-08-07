@@ -1,0 +1,54 @@
+schema_version: 1
+
+# Keep API baselines physically separate from local vLLM/adapter results.
+output_path: eval_output/api_results
+local_results_path: eval_output/results
+
+api_base_url: https://az.gptplus5.com/v1
+api_key_env: GPTPLUS5_KEY
+env_file: .env
+timeout_seconds: 180
+max_retries: 5
+progress_every: 10
+require_response_model_match: true
+
+temperature: 0
+top_p: 1.0
+max_tokens: 512
+max_tokens_by_mode:
+  label_only: 32
+  cot: 512
+
+models:
+  - name: gpt-4.1-2025-04-14
+    slug: gpt_4_1_2025_04_14
+
+tasks:
+  - name: rev_util_actionability
+    datasets:
+      label_only: data/rev_util_actionability/label_only/test_label_only.jsonl
+      cot: data/rev_util_actionability/cot/test_cot.jsonl
+  - name: rev_util_grounding_specificity
+    datasets:
+      label_only: data/rev_util_grounding_specificity/label_only/test_label_only.jsonl
+      cot: data/rev_util_grounding_specificity/cot/test_cot.jsonl
+  - name: rev_util_helpfulness
+    datasets:
+      label_only: data/rev_util_helpfulness/label_only/test_label_only.jsonl
+      cot: data/rev_util_helpfulness/cot/test_cot.jsonl
+  - name: rev_util_verifiability
+    datasets:
+      label_only: data/rev_util_verifiability/label_only/test_label_only.jsonl
+      cot: data/rev_util_verifiability/cot/test_cot.jsonl
+  - name: rw_gen_coherence
+    datasets:
+      label_only: data/rw_gen_coherence/label_only/test_label_only.jsonl
+      cot: data/rw_gen_coherence/cot/test_cot.jsonl
+  - name: rw_gen_positioning_check
+    datasets:
+      label_only: data/rw_gen_positioning_check/label_only/test_label_only.jsonl
+      cot: data/rw_gen_positioning_check/cot/test_cot.jsonl
+  - name: rw_gen_positioning_type
+    datasets:
+      label_only: data/rw_gen_positioning_type/label_only/test_label_only.jsonl
+      cot: data/rw_gen_positioning_type/cot/test_cot.jsonl

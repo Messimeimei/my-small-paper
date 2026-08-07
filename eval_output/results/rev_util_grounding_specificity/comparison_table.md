@@ -1,5 +1,10 @@
-> **🟦 label_only**　**🟧 cot**　｜　base 列不加标记
+## Grounding Specificity
 
-| Criterion | base-label_only Acc | base-cot Acc | 🟦 label_only Acc | 🟧 cot Acc | base-label_only F1 | base-cot F1 | 🟦 label_only F1 | 🟧 cot F1 | base-label_only samp/s | base-cot samp/s | 🟦 label_only samp/s | 🟧 cot samp/s |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Grounding Specificity | 3.2 | 39.1 | **🟦 56.1** | **🟧 62.9** | 4.8 | 31.7 | **🟦 36.6** | **🟧 48.5** | 162.8 | 19.1 | **🟦 160.5** | **🟧 25.6** |
+| Id | Train | Prompt | Accuracy (%) | Macro-F1 | Samples/s |
+| --- | --- | --- | ---: | ---: | ---: |
+| **Baselines** |  |  |  |  |  |
+| B-L | Base | Label-only | 3.2 | 4.8 | **162.8** |
+| B-C | Base | CoT | 39.1 | 31.7 | 19.1 |
+| **Fine-tuned** |  |  |  |  |  |
+| FT-L | Fine-tuned | Label-only | <u>56.1</u> | <u>36.6</u> | <u>160.5</u> |
+| FT-C | Fine-tuned | CoT | **62.9** | **48.5** | 25.6 |

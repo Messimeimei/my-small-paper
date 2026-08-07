@@ -1,5 +1,10 @@
-> **🟦 label_only**　**🟧 cot**　｜　base 列不加标记
+## Positioning Check
 
-| Criterion | base-label_only Acc | base-cot Acc | 🟦 label_only Acc | 🟧 cot Acc | base-label_only F1 | base-cot F1 | 🟦 label_only F1 | 🟧 cot F1 | base-label_only samp/s | base-cot samp/s | 🟦 label_only samp/s | 🟧 cot samp/s |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Positioning Check | 43.0 | 90.9 | **🟦 98.2** | **🟧 99.5** | 42.3 | 91.1 | **🟦 98.2** | **🟧 99.5** | 72.2 | 18.4 | **🟦 74.0** | **🟧 22.3** |
+| Id | Train | Prompt | Accuracy (%) | Macro-F1 | Samples/s |
+| --- | --- | --- | ---: | ---: | ---: |
+| **Baselines** |  |  |  |  |  |
+| B-L | Base | Label-only | 43.0 | 42.3 | <u>72.2</u> |
+| B-C | Base | CoT | 90.9 | 91.1 | 18.4 |
+| **Fine-tuned** |  |  |  |  |  |
+| FT-L | Fine-tuned | Label-only | <u>98.2</u> | <u>98.2</u> | **74.0** |
+| FT-C | Fine-tuned | CoT | **99.5** | **99.5** | 22.3 |

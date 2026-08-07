@@ -7,6 +7,7 @@ from typing import Any
 
 from shared.metrics import format_float, format_pct
 from evaluation.condition_labels import infer_eval_condition
+from evaluation.paper_table import PaperMetricColumn, PaperMetricRow, render_grouped_metric_table
 
 COMPARISON_MODES = (
     "base_label_only",
@@ -62,53 +63,47 @@ def infer_comparison_mode(
 
 
 def render_comparison_table(rows: list[dict[str, Any]]) -> str:
-    """Plain GFM Markdown table (Cursor preview strips HTML styles).
+    """Render compact task results using the TRACT paper-table organization."""
 
-    Only fine-tuned columns are marked:
-      🟦 Label-only   🟧 cot
-    Base columns stay unmarked.
-    """
     metric_specs = (
-        ("Acc", "acc", format_pct),
-        ("F1", "f1", format_pct),
-        ("samp/s", "samples_per_sec", lambda v: format_float(v, digits=1)),
+        ("Accuracy (%)", "acc", format_pct, True),
+        ("Macro-F1", "f1", format_pct, True),
+        ("Samples/s", "samples_per_sec", lambda value: format_float(value, digits=1), True),
     )
-
-    def header_for(mode: str, suffix: str) -> str:
-        label = COMPARISON_MODE_LABELS[mode]
-        if mode == "ft_label_only":
-            return f"🟦 {label} {suffix}"
-        if mode == "ft_cot":
-            return f"🟧 {label} {suffix}"
-        return f"{label} {suffix}"
-
-    def cell_for(mode: str, text: str) -> str:
-        if not text:
-            return ""
-        if mode == "ft_label_only":
-            return f"**🟦 {text}**"
-        if mode == "ft_cot":
-            return f"**🟧 {text}**"
-        return text
-
-    headers = ["Criterion"]
-    for suffix, _field, _fmt in metric_specs:
-        for mode in COMPARISON_MODES:
-            headers.append(header_for(mode, suffix))
-    align = ["---"] + ["---:"] * (len(headers) - 1)
-    lines = [
-        "> **🟦 Label-only**　**🟧 cot**　｜　base 列不加标记\n\n",
-        "| " + " | ".join(headers) + " |\n",
-        "| " + " | ".join(align) + " |\n",
-    ]
+    labels = {
+        "base_label_only": ("B-L", "Base", "Label-only", "Baselines"),
+        "base_cot": ("B-C", "Base", "CoT", "Baselines"),
+        "ft_label_only": ("FT-L", "Fine-tuned", "Label-only", "Fine-tuned"),
+        "ft_cot": ("FT-C", "Fine-tuned", "CoT", "Fine-tuned"),
+    }
+    table_rows: list[PaperMetricRow] = []
     for row in rows:
-        cells = [str(row.get("criterion", ""))]
-        for _suffix, field, fmt in metric_specs:
-            for mode in COMPARISON_MODES:
-                prefix = comparison_field_prefix(mode)
-                cells.append(cell_for(mode, fmt(row.get(f"{prefix}_{field}"))))
-        lines.append("| " + " | ".join(cells) + " |\n")
-    return "".join(lines)
+        criterion = str(row.get("criterion") or "")
+        for mode in COMPARISON_MODES:
+            identifier, train, prompt, group = labels[mode]
+            prefix = comparison_field_prefix(mode)
+            values = {
+                field: row.get(f"{prefix}_{field}")
+                for _header, field, _formatter, _higher in metric_specs
+            }
+            table_rows.append(
+                PaperMetricRow(
+                    group=group,
+                    config=(identifier, train, prompt),
+                    values=values,
+                )
+            )
+    columns = [
+        PaperMetricColumn(header, field, formatter, higher)
+        for header, field, formatter, higher in metric_specs
+    ]
+    criterion = str(rows[0].get("criterion") or "") if rows else ""
+    table = render_grouped_metric_table(
+        table_rows,
+        config_headers=("Id", "Train", "Prompt"),
+        metric_columns=columns,
+    )
+    return f"## {criterion}\n\n{table}\n"
 
 
 def _refresh_token_ratios(row: dict[str, Any]) -> None:

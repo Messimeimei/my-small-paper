@@ -23,6 +23,25 @@ from api_evaluation.report import update_api_reports
 from shared.project_io import resolve_path
 
 
+def comparison_supplemental_roots(
+    config: dict[str, object],
+) -> tuple[tuple[Path, str], ...]:
+    entries = config.get("comparison_supplemental_results", [])
+    if not isinstance(entries, list):
+        raise ValueError("comparison_supplemental_results must be a list")
+    roots = []
+    for entry in entries:
+        if not isinstance(entry, dict) or not entry.get("path"):
+            raise ValueError("each supplemental result requires a path")
+        roots.append(
+            (
+                resolve_path(str(entry["path"])),
+                str(entry.get("label_suffix") or ""),
+            )
+        )
+    return tuple(roots)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run resumable OpenAI-compatible API baselines."
@@ -54,8 +73,13 @@ def main() -> None:
     config = load_matrix_config(config_path)
     output_root = resolve_path(config["output_path"])
     local_root = resolve_path(config.get("local_results_path", "eval_output/results"))
+    supplemental_roots = comparison_supplemental_roots(config)
     if args.refresh_report_only:
-        paths = update_api_reports(output_root, local_root)
+        paths = update_api_reports(
+            output_root,
+            local_root,
+            supplemental_api_roots=supplemental_roots,
+        )
         print("updated " + " and ".join(map(str, paths)))
         return
 
@@ -102,8 +126,16 @@ def main() -> None:
             limit=args.limit,
         )
         print(f"wrote {output_dir}")
-        update_api_reports(output_root, local_root)
-    paths = update_api_reports(output_root, local_root)
+        update_api_reports(
+            output_root,
+            local_root,
+            supplemental_api_roots=supplemental_roots,
+        )
+    paths = update_api_reports(
+        output_root,
+        local_root,
+        supplemental_api_roots=supplemental_roots,
+    )
     print("updated " + " and ".join(map(str, paths)))
 
 

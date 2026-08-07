@@ -18,6 +18,7 @@ from api_evaluation.pipeline import (
     read_completed_responses,
 )
 from api_evaluation.report import update_api_reports
+from evaluation.experiment_report import update_experiment_report
 
 
 class ApiEvaluationTests(unittest.TestCase):
@@ -125,6 +126,186 @@ class ApiEvaluationTests(unittest.TestCase):
             self.assertTrue(api_report.is_file())
             self.assertTrue(comparison.is_file())
             self.assertEqual(marker.read_text(encoding="utf-8"), "unchanged")
+
+    def test_reports_show_incomplete_run_progress(self) -> None:
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            local = root / "local"
+            api = root / "api"
+            run_dir = (
+                api
+                / "rev_util_helpfulness"
+                / "rev_util_helpfulness#fixed_model#api#greedy#on_label_only#snapshot"
+            )
+            local.mkdir()
+            run_dir.mkdir(parents=True)
+            (run_dir / "resolved_config.json").write_text(
+                json.dumps(
+                    {
+                        "model_name": "fixed-model",
+                        "task": "rev_util_helpfulness",
+                        "mode": "label_only",
+                        "dataset_samples": 2,
+                        "request_hash": "request",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_dir / "api_responses.jsonl").write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "record_type": "response",
+                                "sample_id": "a",
+                                "request_hash": "request",
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "record_type": "error",
+                                "sample_id": "b",
+                                "request_hash": "request",
+                                "error_type": "RateLimitError",
+                            }
+                        ),
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            api_report, comparison = update_api_reports(api, local)
+            for report in (api_report, comparison):
+                content = report.read_text(encoding="utf-8")
+                self.assertIn("1/2", content)
+                self.assertIn("中断（RateLimitError）", content)
+
+
+    def test_comparison_marks_best_values_and_includes_supplemental_summary(self) -> None:
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            local = root / "local"
+            api = root / "api"
+            supplemental = root / "supplemental"
+            local.mkdir()
+            for model, qwk, mae in (("model-a", 0.5, 0.4), ("model-b", 0.6, 0.5)):
+                run_dir = api / model
+                run_dir.mkdir(parents=True)
+                (run_dir / "metrics.json").write_text(
+                    json.dumps(
+                        {
+                            "backend": "openai-compatible-api",
+                            "complete_dataset": True,
+                            "task": "rev_util_actionability",
+                            "supervision_mode": "cot",
+                            "model_name": model,
+                            "aggregate": {
+                                "samples": 2,
+                                "accuracy": qwk,
+                                "macro_f1": qwk,
+                                "qwk": qwk,
+                                "mae": mae,
+                                "pearson": qwk,
+                            },
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+            supplemental_run = supplemental / "rev_util_verifiability" / "run"
+            supplemental_run.mkdir(parents=True)
+            (supplemental_run / "resolved_config.json").write_text(
+                json.dumps(
+                    {
+                        "model_name": "deepseek-v4-pro",
+                        "task": "rev_util_verifiability",
+                        "mode": "cot",
+                        "dataset_samples": 788,
+                        "request_hash": "request",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            _, comparison = update_api_reports(
+                api,
+                local,
+                supplemental_api_roots=((supplemental, " (CoT 2048)"),),
+            )
+            content = comparison.read_text(encoding="utf-8")
+            self.assertIn("| API | model-b | cot | 2 | **0.600**", content)
+            self.assertIn("| API | model-a | cot | 2 | <u>0.500</u>", content)
+            self.assertIn("**0.400**", content)
+            self.assertIn("deepseek-v4-pro (CoT 2048)", content)
+            self.assertIn("## 分指标七任务汇总", content)
+            for metric_heading in (
+                "### QWK 汇总",
+                "### Accuracy (%) 汇总",
+                "### Pearson 汇总",
+                "### Macro-F1 汇总",
+                "### MAE 汇总",
+            ):
+                self.assertIn(metric_heading, content)
+            for task in (
+                "Actionability",
+                "Grounding Specificity",
+                "Helpfulness",
+                "Verifiability",
+                "Coherence",
+                "Positioning Check",
+                "Positioning Type",
+            ):
+                self.assertIn(task, content)
+            self.assertIn(
+                "| API | deepseek-v4-pro (CoT 2048) | cot | 0/7 |",
+                content,
+            )
+
+
+    def test_shared_api_root_disambiguates_cot_2048_and_updates_full_ledger(self) -> None:
+        with TemporaryDirectory() as temporary:
+            eval_root = Path(temporary) / "eval_output"
+            local = eval_root / "results"
+            api = eval_root / "api_results"
+            local.mkdir(parents=True)
+            for slug, max_tokens in (("deepseek_v4_pro", 512), ("deepseek_v4_pro_cot2048", 2048)):
+                run_dir = (
+                    api
+                    / "rev_util_verifiability"
+                    / f"rev_util_verifiability#{slug}#api#greedy#on_cot#snapshot"
+                )
+                run_dir.mkdir(parents=True)
+                (run_dir / "metrics.json").write_text(
+                    json.dumps(
+                        {
+                            "backend": "openai-compatible-api",
+                            "complete_dataset": True,
+                            "task": "rev_util_verifiability",
+                            "supervision_mode": "cot",
+                            "model_name": "deepseek-v4-pro",
+                            "model_slug": slug,
+                            "max_tokens": max_tokens,
+                            "aggregate": {
+                                "samples": 2,
+                                "accuracy": 0.5,
+                                "macro_f1": 0.4,
+                                "qwk": 0.6,
+                                "mae": 0.5,
+                                "pearson": 0.7,
+                                "format_valid_rate": 1.0,
+                            },
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+
+            api_report, comparison = update_api_reports(api, local)
+            for report in (api_report, comparison):
+                content = report.read_text(encoding="utf-8")
+                self.assertIn("deepseek-v4-pro (CoT 2048)", content)
+                self.assertIn("deepseek-v4-pro", content)
+
+            ledger = update_experiment_report(eval_root).read_text(encoding="utf-8")
+            self.assertIn("Local records: 0; API records: 2; total: 2", ledger)
+            self.assertIn("deepseek_v4_pro_cot2048", ledger)
+            self.assertIn("| 2048 | complete |", ledger)
 
 
 if __name__ == "__main__":

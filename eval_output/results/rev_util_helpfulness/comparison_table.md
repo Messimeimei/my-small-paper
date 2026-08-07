@@ -1,5 +1,10 @@
-> **🟦 label_only**　**🟧 cot**　｜　base 列不加标记
+## Helpfulness
 
-| Criterion | base-label_only Acc | base-cot Acc | 🟦 label_only Acc | 🟧 cot Acc | base-label_only F1 | base-cot F1 | 🟦 label_only F1 | 🟧 cot F1 | base-label_only samp/s | base-cot samp/s | 🟦 label_only samp/s | 🟧 cot samp/s |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Helpfulness | 2.4 | 34.9 | **🟦 57.0** | **🟧 60.2** | 4.4 | 28.6 | **🟦 44.9** | **🟧 50.5** | 173.8 | 25.1 | **🟦 166.9** | **🟧 25.5** |
+| Id | Train | Prompt | Accuracy (%) | Macro-F1 | Samples/s |
+| --- | --- | --- | ---: | ---: | ---: |
+| **Baselines** |  |  |  |  |  |
+| B-L | Base | Label-only | 2.4 | 4.4 | **173.8** |
+| B-C | Base | CoT | 34.9 | 28.6 | 25.1 |
+| **Fine-tuned** |  |  |  |  |  |
+| FT-L | Fine-tuned | Label-only | <u>57.0</u> | <u>44.9</u> | <u>166.9</u> |
+| FT-C | Fine-tuned | CoT | **60.2** | **50.5** | 25.5 |

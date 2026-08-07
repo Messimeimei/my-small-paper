@@ -1,5 +1,10 @@
-> **🟦 label_only**　**🟧 cot**　｜　base 列不加标记
+## Actionability
 
-| Criterion | base-label_only Acc | base-cot Acc | 🟦 label_only Acc | 🟧 cot Acc | base-label_only F1 | base-cot F1 | 🟦 label_only F1 | 🟧 cot F1 | base-label_only samp/s | base-cot samp/s | 🟦 label_only samp/s | 🟧 cot samp/s |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Actionability | 5.6 | 36.0 | **🟦 52.6** | **🟧 50.5** | 8.2 | 33.3 | **🟦 47.4** | **🟧 42.7** | 166.6 | 19.6 | **🟦 164.6** | **🟧 20.7** |
+| Id | Train | Prompt | Accuracy (%) | Macro-F1 | Samples/s |
+| --- | --- | --- | ---: | ---: | ---: |
+| **Baselines** |  |  |  |  |  |
+| B-L | Base | Label-only | 5.6 | 8.2 | **166.6** |
+| B-C | Base | CoT | 36.0 | 33.3 | 19.6 |
+| **Fine-tuned** |  |  |  |  |  |
+| FT-L | Fine-tuned | Label-only | **52.6** | **47.4** | <u>164.6</u> |
+| FT-C | Fine-tuned | CoT | <u>50.5</u> | <u>42.7</u> | 20.7 |
