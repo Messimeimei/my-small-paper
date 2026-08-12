@@ -1,0 +1,336 @@
+\clearpage
+
+\newcommand{\evalsystemprompts}[1]{%
+\textbf{Shared system instruction.} You are an evaluator of expert-domain
+scientific writing. You will get a query--answer pair along with criteria
+explaining the specific evaluation aspect and the scoring rubric. You should
+evaluate whether the answer satisfy the query based on the given criteria.
+
+\medskip
+\hypertarget{#1-cot}{\textbf{CoT format.}} First output your reasoning enclosed
+between \texttt{<reasoning>} and \texttt{</reasoning>}. Then output your score
+enclosed between \texttt{<score>} and \texttt{</score>}. Inside
+\texttt{<score>} provide only the numeric score and nothing else.
+
+\medskip
+\hypertarget{#1-label-only}{\textbf{Label-only format.}} Output your score
+enclosed between \texttt{<score>} and \texttt{</score>}. Inside
+\texttt{<score>} provide only the numeric score and nothing else. Do not output
+any reasoning or other text.}
+
+\begin{figure*}[p]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}
+\raggedright\footnotesize
+\textbf{Related Work--Coherence}
+
+\medskip
+\evalsystemprompts{prompt-rw-coherence}
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Given a context from a scientific paper, your task is to
+write a coherent citation sentence that cites the given paper with a specific
+citation number. The citation number will also be provided with the context.
+
+\medskip
+\texttt{[CRITERIA]:} The paper context supports (entails) the citation
+sentence. When a sentence references multiple papers, the given paper need
+only support the part associated with its citation number. Scoring rubric:
+
+0: The context does not align with the claim associated with the citation
+number or with the overall meaning of the citation sentence.
+
+1: The context is compatible with the claim associated with the citation
+number.
+
+\medskip
+\texttt{[CONTEXT]:} This paper proposes a 3D shape descriptor network, which
+is a deep convolutional energy-based model for modeling volumetric shape
+patterns. Maximum-likelihood training follows an ``analysis by synthesis''
+scheme and can be interpreted as mode seeking and mode shifting. The model can
+synthesize 3D shapes through MCMC sampling, train a 3D generator through MCMC
+teaching, and support 3D object recovery and super-resolution. Experiments
+show that it generates realistic shapes and supports 3D shape analysis.
+
+\medskip
+\texttt{CITATION NUMBER:} 5
+
+\medskip
+\texttt{[ANSWER]:} Recent work has introduced the EBM with a ConvNet
+potential [4], [5].
+\end{minipage}}
+\caption{Matched CoT and label-only evaluation prompts for Related
+Work--Coherence. The task input is shared across the two formats.}
+\label{fig:prompt-rw-coherence}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}
+\raggedright\footnotesize
+\textbf{Related Work--Positioning Type}
+
+\medskip
+\evalsystemprompts{prompt-rw-positioning-type}
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a related-work section for a
+scientific paper that states the paper's contribution or its position among
+the literature in each paragraph.
+
+\medskip
+\texttt{[CRITERIA]:} In a multi-paragraph related-work section, every
+paragraph should state the paper's contribution and/or position in the
+literature. The contribution or positioning statement should align with the
+specific focus of its paragraph. Scoring rubric:
+
+0: The answer fails to state the paper's contribution and/or position in each
+related-work paragraph.
+
+1: The answer states the paper's contribution and/or position in each
+related-work paragraph.
+
+\medskip
+\texttt{[ANSWER]:} In several machine-learning settings, negative samples are
+produced from a statistical generative model. [1] generates negative data
+using GANs for semi-supervised learning and novelty detection. [2] proposes a
+theoretical framework that relies on an oracle classifying a sample as valid
+or invalid, without providing a practical implementation. [3] uses
+adversarial training to generate hard negatives for NLP tasks. [4] employs a
+GAN to learn the negative-data distribution for positive-unlabeled learning.
+
+In contrastive unsupervised learning, negative examples are assumed to be
+semantically farther from positive samples. Word2Vec [5] treats samples from a
+different context as negatives, while CPC-based methods [6], such as momentum
+contrast [7], use augmentations of different images. Negative data
+augmentation generates negatives by transforming existing samples, thereby
+incorporating useful inductive biases [8].
+\end{minipage}}
+\caption{Matched CoT and label-only evaluation prompts for Related
+Work--Positioning Type. The task input is shared across the two formats.}
+\label{fig:prompt-rw-positioning-type}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}
+\raggedright\footnotesize
+\textbf{Related Work--Positioning Check}
+
+\medskip
+\evalsystemprompts{prompt-rw-positioning-check}
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a related-work paragraph for a
+scientific paper that states the paper's contribution or its position among
+the literature.
+
+\medskip
+\texttt{[CRITERIA]:} The generated paragraph should explicitly or implicitly
+mention the main paper's contribution or position among existing literature.
+The contribution and/or positioning statement should align with the specific
+focus of the paragraph. Scoring rubric:
+
+0: The paragraph fails to explicitly or implicitly mention the main paper's
+contribution or position among existing literature.
+
+1: The paragraph explicitly or implicitly mentions the main paper's
+contribution or position among existing literature.
+
+\medskip
+\texttt{[ANSWER]:} Another line of research focuses on transforming extracted
+feature spaces into representations that are more discriminative for novel
+classes. Approaches that learn such transformations include metric-learning
+techniques and feature-space adaptation methods [9--12].
+\end{minipage}}
+\caption{Matched CoT and label-only evaluation prompts for Related
+Work--Positioning Check. The task input is shared across the two formats.}
+\label{fig:prompt-rw-positioning-check}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}
+\raggedright\footnotesize
+\textbf{RevUtil--Actionability}
+
+\medskip
+\evalsystemprompts{prompt-ru-actionability}
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a review comment for a scientific
+paper. The comment should be actionable. The actions should be clearly
+identifiable and concrete.
+
+\medskip
+\texttt{[CRITERIA]:} Explicit actions are direct or apparent, whereas implicit
+actions must be inferred. Concrete actions tell authors exactly what to change
+and how to implement the change; vague actions do not. Clarification questions
+count as explicit when they specify a direct action. Scoring rubric:
+
+1: The comment lacks meaningful information that could help the authors
+improve the paper.
+
+2: The comment implies an action, but the action is vague and lacks
+implementation details.
+
+3: The comment explicitly states an action but is vague about how to execute
+it.
+
+4: The comment implies an action and concretely explains how to implement it.
+
+5: The comment explicitly states an action and provides concrete details for
+implementing it.
+
+\medskip
+\texttt{[ANSWER]:} 5. Why is TS-CAN better than MTTS-CAN in some cases?
+\end{minipage}}
+\caption{Matched CoT and label-only evaluation prompts for
+RevUtil--Actionability. The task input is shared across the two formats.}
+\label{fig:prompt-ru-actionability}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}
+\raggedright\footnotesize
+\textbf{RevUtil--Grounding Specificity}
+
+\medskip
+\evalsystemprompts{prompt-ru-grounding}
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a review comment for a scientific
+paper. The comment should refer to a specific part of the paper and clearly
+identify the issue with that part.
+
+\medskip
+\texttt{[CRITERIA]:} A fully grounded comment allows the author to pinpoint
+the section, table, figure, or unique aspect being addressed. A specific
+comment explains what is wrong or missing in that part and provides concrete
+examples when external work is mentioned. Scoring rubric:
+
+1: The comment is neither grounded nor specific.
+
+2: The addressed part cannot be identified confidently, and the issue is not
+specified.
+
+3: The addressed part cannot be identified confidently, but the issue is
+specified clearly.
+
+4: The addressed part is explicit or obvious, but the issue is not specified.
+
+5: The addressed part is explicit or obvious, and the issue is specified.
+
+\medskip
+\texttt{[ANSWER]:} 4. Figure 3 lacks a description in the main body.
+\end{minipage}}
+\caption{Matched CoT and label-only evaluation prompts for RevUtil--Grounding
+Specificity. The task input is shared across the two formats.}
+\label{fig:prompt-ru-grounding}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}
+\raggedright\footnotesize
+\textbf{RevUtil--Helpfulness}
+
+\medskip
+\evalsystemprompts{prompt-ru-helpfulness}
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a review comment for a scientific
+paper. The comment should be useful for helping the authors improve the paper.
+
+\medskip
+\texttt{[CRITERIA]:} A helpful review should be actionable, grounded in a
+specific part of the paper, and provide justification or evidence for its
+claims. Scoring rubric:
+
+1: The comment identifies no meaningful weakness or improvement and provides
+no actionable feedback.
+
+2: The comment identifies an issue but is vague, unclear, or minimally useful.
+
+3: The comment identifies an issue or improvement but is incomplete or lacks
+depth.
+
+4: The comment provides clear and actionable feedback but could be more
+comprehensive.
+
+5: The comment thoroughly identifies weaknesses and provides detailed,
+actionable, and constructive suggestions.
+
+\medskip
+\texttt{[ANSWER]:} 1) Which model is better: HMM/DNN, CTC, or Enc-Dec?
+\end{minipage}}
+\caption{Matched CoT and label-only evaluation prompts for
+RevUtil--Helpfulness. The task input is shared across the two formats.}
+\label{fig:prompt-ru-helpfulness}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{\begin{minipage}{0.95\textwidth}
+\raggedright\footnotesize
+\textbf{RevUtil--Verifiability}
+
+\medskip
+\evalsystemprompts{prompt-ru-verifiability}
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a review comment for a scientific
+paper. The claims in the comment should be justified through logical
+reasoning, common sense, or external sources.
+
+\medskip
+\texttt{[CRITERIA]:} A claim may be justified through supporting logic,
+common knowledge in the field, or relevant external references. Scoring
+rubric:
+
+1: The comment contains a claim without supporting evidence or justification.
+
+2: The comment provides vague, insufficient, or incomplete support.
+
+3: The comment provides support but omits important examples, explanations,
+or references.
+
+4: The claim is sufficiently supported but has minor gaps.
+
+5: The claim is thoroughly supported by explicit and robust reasoning,
+references, data, or common-sense arguments.
+
+\medskip
+\texttt{[ANSWER]:} 4. It is probably better to add a conclusion section.
+\end{minipage}}
+\caption{Matched CoT and label-only evaluation prompts for
+RevUtil--Verifiability. The task input is shared across the two formats.}
+\label{fig:prompt-ru-verifiability}
+\end{figure*}

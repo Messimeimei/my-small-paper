@@ -1,0 +1,198 @@
+\clearpage
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.92\columnwidth}
+\small
+\textbf{Original prompt}
+
+\medskip
+\textbf{System:} You are an evaluator of expert-domain scientific writing.
+You will receive a query--answer pair, evaluation criteria, a scoring rubric,
+and examples demonstrating how the evaluation should be performed. First
+output your reasoning between \texttt{<reasoning>} and
+\texttt{</reasoning>}, followed by the numeric score between
+\texttt{<score>} and \texttt{</score>}.
+
+\medskip
+\textbf{User:}
+\texttt{[QUERY]} $\rightarrow$
+\texttt{[CRITERIA]} $\rightarrow$
+\textbf{\texttt{[EXAMPLES]}} $\rightarrow$
+\texttt{[ANSWER]}
+\end{minipage}%
+}
+\caption{Original prompt format. The system prompt announces fixed few-shot
+examples, and the user prompt includes an example block containing rationales
+and labels.}
+\label{fig:original-prompt}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\fbox{%
+\begin{minipage}{0.92\columnwidth}
+\small
+\textbf{Normalized prompt}
+
+\medskip
+\textbf{System:} You are an evaluator of expert-domain scientific writing.
+You will receive a query--answer pair, evaluation criteria, and a scoring
+rubric. First output your reasoning between \texttt{<reasoning>} and
+\texttt{</reasoning>}, followed by the numeric score between
+\texttt{<score>} and \texttt{</score>}.
+
+\medskip
+\textbf{User:}
+\texttt{[QUERY]} $\rightarrow$
+\texttt{[CRITERIA]} $\rightarrow$
+\texttt{[ANSWER]}
+\end{minipage}%
+}
+\caption{Normalized prompt format. The fixed few-shot examples and the
+corresponding system instruction are removed, while all task-specific content
+is retained.}
+\label{fig:normalized-prompt}
+\end{figure}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{%
+\begin{minipage}{0.95\textwidth}
+\raggedright
+\footnotesize
+\textbf{CoT training example: RevUtil actionability}
+
+\medskip
+\textbf{System prompt.}
+You are an evaluator of expert-domain scientific writing. You will get a
+query-answer pair along with criteria explaining the specific evaluation
+aspect and the scoring rubric. You should evaluate whether the answer satisfy
+the query based on the given criteria. First output your reasoning enclosed
+between \texttt{<reasoning>} and \texttt{</reasoning>}. Then, output your
+score enclosed between \texttt{<score>} and \texttt{</score>}. Inside
+\texttt{<score>} provide only the numeric score and nothing else.
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a review comment for a scientific
+paper. The comment should be actionable. Those actions should be clearly
+identifiable and concrete.
+
+\medskip
+\texttt{[CRITERIA]:} Explicit actions or suggestions are direct or apparent.
+Authors can directly identify modifications they should apply to their draft.
+Clarification questions should be treated as explicit statements if they give
+a direct action. However, implicit actions need to be inferred from the
+comment. This includes missing parts that need to be added. Authors can deduce
+what needs to be done after reading the comment. For concrete actions, the
+authors know exactly what needs to be done and how to apply the action.
+However, for vague actions the authors still do not know how to carry out this
+action. Scoring rubric is as follows:
+
+1: The comment lacks meaningful information to help authors improve the paper.
+Authors do not know what they should do after reading the comment.
+
+2: The comment includes an implicitly stated action or an action that can be
+inferred. However, the action itself is vague and lacks detail on how to apply
+it.
+
+3: The comment explicitly states an action but is vague on how to execute it.
+
+4: The comment implicitly states an action but concretely states how to
+implement the inferred action.
+
+5: The comment contains an explicit action and concrete details on how to
+implement it. Authors know exactly how to apply it.
+
+\medskip
+\texttt{[ANSWER]:} - line 114: Why not mention that the operator has to be
+associative and commutative?
+
+\medskip
+\textbf{Gold label.} 5
+
+\medskip
+\textbf{Completion.}
+\texttt{<reasoning>} The comment explicitly suggests adding a mention that the
+operator must be associative and commutative, specifically at line 114. This
+is a clear, direct action with a concrete location. The authors know exactly
+what to write and where, making it fully actionable and concrete.
+\texttt{</reasoning>} \texttt{<score>5</score>}
+\end{minipage}%
+}
+\caption{Complete CoT training example for RevUtil actionability.}
+\label{fig:cot-example}
+\end{figure*}
+
+\clearpage
+
+\begin{figure*}[p]
+\centering
+\fbox{%
+\begin{minipage}{0.95\textwidth}
+\raggedright
+\footnotesize
+\textbf{Label-only training example: RevUtil actionability}
+
+\medskip
+\textbf{System prompt.}
+You are an evaluator of expert-domain scientific writing. You will get a
+query-answer pair along with criteria explaining the specific evaluation
+aspect and the scoring rubric. You should evaluate whether the answer satisfy
+the query based on the given criteria. Output your score enclosed between
+\texttt{<score>} and \texttt{</score>}. Inside \texttt{<score>} provide only
+the numeric score and nothing else. Do not output any reasoning or other text.
+
+\medskip
+\textbf{User prompt.}
+
+\texttt{[QUERY]:} Your task is to write a review comment for a scientific
+paper. The comment should be actionable. Those actions should be clearly
+identifiable and concrete.
+
+\medskip
+\texttt{[CRITERIA]:} Explicit actions or suggestions are direct or apparent.
+Authors can directly identify modifications they should apply to their draft.
+Clarification questions should be treated as explicit statements if they give
+a direct action. However, implicit actions need to be inferred from the
+comment. This includes missing parts that need to be added. Authors can deduce
+what needs to be done after reading the comment. For concrete actions, the
+authors know exactly what needs to be done and how to apply the action.
+However, for vague actions the authors still do not know how to carry out this
+action. Scoring rubric is as follows:
+
+1: The comment lacks meaningful information to help authors improve the paper.
+Authors do not know what they should do after reading the comment.
+
+2: The comment includes an implicitly stated action or an action that can be
+inferred. However, the action itself is vague and lacks detail on how to apply
+it.
+
+3: The comment explicitly states an action but is vague on how to execute it.
+
+4: The comment implicitly states an action but concretely states how to
+implement the inferred action.
+
+5: The comment contains an explicit action and concrete details on how to
+implement it. Authors know exactly how to apply it.
+
+\medskip
+\texttt{[ANSWER]:} - line 114: Why not mention that the operator has to be
+associative and commutative?
+
+\medskip
+\textbf{Gold label.} 5
+
+\medskip
+\textbf{Completion.} \texttt{<score>5</score>}
+\end{minipage}%
+}
+\caption{Complete label-only training example for the same RevUtil
+actionability instance as Figure~\ref{fig:cot-example}.}
+\label{fig:label-only-example}
+\end{figure*}

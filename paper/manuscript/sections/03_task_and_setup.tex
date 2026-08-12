@@ -1,0 +1,81 @@
+\section{Experiment Setup}
+\label{sec:experiment-setup}
+
+% 介绍模型使用情况：一个用于微调，一个用于垂域微调对比，另有第三方大模型。
+\subsection{Models}
+
+We use Qwen3-4B~\citep{yang-etal-2025-qwen3} as the primary backbone and fine-tune 
+it separately on each scientific-writing evaluation task. For comparison, we 
+evaluate SciRM~\citep{sahinuc-etal-2026-reward}, a reward model developed 
+specifically for scientific-writing assessment, as well as several third-party 
+large language models under the same evaluation protocol.
+%todo：还需要参考 reward modeling 论文介绍用的三方大模型去修改
+
+% 引入原始数据来源和情况介绍
+\subsection{Dataset}
+
+Following \citet{sahinuc-etal-2026-reward}, we construct the evaluation suite from 
+two complementary sources. The related-work tasks are based on the fine-grained 
+evaluation framework introduced by \citet{sahinuc-etal-2025-related-work} and 
+extended by \citet{sahinuc-etal-2026-reward} to cover additional machine-learning 
+venues. The review-utility tasks are drawn from 
+RevUtil~\citep{sadallah-etal-2025-good} and focus on the quality of peer-review 
+comments.
+
+\subsubsection*{Related-work data}
+
+The related-work data evaluate literature synthesis along three dimensions:
+coherence, positioning type, and positioning check. Each task is formulated
+as a binary classification problem, with score 0 indicating that the
+specified criterion is not satisfied and score 1 indicating that it is
+satisfied.
+
+\begin{enumerate}
+    \renewcommand{\labelenumi}{(\arabic{enumi})}
+
+    \item \textit{coherence}~\citep{sahinuc-etal-2025-related-work}:
+    Determines whether a citation sentence accurately reflects and remains
+    consistent with the findings of the cited paper.
+
+    \item \textit{positioning type}~\citep{sahinuc-etal-2025-related-work}:
+    Determines whether the related-work section presents the paper's
+    contribution or positioning in the required location and form.
+
+    \item \textit{positioning check}~\citep{sahinuc-etal-2025-related-work}:
+    Determines whether the related-work section compares the target paper
+    with prior studies and establishes its position in the literature.
+
+\end{enumerate}
+
+\subsubsection*{Review-utility data}
+
+The review-utility data evaluate peer-review comments along four dimensions:
+actionability, grounding specificity, helpfulness, and verifiability. These
+tasks use five-point ordinal scales, with scores from 1 to 5 and higher scores
+indicating more useful, specific, actionable, and better-supported feedback.
+
+\begin{enumerate}
+    \renewcommand{\labelenumi}{(\arabic{enumi})}
+
+    \item \textit{actionability}~\citep{sadallah-etal-2025-good}: Measures
+    how explicitly and concretely a review comment specifies the changes that
+    authors should make.
+
+    \item \textit{grounding specificity}~\citep{sadallah-etal-2025-good}:
+    Measures whether a review comment identifies the relevant part of the
+    paper and specifies the issue that should be addressed.
+
+    \item \textit{helpfulness}~\citep{sadallah-etal-2025-good}: Measures
+    whether a review comment provides clear, constructive, and actionable
+    guidance for improving the paper.
+
+    \item \textit{verifiability}~\citep{sadallah-etal-2025-good}: Measures
+    whether the claims in a review comment are supported by sufficient
+    reasoning, evidence, or external references.
+
+\end{enumerate}
+
+The processing of the source data and the construction of the final training
+and test sets are detailed in Appendix~\ref{app:dataset-process}.
+Representative examples from the resulting datasets are provided in
+Appendix~\ref{app:dataset-examples}.
