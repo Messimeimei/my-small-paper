@@ -1,9 +1,10 @@
-"""Generate a complete, reproducible experiment ledger under eval_output."""
+"""生成 eval_output 下的实验结果汇总报告。"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+import statistics
 from typing import Any
 
 from evaluation.condition_labels import infer_eval_condition
@@ -11,6 +12,7 @@ from evaluation.result_records import (
     CONDITION_DATA,
     CONDITION_INFERENCE,
     CONDITION_META,
+    ORDINAL_TASKS,
     TRAINABLE_TASKS,
     collect_eval_records,
     normalize_condition,
@@ -62,7 +64,7 @@ def _local_rows(results_root: Path) -> list[dict[str, Any]]:
             "task": record.get("task"),
             "criterion": criterion_title(str(record.get("task") or "")),
             "condition": condition,
-            "model": metrics.get("model_name") or CONDITION_META.get(condition, (condition,))[0],
+            "model": ("SciRM-7B" if "scirm" in str(metrics.get("model_name") or "").lower() else "Qwen3-4B" if "qwen3" in str(metrics.get("model_name") or "").lower() else metrics.get("model_name")) or CONDITION_META.get(condition, (condition,))[0],
             "train": CONDITION_META.get(condition, (condition,))[0],
             "prompt": CONDITION_DATA.get(condition, MISSING),
             "inference": CONDITION_INFERENCE.get(condition, MISSING),
@@ -128,47 +130,209 @@ def _api_rows(api_root: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def _summary_table(rows: list[dict[str, Any]]) -> str:
-    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for row in rows:
-        grouped.setdefault((str(row["source"]), str(row["task"])), []).append(row)
-    lines = [
-        "| 来源 | 任务 | 条件/运行数 | 平均 Accuracy (%) | 平均 QWK | 平均 Pearson | 平均 Macro-F1 | 平均 MAE |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
-    ]
-    for (source, task), items in sorted(grouped.items()):
-        def mean(field: str) -> str:
-            values = [float(item[field]) for item in items if item.get(field) is not None]
-            return _num(sum(values) / len(values)) if values else MISSING
-        lines.append(
-            f"| {source} | {criterion_title(task)} | {len(items)} | {_pct(sum(float(item['accuracy']) for item in items if item.get('accuracy') is not None) / max(1, sum(item.get('accuracy') is not None for item in items)) if any(item.get('accuracy') is not None for item in items) else None)} | {mean('qwk')} | {mean('pearson')} | {mean('macro_f1')} | {mean('mae')} |"
-        )
-    return "\n".join(lines)
+METRICS = ("accuracy", "qwk", "pearson", "macro_f1", "mae")
+METRIC_LABELS = {"accuracy": "准确率 (%)", "qwk": "QWK", "pearson": "Pearson", "macro_f1": "Macro-F1", "mae": "MAE"}
+ConfigKey = tuple[str, str, str, str, str, str]
 
 
-def _ledger_table(rows: list[dict[str, Any]]) -> str:
-    headers = (
-        "Id", "来源", "任务", "条件", "模型", "训练/来源", "Prompt", "Inf.",
-        "Seed", "N", "Accuracy (%)", "QWK", "Pearson", "Macro-F1", "MAE",
-        "Valid (%)", "Avg output tok.", "Avg reasoning tok.", "Max tokens", "Status", "Metrics path",
+def _task_label(task: str) -> str:
+    """数据集名称保持英文。"""
+    return criterion_title(task)
+
+
+def _config_key(row: dict[str, Any]) -> ConfigKey:
+    return (
+        str(row.get("source") or MISSING),
+        str(row.get("model") or MISSING),
+        str(row.get("condition") or MISSING),
+        str(row.get("train") or MISSING),
+        str(row.get("prompt") or MISSING),
+        str(row.get("inference") or MISSING),
     )
-    lines = [
-        "| " + " | ".join(headers) + " |",
-        "| " + " | ".join(["---"] * 9 + ["---:"] * 10 + ["---"] * 2) + " |",
-    ]
-    previous_source = None
-    for index, row in enumerate(rows, start=1):
-        if row["source"] != previous_source:
-            lines.append("| **" + str(row["source"]) + " experiments** | " + " | ".join([""] * (len(headers) - 1)) + " |")
-            previous_source = row["source"]
-        cells = [
-            str(index), str(row["source"]), criterion_title(str(row["task"] or "")), str(row.get("condition") or MISSING),
-            str(row.get("model") or MISSING), str(row.get("train") or MISSING), str(row.get("prompt") or MISSING), str(row.get("inference") or MISSING),
-            str(row.get("seed") or MISSING), str(row.get("samples") or MISSING), _pct(row.get("accuracy")), _num(row.get("qwk")), _num(row.get("pearson")), _num(row.get("macro_f1")), _num(row.get("mae")), _pct(row.get("format_valid")),
-            _num(row.get("avg_output_tokens"), 1), _num(row.get("avg_reasoning_tokens"), 1), str(row.get("max_tokens") or MISSING), str(row.get("status") or MISSING), str(row.get("path") or MISSING),
+
+
+def _group_by_config(rows: list[dict[str, Any]]) -> dict[ConfigKey, list[dict[str, Any]]]:
+    grouped: dict[ConfigKey, list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(_config_key(row), []).append(row)
+    return grouped
+
+
+def _config_cells(key: ConfigKey) -> list[str]:
+    source, model, condition, train, prompt, inference = key
+    model_config = model if source == "API" else f"{model} / {condition}"
+    return ["本地" if source == "Local" else source, model_config, train, prompt, inference]
+
+
+def _seed_sort_key(seed: str) -> tuple[int, int | str]:
+    if seed.isdigit():
+        return (0, int(seed))
+    return (1, seed)
+
+
+def _seed_text(items: list[dict[str, Any]]) -> str:
+    seeds = sorted(
+        {str(item.get("seed")) for item in items if item.get("seed") not in {None, MISSING}},
+        key=_seed_sort_key,
+    )
+    return ", ".join(seeds) if seeds else MISSING
+
+
+def _values(items: list[dict[str, Any]], metric: str) -> list[float]:
+    return [float(item[metric]) for item in items if item.get(metric) is not None]
+
+
+def _mean(items: list[dict[str, Any]], metric: str) -> float | None:
+    values = _values(items, metric)
+    return statistics.fmean(values) if values else None
+
+
+def _render_value(metric: str, value: float) -> str:
+    return _pct(value) if metric == "accuracy" else _num(value)
+
+
+def _format_stats(metric: str, values: list[float], *, best: bool = False, coverage: str | None = None) -> str:
+    if not values:
+        return MISSING
+    rendered = _render_value(metric, statistics.fmean(values))
+    if len(values) > 1:
+        rendered += f" ± {_render_value(metric, statistics.stdev(values))}"
+    if best:
+        rendered = f"<u>{rendered}</u>"
+    return f"{rendered} ({coverage})" if coverage else rendered
+
+
+def _best_value(values: list[float], metric: str) -> float | None:
+    if not values:
+        return None
+    return min(values) if metric == "mae" else max(values)
+
+
+def _task_table(rows: list[dict[str, Any]], task: str) -> str:
+    grouped = _group_by_config([row for row in rows if str(row.get("task")) == task])
+    keys = sorted(grouped)
+    means = {metric: [_mean(grouped[key], metric) for key in keys] for metric in METRICS}
+    best = {
+        metric: _best_value([value for value in means[metric] if value is not None], metric)
+        for metric in METRICS
+    }
+    headers = ("来源", "模型 / 配置", "训练", "Prompt", "推理", "Seed", "运行数", *(METRIC_LABELS[m] for m in METRICS))
+    lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * 6 + ["---:"] * (len(METRICS) + 1)) + " |"]
+    for index, key in enumerate(keys):
+        items = grouped[key]
+        metric_cells = [
+            _format_stats(metric, _values(items, metric), best=means[metric][index] is not None and means[metric][index] == best[metric])
+            for metric in METRICS
         ]
-        lines.append("| " + " | ".join(cells) + " |")
+        lines.append("| " + " | ".join([*_config_cells(key), _seed_text(items), str(len(items)), *metric_cells]) + " |")
     return "\n".join(lines)
+
+
+def _applicable_tasks(metric: str) -> tuple[str, ...]:
+    return tuple(ORDINAL_TASKS) if metric in {"qwk", "mae"} else tuple(TRAINABLE_TASKS)
+
+
+def _seed_macro_values(items: list[dict[str, Any]], metric: str) -> list[float]:
+    by_seed: dict[str, list[float]] = {}
+    applicable = set(_applicable_tasks(metric))
+    for item in items:
+        if str(item.get("task")) not in applicable or item.get(metric) is None:
+            continue
+        seed = str(item.get("seed") or MISSING)
+        by_seed.setdefault(seed, []).append(float(item[metric]))
+    return [statistics.fmean(values) for values in by_seed.values() if values]
+
+
+def _coverage(items: list[dict[str, Any]], metric: str) -> tuple[int, int]:
+    applicable = _applicable_tasks(metric)
+    covered = {str(item.get("task")) for item in items if str(item.get("task")) in applicable and item.get(metric) is not None}
+    return len(covered), len(applicable)
+
+
+def _metric_table(rows: list[dict[str, Any]], metric: str) -> str:
+    grouped = _group_by_config(rows)
+    keys = sorted(grouped)
+    task_means = {
+        task: [_mean([item for item in grouped[key] if str(item.get("task")) == task], metric) for key in keys]
+        for task in TRAINABLE_TASKS
+    }
+    task_best = {
+        task: _best_value([value for value in task_means[task] if value is not None], metric)
+        for task in TRAINABLE_TASKS
+    }
+    averages = [_seed_macro_values(grouped[key], metric) for key in keys]
+    coverage = [_coverage(grouped[key], metric) for key in keys]
+    complete_means = [statistics.fmean(values) for values, (covered, total) in zip(averages, coverage, strict=True) if values and covered == total]
+    average_best = _best_value(complete_means, metric)
+    headers = ("来源", "模型 / 配置", "训练", "Prompt", "推理", "Seed", *(_task_label(task) for task in TRAINABLE_TASKS), "平均值（覆盖）")
+    lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * 6 + ["---:"] * (len(TRAINABLE_TASKS) + 1)) + " |"]
+    for index, key in enumerate(keys):
+        items = grouped[key]
+        task_cells = []
+        for task in TRAINABLE_TASKS:
+            task_items = [item for item in items if str(item.get("task")) == task]
+            value = task_means[task][index]
+            task_cells.append(_format_stats(metric, _values(task_items, metric), best=value is not None and value == task_best[task]))
+        covered, total = coverage[index]
+        average_mean = statistics.fmean(averages[index]) if averages[index] else None
+        average_cell = _format_stats(
+            metric,
+            averages[index],
+            best=covered == total and average_mean is not None and average_mean == average_best,
+            coverage=f"{covered}/{total}",
+        )
+        lines.append("| " + " | ".join([*_config_cells(key), _seed_text(items), *task_cells, average_cell]) + " |")
+    return "\n".join(lines)
+
+
+def _model_average_table(rows: list[dict[str, Any]]) -> str:
+    grouped = _group_by_config(rows)
+    keys = sorted(grouped)
+    averages = {metric: [_seed_macro_values(grouped[key], metric) for key in keys] for metric in METRICS}
+    coverage = {metric: [_coverage(grouped[key], metric) for key in keys] for metric in METRICS}
+    best: dict[str, float | None] = {}
+    for metric in METRICS:
+        complete = [
+            statistics.fmean(values)
+            for values, (covered, total) in zip(averages[metric], coverage[metric], strict=True)
+            if values and covered == total
+        ]
+        best[metric] = _best_value(complete, metric)
+    headers = ("来源", "模型 / 配置", "训练", "Prompt", "推理", "Seed", *(METRIC_LABELS[m] for m in METRICS))
+    lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * 6 + ["---:"] * len(METRICS)) + " |"]
+    for index, key in enumerate(keys):
+        items = grouped[key]
+        cells = []
+        for metric in METRICS:
+            values = averages[metric][index]
+            covered, total = coverage[metric][index]
+            mean = statistics.fmean(values) if values else None
+            cells.append(_format_stats(metric, values, best=covered == total and mean is not None and mean == best[metric], coverage=f"{covered}/{total}"))
+        lines.append("| " + " | ".join([*_config_cells(key), _seed_text(items), *cells]) + " |")
+    return "\n".join(lines)
+
+
+def _report_summaries(rows: list[dict[str, Any]]) -> str:
+    tasks = [task for task in TRAINABLE_TASKS if any(str(row.get("task")) == task for row in rows)]
+    task_tables = "\n\n".join(f"### {_task_label(task)}\n\n{_task_table(rows, task)}" for task in tasks)
+    metric_tables = "\n\n".join(f"### {METRIC_LABELS[metric]}\n\n{_metric_table(rows, metric)}" for metric in METRICS)
+    return f"""## 各数据集的模型结果
+
+数据集名称保持英文。同一模型配置的多个 seed 报告为 `均值 ± 样本标准差`；单 seed 仅报告单值。下划线表示该数据集、该指标的最优均值。
+
+{task_tables}
+
+## 按指标比较所有数据集
+
+每张表固定一个指标，列出全部七个数据集及模型配置。`平均值（覆盖）`先对每个 seed 做跨数据集宏平均，再报告 seed 间的均值与样本标准差。
+
+{metric_tables}
+
+## 模型 / 配置平均结果汇总
+
+括号内为数据集覆盖数。最佳值只在完整覆盖适用数据集的配置中比较；MAE 越低越好，其余指标越高越好。`—` 表示缺失或不适用。
+
+{_model_average_table(rows)}"""
 
 
 def render_experiment_report(eval_root: Path) -> str:
@@ -178,21 +342,13 @@ def render_experiment_report(eval_root: Path) -> str:
     rows.sort(key=lambda row: (row["source"], str(row.get("task")), str(row.get("condition")), str(row.get("model")), str(row.get("seed")), str(row.get("path"))))
     local_count = sum(row["source"] == "Local" for row in rows)
     api_count = sum(row["source"] == "API" for row in rows)
-    return f"""# Complete Experiment Results Ledger
+    return f"""# 实验结果汇总
 
-> Generated at {utc_now()}. This ledger includes every discovered complete `metrics.json` result under `eval_output/results` and `eval_output/api_results`.
-> Local records: {local_count}; API records: {api_count}; total: {len(rows)}.
-> `CoT 2048` runs are stored in the shared API directory and remain distinguishable through their model slug/configuration.
+> 生成时间：{utc_now()}。统计范围为 `eval_output/results` 和 `eval_output/api_results` 中已发现的完整 `metrics.json`。
+> 本地实验 {local_count} 条，API 实验 {api_count} 条，共 {len(rows)} 条。
+> 仅聚合同一模型配置的不同 seed，并报告 `均值 ± 样本标准差`；单 seed 报告单值。`CoT 2048` 作为单独模型配置展示。
 
-## Coverage summary
-
-{_summary_table(rows)}
-
-## Complete experiment records
-
-The table below is the authoritative row-level experiment ledger. Each row corresponds to one persisted result record; no best-result filtering is applied. `—` means unavailable or not applicable.
-
-{_ledger_table(rows)}
+{_report_summaries(rows)}
 """
 
 

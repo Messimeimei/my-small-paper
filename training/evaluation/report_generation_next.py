@@ -49,6 +49,7 @@ CONDITION_GROUPS = (
     ("Baselines", ("B-L", "B-C", "SciRM-L", "SciRM-C")),
     ("Standard fine-tuning", ("LL", "LC", "CL", "CC")),
     ("Paper Align", ("PAL", "PAC")),
+    ("Self-correct Align", ("SCAL", "SCAC")),
     (
         "Regression-aware methods",
         ("LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R"),
@@ -73,6 +74,8 @@ CONDITION_TRAIN = {
     "CC": "CoT SFT",
     "PAL": "Paper Align SFT",
     "PAC": "Paper Align SFT",
+    "SCAL": "Self-correct Align SFT",
+    "SCAC": "Self-correct Align SFT",
     "LL-R": "Label-only CE",
     "RAFT-G": "RAFT without CoT",
     "RAFT-R": "RAFT without CoT",

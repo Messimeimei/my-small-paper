@@ -1,16 +1,19 @@
 // ========== 评测 ==========
-CUDA_VISIBLE_DEVICES=0 python training/evaluate.py \
-  --config eval_output/configs/rev_util_actionability/paper_align/greedy_on_cot.yaml
+CUDA_VISIBLE_DEVICES=0 \
+  VLLM_USE_FLASHINFER_SAMPLER=0 \
+  python training/evaluate.py \
+    --config eval_output/configs/rev_util_actionability/self_correct_align/greedy_on_cot.yaml
 
-CUDA_VISIBLE_DEVICES=1 python training/evaluate.py \
-  --config eval_output/configs/rev_util_actionability/label_only/greedy_on_label_only.yaml
-
+CUDA_VISIBLE_DEVICES=0 \
+  VLLM_USE_FLASHINFER_SAMPLER=0 \
+  python training/evaluate.py \
+    --config eval_output/configs/rev_util_actionability/self_correct_align/greedy_on_label_only.yaml
 
 // ========== 训练 ==========
 CUDA_VISIBLE_DEVICES=0 \
 python \
   training/train.py \
-  --config training/configs/rev_util_grounding_specificity/cot_raft.yaml \
+  --config training/configs/rev_util_actionability/self_correct_align.yaml \
   --seed 42
 
 CUDA_VISIBLE_DEVICES=1 \
@@ -18,3 +21,16 @@ python \
   training/train.py \
   --config training/configs/rw_gen_positioning_type/paper_align.yaml \
   --seed 43
+
+// ========== 生成 align-self-cot 数据 ==========
+CUDA_VISIBLE_DEVICES=0 \
+VLLM_USE_FLASHINFER_SAMPLER=0 \
+python \
+  data/align_self_generated_data/generate_align_self_cot.py \
+  --model_name model/Qwen3-4B \
+  --adapter train_outputs/rev_util_actionability/paper_align/rev_util_actionability#qwen3_4b#paper_align__seed42__2026-07-31_11-27-24/adapter \
+  --dataset_name rev_util_actionability \
+  --max_model_len 8192 \
+  --max_tokens 512 \
+  --batch_size 64 \
+  --gpu_memory_utilization 0.9

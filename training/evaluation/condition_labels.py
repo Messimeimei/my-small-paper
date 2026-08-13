@@ -27,14 +27,26 @@ def infer_eval_condition(
     else:
         test_mode = "label_only" if supervision_mode == "label_only" else "cot"
 
+    adapter_path = (adapter or "").lower().replace("\\", "/")
+
     if is_scirm:
         train_mode = "SciRM"
     elif is_base:
         train_mode = "B"
     elif (
+        "self_correct_align" in text
+        or "self_correct_align.yaml" in config_path
+        or "/self_correct_align/" in config_path
+        or "/self_correct_align/" in adapter_path
+    ):
+        # Must precede paper_align / generic #ft# fallbacks: training still uses
+        # supervision.method=paper_align, but exp/adapter paths differ.
+        train_mode = "SCA"
+    elif (
         "paper_align" in text
         or "paper_align.yaml" in config_path
         or "/paper_align/" in config_path
+        or "/paper_align/" in adapter_path
     ):
         train_mode = "PA"
     elif (
@@ -71,6 +83,8 @@ def infer_eval_condition(
         ("A", "cot"): "AC",
         ("PA", "label_only"): "PAL",
         ("PA", "cot"): "PAC",
+        ("SCA", "label_only"): "SCAL",
+        ("SCA", "cot"): "SCAC",
     }.get((train_mode, test_mode))
 
 

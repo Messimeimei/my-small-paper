@@ -15,7 +15,8 @@ from evaluation.condition_labels import infer_eval_condition
 
 EVAL_CONDITIONS = (
     "B-L", "B-C", "SciRM-L", "SciRM-C", "LL", "LC", "CL", "CC",
-    "PAL", "PAC", "LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R",
+    "PAL", "PAC", "SCAL", "SCAC",
+    "LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R",
 )
 # Only conditions included in the current report are normalized here.
 LEGACY_CONDITION_ALIASES = {
@@ -34,6 +35,16 @@ CONDITION_META = {
     "CC": ("CoT SFT", "CoT", "同格式 CoT 微调与测试"),
     "PAL": ("Paper Align SFT", "Label-only", "Paper Align adapter 交叉测试 Label-only prompt"),
     "PAC": ("Paper Align SFT", "CoT", "Paper Align adapter 在 CoT 测试 prompt 上评测"),
+    "SCAL": (
+        "Self-correct Align SFT",
+        "Label-only",
+        "Self-correct Align adapter 交叉测试 Label-only prompt",
+    ),
+    "SCAC": (
+        "Self-correct Align SFT",
+        "CoT",
+        "Self-correct Align adapter 在 CoT 测试 prompt 上评测",
+    ),
     "LL-R": ("Label-only CE", "RAIL", "Label-only adapter 使用官方完整词表概率加权和"),
     "RAFT-G": ("RAFT without CoT", "Greedy", "RAFT adapter 使用原自由生成"),
     "RAFT-R": ("RAFT without CoT", "RAIL", "RAFT adapter 使用官方完整词表概率加权和"),
@@ -67,6 +78,7 @@ CONDITION_INFERENCE = {
     "B-L": "Greedy", "B-C": "Greedy", "SciRM-L": "Greedy", "SciRM-C": "Greedy",
     "LL": "Greedy", "LC": "Greedy",
     "CL": "Greedy", "CC": "Greedy", "PAL": "Greedy", "PAC": "Greedy",
+    "SCAL": "Greedy", "SCAC": "Greedy",
     "LL-R": "RAIL", "RAFT-G": "Greedy", "RAFT-R": "RAIL",
     "CC-R": "CoT-RAIL", "COT-RAFT-G": "Greedy", "COT-RAFT-R": "CoT-RAIL",
 }
@@ -74,6 +86,7 @@ CONDITION_DATA = {
     "B-L": "Label-only", "B-C": "CoT", "SciRM-L": "Label-only", "SciRM-C": "CoT",
     "LL": "Label-only", "LC": "CoT",
     "CL": "Label-only", "CC": "CoT", "PAL": "Label-only", "PAC": "CoT",
+    "SCAL": "Label-only", "SCAC": "CoT",
     "LL-R": "Label-only", "RAFT-G": "Label-only", "RAFT-R": "Label-only",
     "CC-R": "CoT", "COT-RAFT-G": "CoT", "COT-RAFT-R": "CoT",
 }

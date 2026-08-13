@@ -1,0 +1,100 @@
+\section{Related Work}
+\label{sec:related-work}
+
+% 1. scirm 的 写法
+% - 首先一段介绍 LLM-as-a-judge 适合搞评测，但是在领域任务上评测有偏见
+%   （3篇文章）
+%   还提了缺少资源使得让大模型在训练阶段熟悉这个任务更难
+% - 然后介绍了3个文章解决方法：评价科学文章改写发现 LLM-as-a-judge
+%   把握不了评估要点；同行评审分类任务强制一对一标签，无法适配部分句子
+%   可以归类为多个错误；还有构建了同行评审的数据集
+% - 最后介绍了相关工作的评测，指出效果好但是有局限。
+
+\subsection{Evaluating Scientific Writing}
+\label{sec:related-scientific-writing}
+
+% 先描述科学写作评价的任务，从流畅度到全面的综合证据，定位贡献，有用；然后
+% 引入文章证明 LLM 的评价有用，但是不代表可靠，需要验证 LLM 生成评价是否有用
+Scientific-writing evaluation extends beyond surface fluency to evidence
+synthesis, contribution positioning, and useful criticism. Prior work
+suggests that LLM-generated feedback can overlap with human reviews and help
+researchers, while focused-feedback systems target specific, actionable, and
+coherent comments
+\citep{liang-etal-2024-large-scale,chamoun-etal-2024-automated}. However,
+evidence about generated feedback does not directly establish the reliability
+of rubric-conditioned scores.
+
+% 从具体诊断任务过渡到完整评价框架和多任务模型，最后指出评分因素缺口。
+Recent work evaluates scientific writing through
+task-specific, verifiable judgments. For text revision, conventional
+similarity metrics and LLM-based judges capture instruction following and
+correctness unevenly \citep{jourdan-etal-2025-identifying}; other benchmarks
+test limitation identification \citep{xu-etal-2025-llms-identify}, critique
+grounding \citep{ou-etal-2025-claimcheck}, and alignment of review focus with
+experts \citep{shin-etal-2025-mind}. Dedicated frameworks further decompose
+related-work quality into coherence and research positioning
+\citep{sahinuc-etal-2025-related-work}, and review utility into actionability,
+grounding specificity, helpfulness, and verifiability
+\citep{sadallah-etal-2025-good}. SciRM combines these tasks in a multi-task
+reward model \citep{sahinuc-etal-2026-reward}. Together, these studies show
+that scientific-writing evaluation is multidimensional rather than reducible
+to surface similarity or a single score. However, they focus mainly on
+defining criteria and improving evaluator performance, leaving how
+supervision and output design shape scoring reliability underexplored.
+
+\subsection{Training LLM-as-a-Judge}
+\label{sec:related-llm-judges}
+
+% 这一段介绍 LLM-as-a-Judge 的两种模型，引出我的工作的 direct assessment 类型
+% 还介绍了已有研究说明：输出 reasoning 和改变候选顺序会影响结果。证明我工作是合理的。
+LLM-as-a-Judge uses LLMs either to score individual outputs directly or to
+compare output pairs
+\citep{chiang-lee-2023-large,zheng-etal-2023-judging}. G-Eval further
+generates task-specific evaluation steps before direct scoring
+\citep{liu-etal-2023-g}. However, explanation requests and candidate order can
+alter agreement with human ratings and pairwise preferences
+\citep{chiang-lee-2023-closer,wang-etal-2024-large-language-models-fair}.
+
+% 这一段则是介绍了 微调 LLM-as-a-Judge 的几种方法，并引出他们没有把 reasoning
+% 和 score 分开，导致无法区分评价效果的提升究竟来自哪里
+Fine-tuned open judges provide specialized alternatives to closed API judges.
+Prometheus generates rubric-conditioned feedback and scores, Prometheus 2
+supports direct and pairwise judgments, and FLAMe scales training across more
+than 100 evaluation tasks
+\citep{kim-etal-2024-prometheus-iclr,kim-etal-2024-prometheus,
+vu-etal-2024-foundational}. TRACT further augments joint CoT--score
+cross-entropy with a regression-aware score loss
+\citep{chiang-etal-2025-tract}. Because these systems vary supervision,
+objectives, and inference formats together, they do not isolate whether
+rationale supervision improves binary or ordinal scoring.
+
+\subsection{Rationales in Training and Inference}
+\label{sec:related-rationale-supervision}
+
+% 先介绍 rationale 在训练和推理的两种效果，并指出训练时加入 rationale 不一定有用
+Rationale-first inference and rationale supervision intervene at different
+stages. The former prompts a fixed model to generate reasoning before its
+judgment, whereas the latter optimizes rationale tokens during fine-tuning.
+Prompted CoT yields its clearest gains on mathematical and symbolic tasks
+\citep{sprague-etal-2025-cot}; in LLM-as-a-Judge, it can instead narrow the
+judgment distribution and degrade performance
+\citep{wang-etal-2025-improving-llm-judge}. Thus, rationale-first inference
+does not uniformly improve scoring, nor does any inference-time
+gain establish that rationales are beneficial training targets.
+
+% 随后详细介绍了训练时加入 rationale 的几种方法和对应效果
+% 最后指出他们没有把 reasoning 和 score 分开，导致无法区分评价效果的提升究竟来自哪
+Training-time evidence is similarly conditional. Distilling Step-by-Step
+treats label prediction and rationale generation as separate multi-task
+objectives and improves data efficiency
+\citep{hsieh-etal-2023-distilling}. In contrast, naive rationale-augmented SFT
+can trail label-only training on NLU tasks and harm clinical prediction,
+whereas objectives that protect answer-token learning can recover accuracy
+\citep{shi-etal-2025-rationales-nlu,su-etal-2026-rationale-disease,
+shi-etal-2025-sftkey}. Together with generative judges such as TRACT
+\citep{chiang-etal-2025-tract}, these results leave unclear whether scoring
+differences arise from rationale supervision, the score objective, or
+compatibility between training and inference formats. We separate these
+factors by crossing score-only and rationale-supervised fine-tuning with
+direct and rationale-first inference while holding the data, labels, and
+evaluation tasks fixed.

@@ -1,0 +1,77 @@
+\section{Introduction}
+\label{sec:introduction}
+
+% 1. scirm 的 introduction 写法
+% - 先介绍了科学写作的生成很多，但是不好评估
+% - 然后介绍了为每个科学写作微调成本高，少资源
+% - 再引入 LLm-as-a-judge 是个方法，但是缺少领域知识，已有的在训练时引入
+%   但是又被固化了，推理时还是不够遵循不同维度、准则等等
+% - 最后引入他们的方法，奖励推理模型。先说了已有的奖励推理模型的几个不足：
+%   首先是只在通用评价任务上，没有科学写作评价；另一个是采用成对偏好建模，对
+%   文本质量打分不够；还有就是训练时候适配了固定打分规则，换个标准不同的任务就不
+%   行；最后就是也有论文做了专业领域打分，但仅适用单一任务，且依赖闭源商业大模型，
+%   拓展泛化能力不足。
+% - 最后介绍了他们的方法：两阶段推理训练。以及介绍了好处：就是可以学习既定的评定
+%   准则，同时还能反向解读准则，依次修正自身推理，强调这真是现在的奖励推理模型没有的。
+
+Large language models (LLMs) are increasingly used to score scientific text
+against task-specific criteria. A common design asks the judge to generate a
+rationale before returning its score, with the expectation that explicit
+reasoning will support a more reliable judgment. Yet the available evidence
+does not show a uniform scoring benefit. Explanation requests can change
+agreement with human ratings, and chain-of-thought (CoT) can even degrade the
+judgment distribution of an LLM judge
+\citep{chiang-lee-2023-closer,wang-etal-2025-improving-llm-judge}. Likewise,
+rationale-augmented fine-tuning has improved some tasks but trailed label-only
+training on others
+\citep{hsieh-etal-2023-distilling,shi-etal-2025-rationales-nlu,
+su-etal-2026-rationale-disease}. Thus, producing a plausible rationale does not
+by itself establish that the associated score is learned more reliably.
+
+This inconsistency motivates a more precise question: when a judge outputs
+both a rationale and a score, which part of the pipeline accounts for any
+change in scoring? Rationale-first inference asks a fixed model to reason
+before answering, whereas rationale supervision also optimizes the rationale
+tokens during fine-tuning. Conflating the two can obscure whether a score
+changes because the model learned a better criterion-specific decision, or
+because it became adapted to an inference interface that expects reasoning.
+We therefore treat rationale supervision and rationale-first inference as
+separate experimental factors rather than as a single CoT intervention.
+
+Existing generative judges do not provide this separation. Prometheus learns
+rubric-conditioned feedback followed by a score, and SciRM trains reasoning
+reward models for multiple scientific-writing criteria
+\citep{kim-etal-2024-prometheus-iclr,sahinuc-etal-2026-reward}. More closely,
+work on natural language understanding compares label-only and
+rationale-augmented fine-tuning and proposes Align to balance paired direct and
+reasoning views \citep{shi-etal-2025-rationales-nlu}. However, its evidence
+comes from general understanding tasks rather than rubric-conditioned
+scientific-writing evaluation. Whether the same supervision choices improve
+scientific-writing scores, and how they interact with the inference format,
+therefore remains unresolved.
+
+In this work, we conduct a controlled study of whether CoT supervision improves
+scientific-writing judgments under explicit rubrics. Concretely, we train
+matched
+judges with label-only targets, CoT targets, or Align, which pairs direct and
+reasoning supervision. Rather than treating CoT as a single design choice, we
+independently vary the training target and the inference interface. We apply
+this design to seven tasks spanning related-work evaluation and review utility,
+each with an explicit criterion and label space. This separation allows us to
+identify whether a scoring change reflects supervision, reliance on a
+reasoning-first interface, or their interaction. We further trace paired
+prediction changes to distinguish invalid output schemas from shifts among
+valid scores.
+
+Our contributions and findings are threefold. First, we systematically compare
+label-only and CoT supervision across multiple scientific-writing criteria and
+show that CoT is not a uniform improvement: its effects vary by task and
+inference interface. Second, we demonstrate that performance degradation has
+two distinct forms, output-schema failure and valid-score drift, which are
+obscured by aggregate metrics. Third, we adapt Align to preserve direct
+supervision while learning a reasoning path. Align recovers roughly three
+quarters of the label-only-correct predictions lost after CoT fine-tuning
+across two seeds, although our current evidence does not attribute this
+recovery solely to its loss-balancing design. Together, these findings show
+that rationale generation and scoring reliability must be evaluated as
+related but distinct objectives.

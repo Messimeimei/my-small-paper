@@ -1,0 +1,91 @@
+\section{Dataset Process}
+\label{app:dataset-process}
+
+% 介绍原始数据的清洗工作
+\subsection{Source Data and Data Cleaning}
+
+We obtained the original data from \citet{sahinuc-etal-2026-reward} and retained 
+three related-work and four review-utility dimensions, excluding 
+\textit{verifiability extraction}. We removed duplicate, overlapping, malformed, 
+and unreliable instances. RevUtil is substantially larger than
+the related-work data; we therefore reproducibly
+sampled 4,800 candidates per RevUtil dimension while approximately preserving
+the original label distributions.
+
+% 介绍三个工作：1.prompt 修改 2.蒸馏得到 cot 数据 3.构建 cot 和 label-only 2种数据
+\subsection{Training and Test Data Construction}
+
+\noindent\textbf{Zero-shot prompt construction.}
+The original prompts included fixed few-shot examples containing both
+rationales and labels, which could influence the model's reasoning and
+confound comparisons across supervision settings. As illustrated in Figure
+\hyperref[fig:original-prompt]{~\ref*{fig:original-prompt}} and Figure
+\hyperref[fig:normalized-prompt]{~\ref*{fig:normalized-prompt}}, we
+removed the example block and its corresponding system instruction while
+leaving the query, criteria, scoring rubric, and evaluation instance
+unchanged.
+
+\noindent\textbf{Teacher rationale distillation.}
+We use DeepSeek-V4-Pro to generate a rationale and score for each training
+candidate under the configuration summarized in
+Table~\ref{tab:distillation-configuration}. A trajectory is retained only if
+it strictly follows the required output format, contains a score from the
+task-specific label space, and assigns the same score as the gold label.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lp{0.58\columnwidth}}
+\hline
+\textbf{Configuration} & \textbf{Value} \\
+\hline
+Teacher model & DeepSeek-V4-Pro \\
+Temperature & 0 \\
+Top-$p$ & 1 \\
+Maximum output tokens & 2,048 \\
+Number of completions & 1 \\
+Output format & \texttt{<reasoning>...</reasoning>} followed by
+\texttt{<score>N</score>} \\
+Acceptance criterion & Format valid and score matches gold label \\
+\hline
+\end{tabular}
+\caption{Configuration used for teacher-rationale distillation.}
+\label{tab:distillation-configuration}
+\end{table}
+
+\noindent\textbf{CoT and label-only data construction.}
+The final training data contain two supervision formats. CoT data pair each
+evaluation prompt with a teacher-generated rationale followed by the gold
+score, whereas label-only data pair the prompt with the gold score alone.
+Figures~\ref{fig:cot-example} and~\ref{fig:label-only-example} present the two
+formats using the same RevUtil actionability instance.
+
+% 展示数据统计
+\subsection{Final Dataset Statistics}
+
+Table~\ref{tab:dataset-process-statistics} reports the task format and final
+numbers of training and test instances for all seven datasets, together with
+their aggregate sizes.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{p{0.43\columnwidth}crr}
+\hline
+\textbf{Task} & \textbf{Format} & \textbf{Train} & \textbf{Test} \\
+\hline
+Related Work--Coherence & Binary & 1,526 & 1,046 \\
+Related Work--Positioning Check & Binary & 2,666 & 603 \\
+Related Work--Positioning Type & Binary & 944 & 204 \\
+RevUtil--Actionability & Ordinal & 1,788 & 1,000 \\
+RevUtil--Grounding Specificity & Ordinal & 2,652 & 1,000 \\
+RevUtil--Helpfulness & Ordinal & 2,279 & 1,000 \\
+RevUtil--Verifiability & Ordinal & 1,825 & 788 \\
+\hline
+\textbf{Total} & -- & \textbf{13,680} & \textbf{5,641} \\
+\hline
+\end{tabular}
+\caption{Task formats and final training and test set sizes. Binary tasks use
+scores of 0--1, whereas ordinal tasks use scores of 1--5.}
+\label{tab:dataset-process-statistics}
+\end{table}
