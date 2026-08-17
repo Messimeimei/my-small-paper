@@ -34,7 +34,6 @@ from evaluation.result_records import (
     utc_now,
 )
 from shared.metrics import criterion_title
-from evaluation.experiment_report import update_experiment_report
 
 
 METRIC_SECTIONS = (
@@ -383,5 +382,4 @@ def update_evaluation_analysis(output_root: Path) -> Path:
     analysis_path = output_root / "evaluation_analysis.md"
     analysis_path.write_text(render_evaluation_analysis(records), encoding="utf-8")
     refresh_legacy_comparison_tables(output_root)
-    update_experiment_report(output_root.parent)
     return analysis_path
