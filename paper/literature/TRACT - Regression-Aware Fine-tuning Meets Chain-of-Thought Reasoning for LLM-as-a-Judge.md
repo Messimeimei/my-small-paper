@@ -196,7 +196,7 @@ $$
 
 这里不会在合法分数集合内二次归一化。如果 `1` 到 `5` 的总概率质量只有 0.7，剩余 0.3 不会重新分给五个分数。这一点与 TRACT 官方推理代码一致，也是当前训练和 RAIL/CoT-RAIL 推理共同采用的定义。
 
-当前实现位于 [`training/trainers/raft_trainer.py`](../../training/trainers/raft_trainer.py)，论文定义见 [§2.3 Regression-Aware Fine-Tuning](https://arxiv.org/html/2503.04381v2#S2.SS3)。
+当前实现位于 [`training/trainers/raft_trainer.py`](../../src/trainers/raft_trainer.py)，论文定义见 [§2.3 Regression-Aware Fine-Tuning](https://arxiv.org/html/2503.04381v2#S2.SS3)。
 
 ### 当前 RaftWithoutCot
 
@@ -266,7 +266,7 @@ $$
 - `L_RAFT` 只作用在数字分数位置。
 - 训练分数时使用 teacher forcing，实际优化的是 $p(y\mid x,s_{teacher},\texttt{<score>})$。
 
-当前每个 epoch 内的验证仍然使用 greedy 完整生成并解析 `<score>`，不是 CoT-RAIL。独立运行 `../../training/evaluate.py --inference_mode cot_rail` 时，才会先生成解释直到 `<score>`，再执行一次单 token 概率探测。如果第一阶段没有生成 `<score>`，该样本的 CoT-RAIL 结果就是无效值。
+当前每个 epoch 内的验证仍然使用 greedy 完整生成并解析 `<score>`，不是 CoT-RAIL。独立运行 `../../scripts/evaluate.py --inference_mode cot_rail` 时，才会先生成解释直到 `<score>`，再执行一次单 token 概率探测。如果第一阶段没有生成 `<score>`，该样本的 CoT-RAIL 结果就是无效值。
 
 当前 `cot_raft` 与论文的关系是：
 

@@ -1,3 +1,14 @@
+# Project Entry Points
+
+The importable source is under `src/`, with evaluation split into `config.py`, `dataset.py`, `runner.py`, pluggable `inference/`, and explicit `reporting/`. Commands, configs, datasets, checkpoints, and outputs remain separated at the repository root.
+
+```bash
+python scripts/train.py --config configs/training/<task>/<method>.yaml --seed 42 --dry-run
+python scripts/evaluate.py --config configs/evaluation/<task>/<method>/<experiment>.yaml
+```
+
+# Research Log
+
 # 2026-07-08
 
 今天开始复现论文方法和准备数据集。通过阅读大量论文，初步锁定的选题是解决小模型推理退化的问题，尤其是在垂域微调之后（但是也可能变成用下面新的方法提升科学文献领域的一些问题；或者是用推理 + 新方法提升科学文献领域准确率）。整体采用的方法是 Lora + MoE，但是目前发现的具体实现有两种：

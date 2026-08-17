@@ -3,7 +3,7 @@
 Use the isolated environment at `../.venv-paper`; do not install these packages
 into the training environment.
 
-Activate it from `paper_workspace/` with:
+Activate it from `paper/` with:
 
 ```bash
 source analysis/activate.sh
@@ -12,7 +12,7 @@ source analysis/activate.sh
 Canonical aggregate input:
 
 ```text
-../eval_output/results/evaluation_analysis_records.json
+../outputs/evaluations/evaluation_analysis_records.json
 ```
 
 This JSON is an object with a `records` array, not a top-level array. Its cached

@@ -16,7 +16,7 @@
 
 采用下面这套约定：
 
-> **所有论文工作都从 `paper_workspace/` 执行。论文源文件只放在 `manuscript/` 中，以 LaTeX 为正式稿；中文思考放 `manuscript/notes/`，英文投稿正文放 `manuscript/sections/`。实验结果仍以上一级的 `../eval_output/` 为原始来源，任何表图必须由 `analysis/` 中的脚本生成。**
+> **所有论文工作都从 `paper/` 执行。论文源文件只放在 `manuscript/` 中，以 LaTeX 为正式稿；中文思考放 `manuscript/notes/`，英文投稿正文放 `manuscript/sections/`。实验结果仍以上一级的 `../outputs/evaluations/` 为原始来源，任何表图必须由 `analysis/` 中的脚本生成。**
 
 不要把正式正文写在以下位置：
 
@@ -24,7 +24,7 @@
 - `literature/`：这里保存相关论文和阅读笔记，不是自己的稿件；
 - 聊天窗口：AI 输出只能作为候选草稿，确认后才进入 `.tex`；
 - Word、Overleaf、本地 LaTeX 三处同时修改：会立即产生版本分叉；
-- `../eval_output/results/evaluation_analysis.md`：这是自动分析产物，不是论文 Results。
+- `../outputs/evaluations/evaluation_analysis.md`：这是自动分析产物，不是论文 Results。
 
 ### B. 当前机器有什么工具
 
@@ -64,7 +64,7 @@
 
 ```text
 my-small-paper/
-├── paper_workspace/                    # 所有论文写作资产
+├── paper/                    # 所有论文写作资产
 │   ├── README.md                       # 统一入口
 │   ├── Makefile                        # 编译和检查命令
 │   ├── docs/                           # 指南、研究分析与综述
@@ -81,22 +81,21 @@ my-small-paper/
 │   ├── analysis/                       # 统计、图表脚本与派生数据
 │   ├── reproducibility/                # 环境、数据和图表溯源
 │   └── submission/                     # 投稿快照
-├── training/                           # 原项目训练代码，不移动
+├── src/
 ├── data/                               # 原项目数据，不移动
-├── eval_output/                        # 原始评测输出，不移动
-└── MoDE/                               # 原项目模块，不移动
+├── outputs/evaluations/
 ```
 
-进入 `paper_workspace/` 后，内部目录直接使用 `manuscript/`、`analysis/`、
+进入 `paper/` 后，内部目录直接使用 `manuscript/`、`analysis/`、
 `literature/`、`reproducibility/` 和 `submission/`；原项目资源使用
-`../training/`、`../data/` 和 `../eval_output/`。不要移动原项目目录。
+`../src/`、`../data/` 和 `../outputs/evaluations/`。不要移动原项目目录。
 
 根目录 `.gitignore` 已经忽略项目本地环境和构建产物：
 
 ```gitignore
 # Paper-local environments and build artifacts
 .venv-paper/
-paper_workspace/manuscript/build/
+paper/manuscript/build/
 ```
 
 不要全局忽略 `*.pdf`，因为最终论文图片本来就建议保存为 PDF。
@@ -107,7 +106,7 @@ paper_workspace/manuscript/build/
 Workshop 已配置为调用这套 `latexmk + pdfLaTeX` 工具链。首次开始只需：
 
 ```bash
-cd /home/messi/pyprojects/paper/my-small-paper/paper_workspace
+cd /home/messi/pyprojects/paper/my-small-paper/paper
 source analysis/activate.sh
 make paper-env-check
 make paper-check
@@ -187,7 +186,7 @@ python -c "import numpy, pandas, scipy, statsmodels, matplotlib, seaborn, pypdf"
 正式图表生成流程固定为：
 
 ```text
-../eval_output/results/**/predictions.jsonl + metrics.json
+../outputs/evaluations/**/predictions.jsonl + metrics.json
                          |
                          v
 analysis/scripts/*.py
@@ -275,11 +274,11 @@ shifts observed on Grounding and Verifiability.
 
 打开并同时参考：
 
-- `../training/configs/<task>/*.yaml`：训练条件；
-- `../eval_output/results/**/resolved_config.json`：实际执行配置；
+- `../configs/training/<task>/*.yaml`：训练条件；
+- `../outputs/evaluations/**/resolved_config.json`：实际执行配置；
 - `../data/<task>/`：数据字段和样本；
-- `../training/supervision/*.py`：损失实现；
-- `../training/trainers/*.py`：trainer 行为。
+- `../src/supervision/*.py`：损失实现；
+- `../src/trainers/*.py`：trainer 行为。
 
 先写表格，不先写散文：
 
@@ -302,7 +301,7 @@ shifts observed on Grounding and Verifiability.
 唯一数字入口应是：
 
 ```text
-../eval_output/results/evaluation_analysis_records.json
+../outputs/evaluations/evaluation_analysis_records.json
 ```
 
 但写入正文前，必须回查相应任务目录中的 `metrics.json` 与 `predictions.jsonl`。创建 `analysis/scripts/build_main_results.py`，输出：
@@ -367,7 +366,7 @@ Abstract 不单独建章节文件，放在 `main.tex`。从 Results 选 2–3 �
 每次开始写作：
 
 ```bash
-cd /home/messi/pyprojects/paper/my-small-paper/paper_workspace
+cd /home/messi/pyprojects/paper/my-small-paper/paper
 git status --short
 source analysis/activate.sh
 cursor .
@@ -401,7 +400,7 @@ make paper-check
 方法部分提示词示例：
 
 ```text
-读取 ../training/configs、../training/supervision、../training/trainers 和三个代表任务的
+读取 ../src/configs、../src/supervision、../src/trainers 和三个代表任务的
 resolved_config.json。只修改 manuscript/sections/03_task_and_setup.tex。
 写清 Label-only、CoT、Paper Align、RAFT 的数据视图、损失和推理协议。
 所有超参数必须来自文件；找不到就记录到 manuscript/notes/04_open_issues.md，
@@ -411,7 +410,7 @@ resolved_config.json。只修改 manuscript/sections/03_task_and_setup.tex。
 结果部分提示词示例：
 
 ```text
-读取 ../eval_output/results/evaluation_analysis_records.json 和对应 metrics.json。
+读取 ../outputs/evaluations/evaluation_analysis_records.json 和对应 metrics.json。
 按 RQ1/RQ2/RQ3 起草 manuscript/sections/04_main_results.tex。
 每个段落必须是 claim-evidence-interpretation-boundary，保留两个 seed，
 不把数值变化写成显著性，不提出新机制。只引用自动生成的 LaTeX 表格。
@@ -974,7 +973,7 @@ Boundary: 结果不能支持什么更强结论。
 其中三条规则最重要：
 
 1. `manuscript/` 是论文正文的唯一真源；
-2. `analysis/` 负责把 `../eval_output/` 转成表图，禁止手工抄数字；
+2. `analysis/` 负责把 `../outputs/evaluations/` 转成表图，禁止手工抄数字；
 3. `reproducibility/experiment_manifest.md` 必须记录代码 commit、模型 checkpoint、数据版本、seed、配置文件、训练命令、推理命令、原始预测路径和汇总脚本。
 
 审稿回复放在对应的提交轮次下，例如 `submission/arr-2026-10-12/response/rebuttal_matrix.md`，不要混进正文目录。

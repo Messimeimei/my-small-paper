@@ -2,7 +2,7 @@
 
 本目录存放论文规划与写作指导；它与 `manuscript/`、`analysis/`、
 `literature/`、`reproducibility/` 和 `submission/` 共同组成
-`paper_workspace/`。项目代码、数据和实验输出保留在上一级项目目录。
+`paper/`。项目代码、数据和实验输出保留在上一级项目目录。
 
 ## 建议阅读顺序
 
@@ -18,4 +18,4 @@
 - 项目使用说明：[`../../README.md`](../../README.md)
 - 论文写作入口：[`../manuscript/START_HERE.md`](../manuscript/START_HERE.md)
 - 本地参考论文：[`../literature/`](../literature/)
-- 实验结果：[`../../eval_output/results/`](../../eval_output/results/)
+- 实验结果：[`../../outputs/evaluations/`](../../outputs/evaluations/)

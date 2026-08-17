@@ -6,7 +6,7 @@
 ## 立即开始
 
 ```bash
-cd /home/messi/pyprojects/paper/my-small-paper/paper_workspace
+cd /home/messi/pyprojects/paper/my-small-paper/paper
 source analysis/activate.sh
 make paper-check
 cursor .
@@ -30,9 +30,9 @@ cursor .
 所有写作命令都从本目录运行：
 
 - 工作区内部使用 `manuscript/`、`analysis/`、`literature/` 等路径；
-- 原项目训练代码使用 `../training/`；
+- 原项目训练代码使用 `../src/`；
 - 原项目数据使用 `../data/`；
-- 原始评测结果使用 `../eval_output/`；
+- 原始评测结果使用 `../outputs/evaluations/`；
 - 本地 TeX、Python 和 PDF 工具由 `analysis/activate.sh` 自动连接。
 
 正文写作从 [manuscript/START_HERE.md](manuscript/START_HERE.md) 开始；完整流程见
