@@ -176,6 +176,14 @@ class PaperAlignPairCollator:
 
 class PaperAlignStrategy:
     training_method = "paper_align"
+    trainer_class = PaperAlignGenerativeEvalSFTTrainer
+
+    def trainer_kwargs(self, config: dict[str, Any]) -> dict[str, float]:
+        coeffs = resolve_align_coefficients(config)
+        return {
+            "label_coeff": coeffs.label,
+            "rationale_coeff": coeffs.rationale,
+        }
 
     def build_trainer(
         self,
@@ -190,12 +198,11 @@ class PaperAlignStrategy:
             or context.label_validation_rows is None
         ):
             raise ValueError(
-                "paper_align requires paired label train and validation rows"
+                f"{self.training_method} requires paired label train and validation rows"
             )
         config = context.config
         training = config.get("training", {})
         generation = config.get("generation", {})
-        coeffs = resolve_align_coefficients(config)
         max_length = int(training.get("max_length", 8192))
         train_dataset = build_paired_align_dataset(
             context.train_rows,
@@ -215,7 +222,7 @@ class PaperAlignStrategy:
                 pretokenized=True,
             )
         )
-        return PaperAlignGenerativeEvalSFTTrainer(
+        return self.trainer_class(
             model=model,
             args=sft_config,
             train_dataset=train_dataset,
@@ -234,8 +241,7 @@ class PaperAlignStrategy:
             ),
             run_directory=context.run_directory,
             logger=context.logger,
-            label_coeff=coeffs.label,
-            rationale_coeff=coeffs.rationale,
+            **self.trainer_kwargs(config),
             callbacks=[
                 JsonlLogCallback(
                     context.run_directory / "train_history.jsonl",

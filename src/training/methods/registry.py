@@ -87,6 +87,11 @@ for _spec in (
         frozenset({"cot"}),
     ),
     StrategySpec(
+        "paper_align_without_loss_balance",
+        "training.methods.paper_align_without_loss_balance:PaperAlignWithoutLossBalanceStrategy",
+        frozenset({"cot"}),
+    ),
+    StrategySpec(
         "raft_without_cot",
         "training.methods.raft_without_cot:RaftWithoutCotStrategy",
         frozenset({"label_only"}),

@@ -43,6 +43,20 @@ def infer_eval_condition(
         # supervision.method=paper_align, but exp/adapter paths differ.
         train_mode = "SCA"
     elif (
+        "self_correct_cot" in text
+        or "self_correct_cot.yaml" in config_path
+        or "/self_correct_cot/" in config_path
+        or "/self_correct_cot/" in adapter_path
+    ):
+        train_mode = "SC"
+    elif (
+        "paper_align_without_loss_balance" in text
+        or "paper_align_without_loss_balance.yaml" in config_path
+        or "/paper_align_without_loss_balance/" in config_path
+        or "/paper_align_without_loss_balance/" in adapter_path
+    ):
+        train_mode = "MIX"
+    elif (
         "paper_align" in text
         or "paper_align.yaml" in config_path
         or "/paper_align/" in config_path
@@ -76,6 +90,10 @@ def infer_eval_condition(
         ("A", "cot"): "AC",
         ("PA", "label_only"): "PAL",
         ("PA", "cot"): "PAC",
+        ("MIX", "label_only"): "MIX-L",
+        ("MIX", "cot"): "MIX-C",
+        ("SC", "label_only"): "SCL",
+        ("SC", "cot"): "SCC",
         ("SCA", "label_only"): "SCAL",
         ("SCA", "cot"): "SCAC",
     }.get((train_mode, test_mode))

@@ -39,6 +39,11 @@ from training.methods.interfaces import TrainingBuildContext
 from training.methods.paper_align_data import validate_and_pair_rows
 
 
+_PAIRED_VIEW_METHODS = frozenset(
+    {"paper_align", "paper_align_without_loss_balance"}
+)
+
+
 def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
     config_path = resolve_path(args.config)
     config = read_config(config_path)
@@ -60,10 +65,10 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
     label_dataset_path = None
     label_dataset_hash = None
     label_rows = None
-    if training_method == "paper_align":
+    if training_method in _PAIRED_VIEW_METHODS:
         if not config.get("label_dataset_path"):
             raise ValueError(
-                "supervision.method=paper_align requires label_dataset_path"
+                f"supervision.method={training_method} requires label_dataset_path"
             )
         label_dataset_path = resolve_path(config["label_dataset_path"])
         label_dataset_hash = sha256_file(label_dataset_path)
@@ -114,7 +119,7 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
             "labels": label_counts(validation_rows, labels),
         },
     }
-    if training_method == "paper_align":
+    if training_method in _PAIRED_VIEW_METHODS:
         data_summary["align_train_pairs"] = len(train_rows)
         data_summary["align_train_views"] = len(train_rows) * 2
         data_summary["label_dataset"] = str(label_dataset_path)

@@ -15,7 +15,7 @@ from evaluation.reporting.conditions import infer_eval_condition
 
 EVAL_CONDITIONS = (
     "B-L", "B-C", "SciRM-L", "SciRM-C", "LL", "LC", "CL", "CC",
-    "PAL", "PAC", "SCAL", "SCAC",
+    "PAL", "PAC", "MIX-L", "MIX-C", "SCL", "SCC", "SCAL", "SCAC",
     "LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R",
 )
 # Only conditions included in the current report are normalized here.
@@ -35,6 +35,26 @@ CONDITION_META = {
     "CC": ("CoT SFT", "CoT", "同格式 CoT 微调与测试"),
     "PAL": ("Paper Align SFT", "Label-only", "Paper Align adapter 交叉测试 Label-only prompt"),
     "PAC": ("Paper Align SFT", "CoT", "Paper Align adapter 在 CoT 测试 prompt 上评测"),
+    "MIX-L": (
+        "Paper Align w/o Loss Balance",
+        "Label-only",
+        "Paper Align 无 loss balance adapter 交叉测试 Label-only prompt",
+    ),
+    "MIX-C": (
+        "Paper Align w/o Loss Balance",
+        "CoT",
+        "Paper Align 无 loss balance adapter 在 CoT 测试 prompt 上评测",
+    ),
+    "SCL": (
+        "Self-correct CoT SFT",
+        "Label-only",
+        "Self-correct CoT adapter 交叉测试 Label-only prompt",
+    ),
+    "SCC": (
+        "Self-correct CoT SFT",
+        "CoT",
+        "Self-correct CoT adapter 在 CoT 测试 prompt 上评测",
+    ),
     "SCAL": (
         "Self-correct Align SFT",
         "Label-only",
@@ -78,6 +98,8 @@ CONDITION_INFERENCE = {
     "B-L": "Greedy", "B-C": "Greedy", "SciRM-L": "Greedy", "SciRM-C": "Greedy",
     "LL": "Greedy", "LC": "Greedy",
     "CL": "Greedy", "CC": "Greedy", "PAL": "Greedy", "PAC": "Greedy",
+    "MIX-L": "Greedy", "MIX-C": "Greedy",
+    "SCL": "Greedy", "SCC": "Greedy",
     "SCAL": "Greedy", "SCAC": "Greedy",
     "LL-R": "RAIL", "RAFT-G": "Greedy", "RAFT-R": "RAIL",
     "CC-R": "CoT-RAIL", "COT-RAFT-G": "Greedy", "COT-RAFT-R": "CoT-RAIL",
@@ -86,6 +108,8 @@ CONDITION_DATA = {
     "B-L": "Label-only", "B-C": "CoT", "SciRM-L": "Label-only", "SciRM-C": "CoT",
     "LL": "Label-only", "LC": "CoT",
     "CL": "Label-only", "CC": "CoT", "PAL": "Label-only", "PAC": "CoT",
+    "MIX-L": "Label-only", "MIX-C": "CoT",
+    "SCL": "Label-only", "SCC": "CoT",
     "SCAL": "Label-only", "SCAC": "CoT",
     "LL-R": "Label-only", "RAFT-G": "Label-only", "RAFT-R": "Label-only",
     "CC-R": "CoT", "COT-RAFT-G": "CoT", "COT-RAFT-R": "CoT",
