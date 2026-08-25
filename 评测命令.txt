@@ -34,3 +34,18 @@ python \
   --max_tokens 512 \
   --batch_size 64 \
   --gpu_memory_utilization 0.9
+
+// 计算 cot 的 NLL 值
+python scripts/analyze_cc_lc_nll.py \
+        --tasks rev_util_actionability \
+        --seeds 42 \
+        --model model/Qwen3-4B \
+        --output-dir outputs/analysis/cc_lc_nll_subset
+
+# 三方大模型评测 rationale 质量
+python scripts/compare_rationale.py \
+  --task rev_util_actionability \
+  --prediction-seed 42 \
+  --seed 20260824 \
+  --num 2 \
+  --output-dir outputs/analysis/rationale_comparation_smoke/rev_util_actionability
