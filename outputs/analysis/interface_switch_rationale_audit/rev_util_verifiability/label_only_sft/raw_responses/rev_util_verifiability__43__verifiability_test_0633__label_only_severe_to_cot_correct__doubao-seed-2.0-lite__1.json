@@ -1,0 +1,39 @@
+{
+  "model": "doubao-seed-2.0-lite",
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"score_support\": \"supports_correct_score\",\n  \"score_support_basis\": \"CoT推理理由指出待评价文本仅提出主张和建议，未为提出的主张提供任何支撑证据，符合评分标准中1分的定义，推理符合真实标签的分数要求\",\n  \"error_sentences\": [],\n  \"overall_basis\": \"CoT的推理和证据均符合真实标签对应的1分要求，支持正确分数\"\n}",
+          "reasoning_content": "\n我现在要处理用户的请求，首先一步步来：\n首先，真实标签是1，CoT预测分数是1，CoT的推理理由说这些评论都是只提出了问题，没有给出支持的证据，符合评分标准里1分的情况（1分是只有claim没有支撑）。那CoT的理由支持的预测分数和真实标签一致，所以score_support是supports_correct_score对吧？\n然后，score_support_basis怎么写？哦，CoT推理理由指出待评价文本只给出了观察和建议，没有为提出的主张提供任何支撑证据，符合真实标签1分的评分标准，证据支持正确分数。\n然后，这个是有益样本，有没有错误？我看CoT的推理是对的，所以error_sentences是空数组。\noverall_basis就是CoT推理理由的证据符合真实标签1分的要求，支持正确分数。\n等下我再理一遍：真实标签是1，CoT预测分数也是1，CoT的理由是说待评价文本里的那些主张（不一致、要高亮这些）都没有给出 justification，也就是没有支撑，符合1分的定义，对不对？对的，待评价文本就是只提出了问题，说要一致，要高亮，但是没有说为什么不对啊，为什么一定要这么改，没有任何支撑，所以确实是1分，CoT的理由是对的，支持了正确的分数（真实标签是1，CoT预测也是1，理由也支撑1分）。\n那结构就是：\n{\n  \"score_support\": \"supports_correct_score\",\n  \"score_support_basis\": \"CoT推理理由指出待评价文本仅提出各项主张与建议，未为这些主张提供任何支撑证据，符合评分标准中1分的定义，推理符合真实标签的分数\",\n  \"error_sentences\": [],\n  \"overall_basis\": \"CoT推理正确，其证据和推理均支持真实标签对应的1分，属于支持正确分数\"\n}\n对吗？哦，再检查评分标准1分是“ The comment contains a claim without any supporting evidence or justification.”，对的，待评价文本就是提出了几个主张：术语不一致，图要高亮，但是没有给出为什么不一致是问题，为什么高亮是必要的，没有任何支撑，所以确实是1分，CoT的理由说的对，所以支持正确分数，没有错误句子。",
+          "role": "assistant"
+        }
+      }
+    ],
+    "created": 1787721591,
+    "id": "021787721584787f2aa58d54c9d99740e93421e20223e304e35e3",
+    "model": "doubao-seed-2.0-lite",
+    "service_tier": "default",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 628,
+      "prompt_tokens": 1222,
+      "total_tokens": 1850,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 525
+      }
+    }
+  },
+  "parsed": {
+    "score_support": "supports_correct_score",
+    "score_support_basis": "CoT推理理由指出待评价文本仅提出主张和建议，未为提出的主张提供任何支撑证据，符合评分标准中1分的定义，推理符合真实标签的分数要求",
+    "error_sentences": [],
+    "overall_basis": "CoT的推理和证据均符合真实标签对应的1分要求，支持正确分数"
+  }
+}
