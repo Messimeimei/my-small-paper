@@ -7,21 +7,21 @@
 | 配对 | 任务 | 已选 | 已完成 | 未完成 | 覆盖率 | 原始 API 文件 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | label_only_sft | rev_util_actionability | 50 | 48 | 2 | 96.0% | 107 |
-| cot_sft | rev_util_actionability | 50 | 47 | 3 | 94.0% | 111 |
-| label_only_sft | rev_util_grounding_specificity | 50 | 43 | 7 | 86.0% | 127 |
+| cot_sft | rev_util_actionability | 50 | 49 | 1 | 98.0% | 113 |
+| label_only_sft | rev_util_grounding_specificity | 50 | 45 | 5 | 90.0% | 129 |
 | cot_sft | rev_util_grounding_specificity | 50 | 50 | 0 | 100.0% | 161 |
 | label_only_sft | rev_util_helpfulness | 0 | 0 | 0 | — | 0 |
 | cot_sft | rev_util_helpfulness | 8 | 8 | 0 | 100.0% | 16 |
-| label_only_sft | rev_util_verifiability | 45 | 40 | 5 | 88.9% | 96 |
-| cot_sft | rev_util_verifiability | 43 | 42 | 1 | 97.7% | 94 |
+| label_only_sft | rev_util_verifiability | 45 | 43 | 2 | 95.6% | 99 |
+| cot_sft | rev_util_verifiability | 43 | 43 | 0 | 100.0% | 95 |
 
 ## 方向与共识结论
 
 | 配对 | 方向 | 已完成 | 支持错误分数 | 支持正确分数 | 无法判断 |
 | --- | --- | ---: | ---: | ---: | ---: |
-| label_only_sft | 有害 | 73 | 72 | 1 | 0 |
+| label_only_sft | 有害 | 78 | 77 | 1 | 0 |
 | label_only_sft | 有益 | 58 | 0 | 58 | 0 |
-| cot_sft | 有害 | 86 | 86 | 0 | 0 |
+| cot_sft | 有害 | 89 | 89 | 0 | 0 |
 | cot_sft | 有益 | 61 | 0 | 61 | 0 |
 
 ## 总结
@@ -52,35 +52,35 @@
 
 | 错误类型 | LL→LC 样本数 | LL→LC 比例 | CL→CC 样本数 | CL→CC 比例 |
 | --- | ---: | ---: | ---: | ---: |
-| factual_error | 40 | 54.8% | 41 | 47.7% |
-| evidence_misread | 43 | 58.9% | 52 | 60.5% |
-| rubric_misapplication | 68 | 93.2% | 83 | 96.5% |
-| score_mapping_error | 45 | 61.6% | 58 | 67.4% |
-| unsupported_inference | 15 | 20.5% | 17 | 19.8% |
-| internal_contradiction | 2 | 2.7% | 1 | 1.2% |
-| irrelevant_or_missing_reasoning | 1 | 1.4% | 1 | 1.2% |
+| factual_error | 43 | 55.1% | 44 | 49.4% |
+| evidence_misread | 48 | 61.5% | 54 | 60.7% |
+| rubric_misapplication | 70 | 89.7% | 86 | 96.6% |
+| score_mapping_error | 48 | 61.5% | 59 | 66.3% |
+| unsupported_inference | 15 | 19.2% | 18 | 20.2% |
+| internal_contradiction | 2 | 2.6% | 1 | 1.1% |
+| irrelevant_or_missing_reasoning | 1 | 1.3% | 1 | 1.1% |
 | other | 0 | 0.0% | 0 | 0.0% |
 
 ## 错误从 rationale 的第几句开始
 
 | 配对 | 已完成有害样本 | rationale 平均句数 | 首错平均句序 | 首错中位句序 | 错误原句匹配率 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| LL→LC | 73 | 4.85 | 1.96 | 2 | 98.1% |
-| CL→CC | 86 | 5.16 | 1.95 | 2 | 97.8% |
+| LL→LC | 78 | 4.88 | 2.00 | 2 | 98.2% |
+| CL→CC | 89 | 5.16 | 1.98 | 2 | 97.8% |
 
 ### 首个错误句的绝对位置
 
 | 配对 | 第1句 | 第2句 | 第3句 | 第4句及以后 | 前两句合计 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| LL→LC | 30 (41.1%) | 22 (30.1%) | 15 (20.5%) | 6 (8.2%) | 52 (71.2%) |
-| CL→CC | 38 (44.2%) | 22 (25.6%) | 18 (20.9%) | 8 (9.3%) | 60 (69.8%) |
+| LL→LC | 31 (39.7%) | 23 (29.5%) | 17 (21.8%) | 7 (9.0%) | 54 (69.2%) |
+| CL→CC | 38 (42.7%) | 23 (25.8%) | 20 (22.5%) | 8 (9.0%) | 61 (68.5%) |
 
 ### 首个错误句在 rationale 中的相对位置
 
 | 配对 | 前25% | 25%–50% | 50%–75% | 后25% |
 | --- | ---: | ---: | ---: | ---: |
-| LL→LC | 43 (58.9%) | 23 (31.5%) | 6 (8.2%) | 1 (1.4%) |
-| CL→CC | 51 (59.3%) | 30 (34.9%) | 5 (5.8%) | 0 (0.0%) |
+| LL→LC | 45 (57.7%) | 25 (32.1%) | 7 (9.0%) | 1 (1.3%) |
+| CL→CC | 52 (58.4%) | 32 (36.0%) | 5 (5.6%) | 0 (0.0%) |
 
 ### 所有错误句的句序分布
 
@@ -88,8 +88,8 @@
 
 | 配对 | 第1句 | 第2句 | 第3句 | 第4句 | 第5句 | 第6句 | 第7句及以后 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| LL→LC | 31 | 49 | 64 | 68 | 39 | 13 | 1 |
-| CL→CC | 41 | 51 | 71 | 64 | 53 | 20 | 6 |
+| LL→LC | 32 | 50 | 66 | 72 | 44 | 14 | 1 |
+| CL→CC | 41 | 52 | 74 | 68 | 55 | 20 | 6 |
 
 ### 句序结论
 
@@ -114,15 +114,15 @@
 
 **待评价文本**
 
-```text
+~~~text
 - Can you provide empirical evidence or metrics that demonstrate the stability of your training process over time.
-```
+~~~
 
 **CoT rationale**
 
-```text
+~~~text
 The answer is a direct request for empirical evidence or metrics to demonstrate the stability of the training process. This is an explicit action that the authors can directly apply by providing the requested evidence. The comment is clear and specific, indicating exactly what the authors should do. Therefore, it meets the criteria for a score of 5.
-```
+~~~
 
 **裁判指出的错误句子**
 
@@ -148,15 +148,15 @@ The answer is a direct request for empirical evidence or metrics to demonstrate 
 
 **待评价文本**
 
-```text
+~~~text
 1. The authors run their network S times repeatedly and collect S latent regions as suggestions each iteration. They set S to 2 to achieve a good balance between accuracy and efficiency. More details are missing to support this choice.
-```
+~~~
 
 **CoT rationale**
 
-```text
+~~~text
 The comment claims that more details are missing to support the choice of S=2. However, it provides no reasoning, evidence, or justification for why the choice is questionable or what specific details are needed. The statement is merely an assertion without any supporting argument, making it unverifiable. Therefore, the evaluation score is 1.
-```
+~~~
 
 **裁判指出的错误句子**
 

@@ -1,15 +1,15 @@
 # rev_util_verifiability / cot_sft
 
 - 已选样本：43
-- 已完成共识：42
-- 未完成：1
-- 原始 API 响应：94 个文件
+- 已完成共识：43
+- 未完成：0
+- 原始 API 响应：95 个文件
 
 ## 按样本方向
 
 | 方向 | 已选 | 已完成 | 未完成 | 支持错误分数 | 支持正确分数 | 无法判断 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 有害 | 36 | 35 | 1 | 35 | 0 | 0 |
+| 有害 | 36 | 36 | 0 | 36 | 0 | 0 |
 | 有益 | 7 | 7 | 0 | 0 | 7 | 0 |
 
 ## 有害样本错误类型
@@ -18,9 +18,9 @@
 
 | 错误类型 | 样本数 | 占已完成有害样本比例 |
 | --- | ---: | ---: |
-| rubric_misapplication | 35 | 100.0% |
-| evidence_misread | 28 | 80.0% |
-| score_mapping_error | 23 | 65.7% |
-| factual_error | 17 | 48.6% |
-| unsupported_inference | 7 | 20.0% |
-| irrelevant_or_missing_reasoning | 1 | 2.9% |
+| rubric_misapplication | 36 | 100.0% |
+| evidence_misread | 28 | 77.8% |
+| score_mapping_error | 23 | 63.9% |
+| factual_error | 18 | 50.0% |
+| unsupported_inference | 7 | 19.4% |
+| irrelevant_or_missing_reasoning | 1 | 2.8% |

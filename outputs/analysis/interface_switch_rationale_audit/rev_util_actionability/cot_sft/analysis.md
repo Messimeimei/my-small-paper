@@ -1,15 +1,15 @@
 # rev_util_actionability / cot_sft
 
 - 已选样本：50
-- 已完成共识：47
-- 未完成：3
-- 原始 API 响应：111 个文件
+- 已完成共识：49
+- 未完成：1
+- 原始 API 响应：113 个文件
 
 ## 按样本方向
 
 | 方向 | 已选 | 已完成 | 未完成 | 支持错误分数 | 支持正确分数 | 无法判断 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| 有害 | 25 | 22 | 3 | 22 | 0 | 0 |
+| 有害 | 25 | 24 | 1 | 24 | 0 | 0 |
 | 有益 | 25 | 25 | 0 | 0 | 25 | 0 |
 
 ## 有害样本错误类型
@@ -18,8 +18,8 @@
 
 | 错误类型 | 样本数 | 占已完成有害样本比例 |
 | --- | ---: | ---: |
-| rubric_misapplication | 21 | 95.5% |
-| score_mapping_error | 16 | 72.7% |
-| evidence_misread | 10 | 45.5% |
-| factual_error | 9 | 40.9% |
-| unsupported_inference | 5 | 22.7% |
+| rubric_misapplication | 23 | 95.8% |
+| score_mapping_error | 17 | 70.8% |
+| evidence_misread | 12 | 50.0% |
+| factual_error | 11 | 45.8% |
+| unsupported_inference | 6 | 25.0% |
