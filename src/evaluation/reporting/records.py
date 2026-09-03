@@ -15,7 +15,9 @@ from evaluation.reporting.conditions import infer_eval_condition
 
 EVAL_CONDITIONS = (
     "B-L", "B-C", "SciRM-L", "SciRM-C", "LL", "LC", "CL", "CC",
-    "PAL", "PAC", "MIX-L", "MIX-C", "SCL", "SCC", "SCAL", "SCAC",
+    "PAL", "PAC", "MIX-L", "MIX-C", "SSAL", "SSAC", "SSA2L", "SSA2C",
+    "SSA3L", "SSA3C",
+    "SCL", "SCC", "SCAL", "SCAC",
     "LL-R", "RAFT-G", "RAFT-R", "CC-R", "COT-RAFT-G", "COT-RAFT-R",
 )
 # Only conditions included in the current report are normalized here.
@@ -44,6 +46,36 @@ CONDITION_META = {
         "Paper Align w/o Loss Balance",
         "CoT",
         "Paper Align 无 loss balance adapter 在 CoT 测试 prompt 上评测",
+    ),
+    "SSAL": (
+        "Single Sample Align SFT",
+        "Label-only",
+        "Single Sample Align adapter 交叉测试 Label-only prompt",
+    ),
+    "SSAC": (
+        "Single Sample Align SFT",
+        "CoT",
+        "Single Sample Align adapter 在 CoT 测试 prompt 上评测",
+    ),
+    "SSA2L": (
+        "SSA v2 SFT",
+        "Label-only",
+        "SSA v2 adapter 使用 greedy 测试 Label-only prompt",
+    ),
+    "SSA2C": (
+        "SSA v2 SFT",
+        "CoT",
+        "SSA v2 adapter 使用 greedy 在 CoT 测试 prompt 上评测",
+    ),
+    "SSA3L": (
+        "SSA v3 SFT",
+        "Label-only",
+        "SSA v3 adapter 使用 greedy 测试 Label-only prompt",
+    ),
+    "SSA3C": (
+        "SSA v3 SFT",
+        "CoT",
+        "SSA v3 adapter 使用 greedy 在 CoT 测试 prompt 上评测",
     ),
     "SCL": (
         "Self-correct CoT SFT",
@@ -99,6 +131,9 @@ CONDITION_INFERENCE = {
     "LL": "Greedy", "LC": "Greedy",
     "CL": "Greedy", "CC": "Greedy", "PAL": "Greedy", "PAC": "Greedy",
     "MIX-L": "Greedy", "MIX-C": "Greedy",
+    "SSAL": "Greedy", "SSAC": "Greedy",
+    "SSA2L": "Greedy", "SSA2C": "Greedy",
+    "SSA3L": "Greedy", "SSA3C": "Greedy",
     "SCL": "Greedy", "SCC": "Greedy",
     "SCAL": "Greedy", "SCAC": "Greedy",
     "LL-R": "RAIL", "RAFT-G": "Greedy", "RAFT-R": "RAIL",
@@ -109,6 +144,9 @@ CONDITION_DATA = {
     "LL": "Label-only", "LC": "CoT",
     "CL": "Label-only", "CC": "CoT", "PAL": "Label-only", "PAC": "CoT",
     "MIX-L": "Label-only", "MIX-C": "CoT",
+    "SSAL": "Label-only", "SSAC": "CoT",
+    "SSA2L": "Label-only", "SSA2C": "CoT",
+    "SSA3L": "Label-only", "SSA3C": "CoT",
     "SCL": "Label-only", "SCC": "CoT",
     "SCAL": "Label-only", "SCAC": "CoT",
     "LL-R": "Label-only", "RAFT-G": "Label-only", "RAFT-R": "Label-only",

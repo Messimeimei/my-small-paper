@@ -92,6 +92,21 @@ for _spec in (
         frozenset({"cot"}),
     ),
     StrategySpec(
+        "ssa",
+        "training.methods.ssa:SsaStrategy",
+        frozenset({"cot"}),
+    ),
+    StrategySpec(
+        "ssa_v2",
+        "training.methods.ssa_v2:SsaV2Strategy",
+        frozenset({"cot"}),
+    ),
+    StrategySpec(
+        "ssa_v3",
+        "training.methods.ssa_v3:SsaV3Strategy",
+        frozenset({"cot"}),
+    ),
+    StrategySpec(
         "raft_without_cot",
         "training.methods.raft_without_cot:RaftWithoutCotStrategy",
         frozenset({"label_only"}),

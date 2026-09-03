@@ -741,54 +741,54 @@ Return exactly the following JSON structure:
 
 | 接口切换 | 全部seed样本 | 有害候选 | 有益候选 | 抽取审计 | 完成裁判 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| SO_DS→SO_RF | 11,364 | 377 | 151 | 145 | 136 |
-| RS_DS→RS_RF | 11,364 | 338 | 269 | 151 | 150 |
+| SO_DS→SO_RF | 11,364 | 377 | 151 | 528 | 517 |
+| RS_DS→RS_RF | 11,364 | 338 | 269 | 607 | 602 |
 
 - SO_DS→SO_RF 接口转变产生的样本
 
 | 任务 | 有害候选 | 有益候选 | 实际抽取 | 完成裁判 |
 | --- | ---: | ---: | ---: | ---: |
-| Actionability | 130 | 46 | 50（25/25） | 48 |
-| Grounding Specificity | 212 | 95 | 50（25/25） | 45 |
+| Actionability | 130 | 46 | 176（130/46） | 171 |
+| Grounding Specificity | 212 | 95 | 307（212/95） | 303 |
 | Helpfulness | 0 | 0 | 0 | 0 |
 | Verifiability | 35 | 10 | 45（35/10） | 43 |
-| **合计** | **377** | **151** | **145** | **136** |
+| **合计** | **377** | **151** | **528** | **517** |
 
 - RS_DS→RS_RF 接口转变产生的样本
 
 | 任务 | 有害候选 | 有益候选 | 实际抽取 | 完成裁判 |
 | --- | ---: | ---: | ---: | ---: |
-| Actionability | 170 | 130 | 50（25/25） | 49 |
-| Grounding Specificity | 128 | 128 | 50（25/25） | 50 |
+| Actionability | 170 | 130 | 300（170/130） | 296 |
+| Grounding Specificity | 128 | 128 | 256（128/128） | 255 |
 | Helpfulness | 4 | 4 | 8（4/4） | 8 |
 | Verifiability | 36 | 7 | 43（36/7） | 43 |
-| **合计** | **338** | **269** | **151** | **150** |
+| **合计** | **338** | **269** | **607** | **602** |
 
-> 本来计划每个任务，两类样本各自抽取 25 条的，但是如上表抽取的并不完全，抽取出来的一共是 145 + 151 条样本，但是调用第三方大模型判断的时候一共只有 136 + 150 条样本。
+> SO_DS→SO_RF 已抽取全部候选；RS_DS→RS_RF 本来计划每个任务，两类样本各自抽取 25 条，但是如上表抽取的并不完全。抽取出来的一共是 528 + 607 条样本，但是调用第三方大模型判断的时候一共只有 517 + 602 条样本。
 
 现在可以重点看一下两个样本中的 rationale 与各自预测分数之间的关系，看看分数之所以发生变化，是不是和 rationale 有关系。已有研究表明，是因为 rationale 容易出现噪声、错误累计和传递的现象，也就是 rationale 一开始就给出了错误的推理方向，才导致整体的 rationale 错误。这就需要进行句子级别的判断，对 rationale 的每个句子做分析判断，看这个句子是否是错误的。这就需要提前定义好每个句子的错误类型：
 
 | 错误类型 | 定义 | 示例 |
 | --- | --- | --- |
-| factual_error | 事实错误：陈述与待评价文本或评分标准中的事实不符。 | **理由原句**：“The authors can directly identify the action and understand how to implement it.”<br>**中文翻译**：“作者可以直接确定要采取的行动，并且知道如何实施。”<br>**判定说明**：待评价文本只建议在更多任务上实验，并仅列举分类、问答和摘要等任务类型，没有说明数据集、实验设置或比较方法；“知道如何实施”与材料事实不符。([完整样本](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L1)；[裁判结果](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L1)) |
-| evidence_misread | 证据误读：忽略、曲解或错误归因于待评价文本中的证据。 | **理由原句**：“The comment is not vague about how to implement the action, as it suggests a specific modification (re-wording the introduction).”<br>**中文翻译**：“该评论对于如何实施这一行动并不含糊，因为它提出了一项具体修改（重写引言）。”<br>**判定说明**：原评论只说“最好对开头稍作改写”，没有给出具体改写方式或方向；理由把一个笼统建议曲解成了具体实施方案。([完整样本](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L21)；[裁判结果](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L21)) |
-| rubric_misapplication | 标准误用：没有按评分标准的维度或门槛判断。 | **理由原句**：“This is an explicit action (performing experiments) with specific examples of tasks to consider.”<br>**中文翻译**：“这是一个明确的行动（开展实验），并给出了可考虑的具体任务示例。”<br>**判定说明**：理由把“列举任务类型”当成了“给出具体实施细节”，降低了 5 分档“作者明确知道如何实施”的门槛；作者仍不知道该选什么数据集、如何设置和比较实验。([完整样本](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L1)；[裁判结果](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L1)) |
-| score_mapping_error | 分数映射错误：理由对应的等级与分数档位含义不匹配。 | **理由原句**：“Therefore, this meets the criteria for a score of 5.”<br>**中文翻译**：“因此，这符合 5 分的标准。”<br>**判定说明**：评论虽然明确要求增加实验，但没有说明如何执行，按标准应属于“行动明确、执行方式模糊”的 3 分档；将这一判断映射到 5 分档属于分数映射错误。([完整样本](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L1)；[裁判结果](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L1)) |
-| unsupported_inference | 无依据推断：从材料中推不出的结论，或凭空添加信息。 | **理由原句**：“The action is clear and actionable, as the authors can directly implement this by creating a diagram or flowchart of the algorithm.”<br>**中文翻译**：“该行动清晰且可执行，因为作者可以直接通过绘制算法示意图或流程图来实施。”<br>**判定说明**：待评价文本只要求增加一种视觉呈现，没有提到“示意图”或“流程图”；理由凭空补出了具体实现形式，再用这一新增信息证明评论足够具体。([完整样本](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L10)；[裁判结果](../outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L10)) |
-| internal_contradiction | 内部矛盾：理由中的不同句子彼此冲突。 | **理由原句**：“While it identifies the issue (omission of a relevant baseline), it does not clearly specify which part of the paper this issue is in.”<br>**中文翻译**：“虽然它指出了问题（遗漏了一个相关基线），但没有清楚说明该问题位于论文的哪个部分。”<br>**判定说明**：同一 rationale 前文已经说该评论针对论文的“基线选择”部分，此处又称没有说明问题所在部分，前后判断直接冲突。([完整样本](../outputs/analysis/interface_switch_rationale_audit/rev_util_grounding_specificity/label_only_sft/selected_samples.jsonl#L23)；[裁判结果](../outputs/analysis/interface_switch_rationale_audit/rev_util_grounding_specificity/label_only_sft/judge_results.jsonl#L23)) |
-| irrelevant_or_missing_reasoning | 无关或关键缺失：理由与评分无关，或漏掉决定分数的关键证据。 | **理由原句**：“This is similar to Example 1, where a claim was made without any supporting evidence.”<br>**中文翻译**：“这与示例 1 类似，其中有一个论断没有任何证据支持。”<br>**判定说明**：当前材料中不存在可供比较的“Example 1”，该引用与待评价文本及评分依据无关，不能用于支持分数判断。([完整样本](../outputs/analysis/interface_switch_rationale_audit/rev_util_verifiability/cot_sft/selected_samples.jsonl#L1)；[裁判结果](../outputs/analysis/interface_switch_rationale_audit/rev_util_verifiability/cot_sft/judge_results.jsonl#L1)) |
-| other | 其他明确影响分数判断、但不属于以上类别的错误。 | **假设理由句**：“The comment satisfies two of the three required conditions, i.e., 80% of them.”<br>**中文翻译**：“该评论满足三个必要条件中的两个，即满足了 80%。”<br>**判定说明**：`2/3` 应为约 `66.7%`，这是会影响后续分数判断的计算错误，但不直接属于事实、证据、标准应用、分数映射等已有类别。**当前裁判数据没有 `other` 实例**，这里只用于说明该兜底类别的边界。([汇总结果：两组均为 0 例](../outputs/analysis/interface_switch_rationale_audit/analysis.md#L62)) |
+| factual_error | 事实错误：陈述与待评价文本或评分标准中的事实不符。 | **理由原句**：“The authors can directly identify the action and understand how to implement it.”<br>**中文翻译**：“作者可以直接确定要采取的行动，并且知道如何实施。”<br>**判定说明**：待评价文本只建议在更多任务上实验，并仅列举分类、问答和摘要等任务类型，没有说明数据集、实验设置或比较方法；“知道如何实施”与材料事实不符。([完整样本](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L1)；[裁判结果](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L1)) |
+| evidence_misread | 证据误读：忽略、曲解或错误归因于待评价文本中的证据。 | **理由原句**：“The comment is not vague about how to implement the action, as it suggests a specific modification (re-wording the introduction).”<br>**中文翻译**：“该评论对于如何实施这一行动并不含糊，因为它提出了一项具体修改（重写引言）。”<br>**判定说明**：原评论只说“最好对开头稍作改写”，没有给出具体改写方式或方向；理由把一个笼统建议曲解成了具体实施方案。([完整样本](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L21)；[裁判结果](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L21)) |
+| rubric_misapplication | 标准误用：没有按评分标准的维度或门槛判断。 | **理由原句**：“This is an explicit action (performing experiments) with specific examples of tasks to consider.”<br>**中文翻译**：“这是一个明确的行动（开展实验），并给出了可考虑的具体任务示例。”<br>**判定说明**：理由把“列举任务类型”当成了“给出具体实施细节”，降低了 5 分档“作者明确知道如何实施”的门槛；作者仍不知道该选什么数据集、如何设置和比较实验。([完整样本](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L1)；[裁判结果](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L1)) |
+| score_mapping_error | 分数映射错误：理由对应的等级与分数档位含义不匹配。 | **理由原句**：“Therefore, this meets the criteria for a score of 5.”<br>**中文翻译**：“因此，这符合 5 分的标准。”<br>**判定说明**：评论虽然明确要求增加实验，但没有说明如何执行，按标准应属于“行动明确、执行方式模糊”的 3 分档；将这一判断映射到 5 分档属于分数映射错误。([完整样本](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L1)；[裁判结果](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L1)) |
+| unsupported_inference | 无依据推断：从材料中推不出的结论，或凭空添加信息。 | **理由原句**：“The action is clear and actionable, as the authors can directly implement this by creating a diagram or flowchart of the algorithm.”<br>**中文翻译**：“该行动清晰且可执行，因为作者可以直接通过绘制算法示意图或流程图来实施。”<br>**判定说明**：待评价文本只要求增加一种视觉呈现，没有提到“示意图”或“流程图”；理由凭空补出了具体实现形式，再用这一新增信息证明评论足够具体。([完整样本](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/selected_samples.jsonl#L10)；[裁判结果](outputs/analysis/interface_switch_rationale_audit/rev_util_actionability/label_only_sft/judge_results.jsonl#L10)) |
+| internal_contradiction | 内部矛盾：理由中的不同句子彼此冲突。 | **理由原句**：“While it identifies the issue (omission of a relevant baseline), it does not clearly specify which part of the paper this issue is in.”<br>**中文翻译**：“虽然它指出了问题（遗漏了一个相关基线），但没有清楚说明该问题位于论文的哪个部分。”<br>**判定说明**：同一 rationale 前文已经说该评论针对论文的“基线选择”部分，此处又称没有说明问题所在部分，前后判断直接冲突。([完整样本](outputs/analysis/interface_switch_rationale_audit/rev_util_grounding_specificity/label_only_sft/selected_samples.jsonl#L23)；[裁判结果](outputs/analysis/interface_switch_rationale_audit/rev_util_grounding_specificity/label_only_sft/judge_results.jsonl#L23)) |
+| irrelevant_or_missing_reasoning | 无关或关键缺失：理由与评分无关，或漏掉决定分数的关键证据。 | **理由原句**：“This is similar to Example 1, where a claim was made without any supporting evidence.”<br>**中文翻译**：“这与示例 1 类似，其中有一个论断没有任何证据支持。”<br>**判定说明**：当前材料中不存在可供比较的“Example 1”，该引用与待评价文本及评分依据无关，不能用于支持分数判断。([完整样本](outputs/analysis/interface_switch_rationale_audit/rev_util_verifiability/cot_sft/selected_samples.jsonl#L1)；[裁判结果](outputs/analysis/interface_switch_rationale_audit/rev_util_verifiability/cot_sft/judge_results.jsonl#L1)) |
+| other | 其他明确影响分数判断、但不属于以上类别的错误。 | **假设理由句**：“The comment satisfies two of the three required conditions, i.e., 80% of them.”<br>**中文翻译**：“该评论满足三个必要条件中的两个，即满足了 80%。”<br>**判定说明**：`2/3` 应为约 `66.7%`，这是会影响后续分数判断的计算错误，但不直接属于事实、证据、标准应用、分数映射等已有类别。**当前裁判数据没有 `other` 实例**，这里只用于说明该兜底类别的边界。([汇总结果：两组均为 0 例](outputs/analysis/interface_switch_rationale_audit/analysis.md#L62)) |
 
 | 接口转变方向 | 样本类型 | 已完成 | 支持错误分数 | 支持正确分数 | 无法判断 |
 | --- | --- | ---: | ---: | ---: | ---: |
-| SO_DS->SO_RF | 有害 | 78 | 77 | 1 | 0 |
-| SO_DS->SO_RF | 有益 | 58 | 0 | 58 | 0 |
-| RS_DS->RS_RF | 有害 | 89 | 89 | 0 | 0 |
-| RS_DS->RS_RF | 有益 | 61 | 0 | 61 | 0 |
+| SO_DS->SO_RF | 有害 | 368 | 367 | 1 | 0 |
+| SO_DS->SO_RF | 有益 | 149 | 0 | 149 | 0 |
+| RS_DS->RS_RF | 有害 | 333 | 333 | 0 | 0 |
+| RS_DS->RS_RF | 有益 | 269 | 0 | 269 | 0 |
 
 从上表可以看到第一个结果，大模型认为，两个训练方法，在 从 DS 切换到 RF 接口后，只要是有害的样本，生成的 rationale 基本都支持错误分数；有益的样本全部支持正确的分数。这首先证明了前面 RQ1 在分析 rationale 一致性的时候，结论是正确的（当然这里不能认为两个训练方式生成的 rationale 的一致性是一样的，因为样本量少），同时证明 rationale 和评分分数之间有强烈的关系，似乎只要 rationale 正确，分数就能正确，而如果 rationale 错误，则分数也是错误。但是这里还不能严谨说明这个情况，只能证明有关系。
 
-下面再看上述有害事件的 rationale 句子级错误构成。同一个测试样本 ID 在 seed 42、43、44 下产生的 rationale 被视为三个相互独立的 seed 级事件，分别切分句子并分别统计，当前已经完成的有害样本中，SO_DS→SO_RF 有 78 个样本，这 78 份 rationale 共包含 381 个句子；RS_DS→RS_RF 有 89 个样本，这 89 份 rationale 共包含 459 个句子。下面两个表分别以 381 和 459 作为分母。
+下面再看上述有害事件的 rationale 句子级错误构成。同一个测试样本 ID 在 seed 42、43、44 下产生的 rationale 被视为三个相互独立的 seed 级事件，分别切分句子并分别统计，当前已经完成的有害样本中，SO_DS→SO_RF 有 368 个样本，这 368 份 rationale 共包含 1,654 个句子；RS_DS→RS_RF 有 333 个样本，这 333 份 rationale 共包含 1,677 个句子。下面两个表分别以 1,654 和 1,677 作为分母。
 
 对于每一个 seed 级事件，先将该事件自己的 rationale 切分为句子。裁判投票只在同一个 seed 级事件的同一句话内部进行。裁判没有标注某句话时视为弃权，不作为 `correct` 票；只有所有有效裁判都没有将该句标为错误时，该句才记为 `correct`。只要至少一个裁判标注了错误，就在实际出现的错误类型之间计票，唯一最高票对应的错误类型作为该句最终类型；最高票并列时记为 `unclear`。同一裁判对同一句重复标注相同类型只计一票。这样每个 seed 级句子只进入一行，各行数量之和等于该组全部句子数，各行比例之和为 100%。`correct` 仅表示没有裁判将该句标为错误，不表示整个样本的预测分数正确。
 
@@ -796,33 +796,33 @@ Return exactly the following JSON structure:
 
 | 句子类型 | 句子数 | 比例 |
 | --- | ---: | ---: |
-| correct（所有裁判均未标记错误） | 117 | 30.7% |
-| factual_error | 26 | 6.8% |
-| evidence_misread | 41 | 10.8% |
-| rubric_misapplication | 86 | 22.6% |
-| score_mapping_error | 34 | 8.9% |
-| unsupported_inference | 9 | 2.4% |
-| internal_contradiction | 1 | 0.3% |
-| irrelevant_or_missing_reasoning | 1 | 0.3% |
+| correct（所有裁判均未标记错误） | 687 | 41.5% |
+| factual_error | 110 | 6.7% |
+| evidence_misread | 90 | 5.4% |
+| rubric_misapplication | 191 | 11.5% |
+| score_mapping_error | 72 | 4.4% |
+| unsupported_inference | 45 | 2.7% |
+| internal_contradiction | 10 | 0.6% |
+| irrelevant_or_missing_reasoning | 1 | 0.1% |
 | other | 0 | 0.0% |
-| unclear（错误类型最高票并列） | 66 | 17.3% |
-| **合计** | **381** | **100.0%** |
+| unclear（错误类型最高票并列） | 448 | 27.1% |
+| **合计** | **1,654** | **100.0%** |
 
 - RS_DS→RS_RF 有害样本的句子类型构成
 
-| 句子类型 | 句子数 | 占 89 个 seed 级有害事件全部 459 句的比例 |
+| 句子类型 | 句子数 | 占 333 个 seed 级有害事件全部 1,677 句的比例 |
 | --- | ---: | ---: |
-| correct（所有裁判均未标记错误） | 170 | 37.0% |
-| factual_error | 22 | 4.8% |
-| evidence_misread | 53 | 11.5% |
-| rubric_misapplication | 87 | 19.0% |
-| score_mapping_error | 46 | 10.0% |
-| unsupported_inference | 11 | 2.4% |
-| internal_contradiction | 1 | 0.2% |
+| correct（所有裁判均未标记错误） | 657 | 39.2% |
+| factual_error | 66 | 3.9% |
+| evidence_misread | 85 | 5.1% |
+| rubric_misapplication | 231 | 13.8% |
+| score_mapping_error | 132 | 7.9% |
+| unsupported_inference | 76 | 4.5% |
+| internal_contradiction | 5 | 0.3% |
 | irrelevant_or_missing_reasoning | 1 | 0.2% |
 | other | 0 | 0.0% |
-| unclear（错误类型最高票并列） | 68 | 14.8% |
-| **合计** | **459** | **100.0%** |
+| unclear（错误类型最高票并列） | 424 | 25.3% |
+| **合计** | **1,677** | **100.0%** |
 
 从上表可以看到 rubric_misapplication、evidence_misread 和 score_mapping_error 占了主要的错误类型，而着3者之间也是存在关联的，往往是模型对审稿意见产生了误解或者对评分准测产生了误解，然后才导致了分数映射的错误。
 
@@ -832,22 +832,22 @@ Return exactly the following JSON structure:
 
 | 接口切换 | 第1句 | 第2句 | 第3句 | 第4句及以后 | 前两句合计 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| SO_DS→SO_RF | 35（44.9%） | 21（26.9%） | 16（20.5%） | 6（7.7%） | 56（71.8%） |
-| RS_DS→RS_RF | 40（44.9%） | 23（25.8%） | 18（20.2%） | 8（9.0%） | 63（70.8%） |
+| SO_DS→SO_RF | 76（20.7%） | 104（28.3%） | 134（36.4%） | 54（14.7%） | 180（48.9%） |
+| RS_DS→RS_RF | 121（36.3%） | 84（25.2%） | 87（26.1%） | 41（12.3%） | 205（61.6%） |
 
 - 相对位置
 
 | 接口切换 | 前25% | 25%–50% | 50%–75% | 后25% |
 | --- | ---: | ---: | ---: | ---: |
-| SO_DS→SO_RF | 48（61.5%） | 24（30.8%） | 5（6.4%） | 1（1.3%） |
-| RS_DS→RS_RF | 55（61.8%） | 29（32.6%） | 5（5.6%） | 0（0.0%） |
+| SO_DS→SO_RF | 108（29.3%） | 131（35.6%） | 113（30.7%） | 16（4.3%） |
+| RS_DS→RS_RF | 164（49.2%） | 122（36.6%） | 39（11.7%） | 8（2.4%） |
 
 从上面的分析可以得出：
 
-- 两组的首个错误平均都约出现在第 2 句，且约 70% 的样本在前两句已经出现错误，说明错误通常不是只发生在最终分数映射处。
-- 前 25% 的句子聚集了最多的具体错误标注：早期对证据或 rubric 的理解偏差，会在中段推导中扩散，并最终形成错误分数。
+- SO_DS→SO_RF 的首个错误平均出现在第 2.48 句，48.9% 的样本在前两句已经出现错误；RS_DS→RS_RF 的首个错误平均约出现在第 2.20 句，约 61.6% 的样本在前两句已经出现错误，说明错误通常不是只发生在最终分数映射处。
+- SO_DS→SO_RF 的首错更多分布在 25%–50%（35.6%）和 50%–75%（30.7%）；RS_DS→RS_RF 的首错仍集中在前 25%（49.2%）：早期对证据或 rubric 的理解偏差，会在中段推导中扩散，并最终形成错误分数。
 
-### 第三层分析：把有害样本中的 ratioale 纠正后，模型预测结果的变化
+### 第三层分析：把有害样本中的 ratioale 纠正后，模型预测结果的变化（！！！这个后面也要更新，因为有害样本增加了）
 
 通过对上面158条有害样本，调用 glm-5.3-flash 进行 rationale 的修正，和 Minimax-3 进行审查，得到了修改后的完整的 rationale。首先修正的方法，是给定一个 json 格式的 material，然后让大模型修正里面的错误句子，其他地方不改变。最后返回的是完整的全新的 rationale。
 
@@ -1048,3 +1048,379 @@ GLM修正后、经MiniMax审核通过的完整rationale
 - `绝对误差变化3→0`表示B与Gold相差3分，而C与Gold完全相同。
 
 > 总体上，86/142（60.56%）的样本由高估分数向下修正，56/142（39.44%）的样本由低估分数向上修正。所有142条样本原本均为至少相差2分的严重错误，替换修正rationale后均恢复为完全正确。
+
+## RQ3：如何提升 RS 训练的效果，既保证模型生成高质量的 rationale，又不影响评测的能力
+
+### 1. 解决 RS 训练模型推理生成的 rationale 质量问题
+
+RQ2 的结果表明，相同训练方法下，DS 推理接口的效果要好于 RF，经过分析其主要原因是 RF 生成的 rationale 容易一开始就错误理解任务准则和评分标准，从而误导模型输出了更多的错误样本。那么经过分析，这种情况很可能是因为训练时候用的教师模型 rationale，但是推理阶段是学生模型自己生成的 rationale，两者之间会存在一定的偏差。即学生模型推理的时候有自己的模型参数的推理逻辑，但是因为训练的时候用的是教师模型的，所以就会产生冲突。但是如果用学生模型自己的 rationale 来训练，那么就会缓解这种情况。
+
+所以可以通过，先让一个学生模型学习教师的 rationale 生成逻辑，并让学生模型自己给出训练集的 rationale，之后再重新让一个学生模型基于自己生成的 rationale 训练，就可以减少这种问题了。
+
+具体的做法很简单，就是和传统的 RS 的训练方法做对比，因为这个方法其实是一个数据处理的方法，不是模型训练的方法，所以第一步和传统的 RS 方法一样，用教师模型生成的 rationale 数据集 A 去用传统的 DS 训练方法训练 base model 得到模型 A，然后再用模型 A 给每个训练数据重新生成 rationale + score，把这个作为训练数据 B，然后重新用 base model 在数据 B 上训练，得到模型 B。
+
+#### 宽松与严格抽取结果
+
+为了验证上述方法，下面比较传统 RS 与 self-correct-RS 的结果。由于 SCRS_DS 在严格格式下存在大量无法抽取的输出，下面分开展示宽松和严格两种答案抽取结果。其中宽松抽取只改变 RS_DS 和 SCRS_DS 的可提取标签，RS_RF 和 SCRS_RF 的宽松结果与严格结果相同。前四个序数任务报告 QWK，后三个分类任务报告 Macro-F1，均为 seed 42、43、44 的均值 ± 样本标准差。
+
+- 各任务主指标（RF 推理接口）
+
+| 任务 | 主指标 | RS_RF | SCRS_RF | Δ（SCRS_RF−RS_RF） |
+| --- | --- | ---: | ---: | ---: |
+| Actionability | QWK | 0.716 ± 0.010 | 0.736 ± 0.011 | +0.020 |
+| Grounding Specificity | QWK | 0.673 ± 0.016 | 0.694 ± 0.008 | +0.021 |
+| Helpfulness | QWK | 0.668 ± 0.008 | 0.691 ± 0.003 | +0.023 |
+| Verifiability | QWK | 0.657 ± 0.010 | 0.708 ± 0.028 | +0.051 |
+| Coherence | Macro-F1 | 0.771 ± 0.003 | 0.770 ± 0.004 | -0.001 |
+| Positioning Check | Macro-F1 | 0.994 ± 0.001 | 0.994 ± 0.001 | 0.000 |
+| Positioning Type | Macro-F1 | 1.000 ± 0.000 | 0.998 ± 0.003 | -0.002 |
+
+- 各任务主指标（DS 推理接口）
+
+| 任务 | 主指标 | RS_DS | SCRS_DS | Δ（SCRS_DS−RS_DS） |
+| --- | --- | ---: | ---: | ---: |
+| Actionability | QWK | 0.764 ± 0.003 | 0.748 ± 0.037 | -0.016 |
+| Grounding Specificity | QWK | 0.687 ± 0.034 | 0.682 ± 0.035 | -0.005 |
+| Helpfulness | QWK | 0.676 ± 0.013 | 0.659 ± 0.023 | -0.017 |
+| Verifiability | QWK | 0.659 ± 0.032 | 0.744 ± 0.018 | +0.085 |
+| Coherence | Macro-F1 | 0.748 ± 0.006 | 0.731 ± 0.005 | -0.017 |
+| Positioning Check | Macro-F1 | 0.986 ± 0.005 | 0.990 ± 0.002 | +0.004 |
+| Positioning Type | Macro-F1 | 0.854 ± 0.035 | 0.813 ± 0.007 | -0.041 |
+
+- 聚合结果
+
+| 推理接口 | 对比 | 序数 QWK 平均 | 序数 MAE 平均 ↓ | 分类 Macro-F1 平均 | 7 任务主指标平均 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| RF | RS_RF→SCRS_RF | 0.679→0.707（+0.028） | 0.583→0.534（-0.049） | 0.922→0.921（-0.001） | 0.783→0.799（+0.016） |
+| DS | RS_DS→SCRS_DS | 0.697→0.708（+0.011） | 0.572→0.551（-0.021） | 0.863→0.844（-0.019） | 0.768→0.767（-0.001） |
+
+- 严格抽取结果
+
+严格抽取下，格式无效率为三个 seed 的全部测试样本中未能被严格解析器抽取的原始输出比例；QWK 仅在严格可抽取样本上计算，Macro-F1 则将格式无效样本计为错误。
+
+- 各任务主指标（RF 推理接口，严格抽取）
+
+| 任务 | 主指标 | RS_RF | SCRS_RF | Δ（SCRS_RF−RS_RF） | 原始格式无效率（RS_RF / SCRS_RF） |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Actionability | QWK | 0.716 ± 0.010 | 0.736 ± 0.011 | +0.020 | 0.00% / 0.00% |
+| Grounding Specificity | QWK | 0.673 ± 0.016 | 0.694 ± 0.008 | +0.021 | 0.00% / 0.00% |
+| Helpfulness | QWK | 0.668 ± 0.008 | 0.691 ± 0.003 | +0.023 | 0.00% / 0.00% |
+| Verifiability | QWK | 0.657 ± 0.010 | 0.708 ± 0.028 | +0.051 | 0.00% / 0.00% |
+| Coherence | Macro-F1 | 0.771 ± 0.003 | 0.770 ± 0.004 | -0.001 | 0.00% / 0.00% |
+| Positioning Check | Macro-F1 | 0.994 ± 0.001 | 0.994 ± 0.001 | 0.000 | 0.00% / 0.00% |
+| Positioning Type | Macro-F1 | 1.000 ± 0.000 | 0.998 ± 0.003 | -0.002 | 0.00% / 0.00% |
+
+- 各任务主指标（DS 推理接口，严格抽取）
+
+| 任务 | 主指标 | RS_DS | SCRS_DS | Δ（SCRS_DS−RS_DS） | 原始格式无效率（RS_DS / SCRS_DS） |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Actionability | QWK | 0.763 ± 0.004 | 0.734 ± 0.063 | -0.029 | 0.93% / 15.10% |
+| Grounding Specificity | QWK | 0.687 ± 0.034 | 0.651 ± 0.076 | -0.036 | 0.00% / 19.07% |
+| Helpfulness | QWK | 0.676 ± 0.013 | — | — | 0.00% / 100.00% |
+| Verifiability | QWK | 0.659 ± 0.032 | 0.586 ± 0.511 | -0.073 | 0.00% / 85.91% |
+| Coherence | Macro-F1 | 0.732 ± 0.011 | 0.511 ± 0.069 | -0.221 | 2.55% / 29.29% |
+| Positioning Check | Macro-F1 | 0.942 ± 0.072 | 0.599 ± 0.167 | -0.342 | 7.79% / 49.03% |
+| Positioning Type | Macro-F1 | 0.854 ± 0.035 | 0.543 ± 0.124 | -0.311 | 0.00% / 35.46% |
+
+> SCRS_DS 的 Helpfulness 在三个 seed 中均无严格可抽取标签，故 QWK 与 Δ 记为 `—`，不纳入严格跨任务汇总。
+
+从宽松结果可以看到，在直接对应本节问题的 RF 推理接口下，SCRS_RF 相比 RS_RF 在四个序数任务上全部提升，QWK 平均提高 0.028，MAE 平均降低 0.049；三个分类任务的 Macro-F1 平均只变化 -0.001，基本保持不变，最终 7 任务主指标平均提高 0.016。这说明用学生模型自己生成的 rationale 构造训练数据，可以稳定改善 rationale-first 推理下的序数评分能力，同时没有明显损害分类任务。
+
+对应的 DS 宽松推理结果并没有表现出同样的整体提升：SCRS_DS 相比 RS_DS 的序数 QWK 平均提高 0.011、MAE 降低 0.021，但分类 Macro-F1 平均下降 0.019，7 任务主指标平均基本不变（-0.001）。因此，这个方法的收益并不是对所有推理接口都产生普遍增益，而是主要集中在它所针对的 RF 场景；这与“减少教师 rationale 和学生模型自身推理逻辑之间的偏差”这一设计动机一致。
+
+#### SCRS_RF 与 RS_RF 生成的 rationale 质量对比
+
+上面的实验结果可以从指标层面证明，引入了 self-correct 方法后，RS 训练方法的效果比传统的 RS 训练要好，并且主要集中在序数任务上面，且没有削弱二分类任务的效果。那么接下来要做的就是，从 rationale 本身证明，其质量要比传统 RS 训练的要好。方法就是和 RQ2 的第二层分析一样，但是用的样本是 RS 训练方法中，从 DS 到 RF 后从正确变成严重错误的样本，共计 338条。然后因为这批样本已经有了分析，接下来只需要分析 SCRS 对应的一样的样本生成的 rationale，看看它的支持分数。这一批样本里面有正确的，相邻错误和严重错误。正确的按照有益样本，其他都是有害样本。看看输出的支持分数和错误分析就可以。
+
+#### SCRS 训练存在的格式问题
+
+从上面的宽松与严格抽取结果可以发现，SCRS 训练方法在 DS 推理接口上存在严重的格式问题。它确实提升了 RF 推理接口的效果，但切换到 DS 推理接口后，对 DS 输出协议的适应性明显下降。SCRS 虽然缓解了教师模型与学生模型之间的 rationale 分布偏差，却没有解决训练接口与推理接口不一致的问题，尤其没有直接训练模型在 assistant 输出的第一个位置生成 `<score>`，并在 `</score>` 后立即停止。
+
+将 7 个任务、3 个 seed 的全部 DS 预测合并后，普通 RS 与 SCRS 的严格格式结果如下：
+
+| 训练方法 × 推理接口 | 测试样本数 | 严格有效数 | 严格无效数 | 格式无效率 |
+| --- | ---: | ---: | ---: | ---: |
+| RS_DS | 16,923 | 16,674 | 249 | 1.47% |
+| SCRS_DS | 16,923 | 8,844 | 8,079 | 47.74% |
+
+进一步检查 SCRS_DS 的 8,079 个严格无效输出，可以得到：
+
+| 严格无效输出类型 | 数量 | 占严格无效输出比例 | 典型形式 |
+| --- | ---: | ---: | --- |
+| 裸数字 | 6,100 | 75.50% | `2` |
+| 数字后继续解释 | 1,710 | 21.17% | `4\n\nThe comment identifies ...` |
+| score 标签不完整 | 269 | 3.33% | `2\n\n</score>` |
+| 先输出 `<reasoning>` | 0 | 0.00% | — |
+
+这组结果说明，SCRS 并非完全没有理解 DS 提示词。绝大多数失败输出仍然先给出了合法范围内的数字，而不是继续使用 RF 接口先生成 `<reasoning>`。因此，主要问题不是模型失去了评分能力，而是没有稳定执行 DS 要求的完整输出协议：
+
+```text
+<score>数字</score> + EOS
+```
+
+SCRS 的第二阶段训练仍然使用标准的全序列 CoT SFT。训练集中 13,680 个 completion 全部以 `<reasoning>` 开始，`<score>` 只出现在 rationale 结束之后；平均每条 completion 约 128 个 token，其中 score block 约 7 个 token，只占约 5.5%。因此模型在训练中学习到的主要序列转移是：
+
+```text
+RF system prompt
+→ <reasoning>
+→ rationale
+→ </reasoning>
+→ <score>数字</score>
+```
+
+而 DS 推理要求的是训练中从未直接出现的另一条路径：
+
+```text
+DS system prompt
+→ <score>数字</score>
+→ EOS
+```
+
+此外，SCRS 使用学生模型自己生成的 rationale 重新训练。与普通 RS 数据相比，SCRS 的 rationale 更模板化，也更容易被学生模型拟合：普通 RS 数据中 rationale 的前 4 个词共有 1,243 种组合，SCRS 中只有 593 种；21 个训练 run 的平均验证 token accuracy 也从普通 RS 的 0.793 提高到 SCRS 的 0.958。这种更窄、更容易拟合的自蒸馏分布进一步强化了固定的 RF 生成轨迹，因此在同分布的 RF 接口上能够改善效果，但对仅通过 system prompt 切换到 DS 输出格式的泛化更差。
+
+宽松抽取结果也支持上述判断。忽略 `<score>` 包装后，SCRS_DS 的序数 QWK 平均为 0.708，高于 RS_DS 的 0.697；但 7 任务主指标平均基本不变，为 0.767 和 0.768。也就是说，SCRS 在 DS 下仍保留了评分能力，严格结果的大幅下降主要来自跨接口的格式泛化失败，而不是评分语义本身全面退化。
+
+### 2. 解决 RS 训练导致的评分能力下降与推理接口失配问题
+
+问题 1 的结果表明，SCRS 缓解了教师 rationale 与学生模型自身推理之间的偏差，并提升了 RF 接口上的序数评分效果，但由于训练数据仍然只有 RF prompt 和 rationale-first completion，模型切换到 DS 接口后会出现严重的输出格式问题。与此同时，RQ1 的结果还表明，标准 RS 会将大部分训练信号分配给较长的 rationale，导致模型对 score 的学习弱于传统 SO。
+
+因此，问题 2 需要同时处理两个目标：一是平衡 rationale 与 score 的训练信号，二是补上训练阶段从未出现过的 DS system prompt。下面先说明标准 RS 的训练过程，再分析只使用 RF prompt 的单分支 SSA 为什么仍不能解决 DS 接口失配，最后说明如何在保留原有 RF 训练分支的同时，新增一个使用 DS prompt 的补充分支。
+
+#### 标准 RS 的训练过程
+
+对于一个输入 $x$，教师模型提供 rationale $r=(r_1,\ldots,r_{N_r})$，数据集提供真实分数对应的 score 序列 $s=(s_1,\ldots,s_{N_s})$。RS 将二者拼接为一个完整的监督目标：
+
+$$
+y=[r;s]=\texttt{<reasoning>}\;r\;\texttt{</reasoning><score>}\;s\;\texttt{</score>}.
+$$
+
+其训练过程可以概括为以下四步：
+
+1. 将任务要求、评分标准和待评价文本组成输入 $x$，并将教师 rationale 与真实 score 组成目标序列 $y$。
+2. 采用 teacher forcing，在生成每个目标 token 时向模型提供此前的真实目标 token，一次性得到所有 assistant 位置上目标 token 的概率。
+3. 屏蔽输入 prompt，只对 assistant completion 中的 rationale 和 score token 计算交叉熵，即取出这个位置上预测的词表概率中，目标 token 的概率然后取 负对数。
+4. 对所有被监督 token 的 loss 取平均，并通过反向传播更新模型参数。
+
+分别记 rationale 和 score 部分的平均 token loss 为：
+
+$$
+\mathcal{L}_{r}=-\frac{1}{N_r}\sum_{i=1}^{N_r}\log p_\theta(r_i\mid x,r_{<i}),
+$$
+
+$$
+\mathcal{L}_{s}=-\frac{1}{N_s}\sum_{j=1}^{N_s}\log p_\theta(s_j\mid x,r,s_{<j}).
+$$
+
+标准 RS 对完整输出中的所有 token 等权求平均，因此其训练目标可以写为：
+
+$$
+\mathcal{L}_{\mathrm{RS}}
+=\frac{N_r}{N_r+N_s}\mathcal{L}_{r}
++\frac{N_s}{N_r+N_s}\mathcal{L}_{s}.
+$$
+
+由于通常有 $N_r\gg N_s$，rationale 对总 loss 的权重 $N_r/(N_r+N_s)$ 会远大于 score 的权重。也就是说，标准 RS 虽然对每个 token 等权，但并没有对“rationale 建模”和“分数预测”两个学习目标等权；较长的 rationale 会自然占据更多监督位置和梯度信号。
+
+**标准 RS 的反向传播。** 在前向传播得到 $\mathcal{L}_{\mathrm{RS}}$ 后，自动微分会对该标量 loss 关于所有可训练参数 $\theta$ 求导。由于求导具有线性性质，标准 RS 的梯度为：
+
+$$
+\mathbf{g}_{\mathrm{RS}}
+=\nabla_\theta\mathcal{L}_{\mathrm{RS}}
+=\frac{N_r}{N_r+N_s}\nabla_\theta\mathcal{L}_{r}
++\frac{N_s}{N_r+N_s}\nabla_\theta\mathcal{L}_{s}.
+$$
+
+这说明长度权重不仅作用于 loss 数值，也会直接作用于两个训练目标传回模型的梯度。在不考虑两部分梯度范数差异的情况下，$N_r\gg N_s$ 会使参数更新更多地受到 rationale 建模目标的影响。用最基本的梯度下降形式表示，参数更新为：
+
+$$
+\theta^{(t+1)}
+=\theta^{(t)}-\eta\mathbf{g}_{\mathrm{RS}},
+$$
+
+其中，$\eta$ 是学习率。实际训练使用 AdamW 等优化器时，会在梯度上进一步计算动量和自适应缩放，但反向传播得到的基础梯度仍然是上式中的 $\mathbf{g}_{\mathrm{RS}}$。
+
+#### 单样本分区域计算 loss 并加权求和方法解决 loss 权重不均的问题
+
+在新增 DS prompt 补充分支之前，我们先尝试了单样本分区域方法 SSA。SSA 只使用原有的 RF prompt，在同一条训练序列中划分 rationale 和 score 两个区域，分别计算平均 loss 后再加权求和。这样可以避免 score loss 被长 rationale 按 token 数量稀释，也只需要处理一条物理序列，计算成本较低。
+
+SSA 的第一个版本虽然平衡了两部分 loss，但 score 仍能看到前面的 rationale，因此没有实现真正独立于 rationale 的评分。后续版本通过 attention mask 阻断了 score 对 rationale 的注意力，但训练数据依然只包含 RF system prompt；模型从未学习以 DS system prompt 直接生成完整的 `<score>...</score>`。现有 SSA 评测也出现了与 SCRS_DS 相似的格式问题：在已完成的 34 个评测中，DS 接口共有 2,387 个严格格式失败，其中 2,378 个可以通过宽松抽取恢复，主要形式仍是缺少 `<score>` 包装的裸数字。
+
+因此，仅在一条 RF 序列内部重新分配 loss 或切断 rationale 到 score 的注意力，并不能解决跨推理接口的问题。要让模型真正适应 DS，训练数据中必须加入与 DS 推理阶段一致的 system prompt 和 score-only completion；这也是下面新增 DS prompt 补充分支的直接动机。
+
+
+#### 双接口平衡监督方法解决 loss 权重与接口失配问题
+
+DIBS 的两个分支是由前面的具体问题直接引出的。SCRS 和 SSA 的训练数据都只出现过 RF system prompt，模型没有见过 DS 推理使用的 system prompt，因此即使能够预测正确分数，也容易遗漏 `<score>` 包装或不能及时停止。为补上这部分训练分布，我们保留原有的 RF 训练分支，并额外加入一个使用 DS system prompt 和 score-only completion 的补充分支，将这种方法称为双接口平衡监督（Dual-Interface Balanced Supervision，DIBS）。两个分支分别计算平均 loss 后再按权重组合，从而同时处理 DS prompt 缺失和 score 监督被长 rationale 稀释的问题。
+
+沿用前文“训练方法 × 推理接口”的命名方式，下面将 DIBS 训练后使用 DS 和 RF 推理分别记为 `DIBS_DS` 和 `DIBS_RF`。为了区分“新增 DS prompt 分支”和“分支级 loss balance”各自的作用，我们设置了 `Mix` 消融：它保留与 DIBS 完全相同的 RF 原有分支、DS 补充分支和训练超参数，但不分别归一化两个分支的 loss，而是将两个分支的所有监督 token 放在一起求平均；对应的两种推理条件记为 `Mix_DS` 和 `Mix_RF`。
+
+三 seed 的宽松抽取结果如下。这里前四个序数任务使用平均 QWK，后三个分类任务使用平均 Macro-F1，最后一列是 7 个任务主指标的平均值。
+
+| 推理接口 | Score-only 训练 | Rationale-supervised 训练 | DIBS 双分支训练 | Mix 双分支训练 |
+| --- | ---: | ---: | ---: | ---: |
+| DS | `SO_DS`：0.825 | `RS_DS`：0.768 | **`DIBS_DS`：0.833** | `Mix_DS`：0.820 |
+| RF | **`SO_RF`：0.803** | `RS_RF`：0.783 | `DIBS_RF`：0.797 | `Mix_RF`：0.791 |
+
+从总体结果看，`DIBS_DS` 的 7 任务主指标为 0.833，高于 `SO_DS` 的 0.825 和 `RS_DS` 的 0.768；`DIBS_RF` 为 0.797，也高于 `RS_RF` 的 0.783，但略低于 `SO_RF` 的 0.803。DIBS 最明显的收益出现在 DS 接口，因为新增的 DS prompt 分支让模型在训练时直接学习了 DS 指令、`<score>` 输出格式和 score-only completion；保留的 RF 分支则继续训练 rationale 生成能力。
+
+为了单独判断分支级 loss balance 的作用，下面比较使用相同 RF 原有分支和 DS 补充分支的 DIBS 与 Mix。差值统一按“DIBS 减 Mix”计算，Accuracy 使用百分点，其余指标使用绝对差值。
+
+| 推理接口 | 对比 | 序数 QWK 平均 ↑ | 序数 MAE 平均 ↓ | 分类 Macro-F1 平均 ↑ | Pearson 平均 ↑ | Accuracy 平均 (%) ↑ | 7 任务主指标平均 ↑ |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| DS | `DIBS_DS` | 0.757 | 0.476 | 0.934 | 0.813 | 75.3 | 0.833 |
+| DS | `Mix_DS` | 0.742 | 0.498 | 0.925 | 0.796 | 74.4 | 0.820 |
+| DS | Δ DIBS − Mix | +0.015 | -0.022 | +0.010 | +0.017 | +0.9 | +0.013 |
+| RF | `DIBS_RF` | 0.698 | 0.555 | 0.929 | 0.777 | 72.7 | 0.797 |
+| RF | `Mix_RF` | 0.690 | 0.571 | 0.926 | 0.769 | 72.2 | 0.791 |
+| RF | Δ DIBS − Mix | +0.008 | -0.016 | +0.004 | +0.007 | +0.5 | +0.006 |
+
+分任务的主指标也呈现相同趋势：
+
+| 任务 | 主指标 | Mix_DS | DIBS_DS | Δ DIBS_DS − Mix_DS | Mix_RF | DIBS_RF | Δ DIBS_RF − Mix_RF |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Actionability | QWK | 0.790 ± 0.009 | 0.783 ± 0.004 | -0.007 | 0.728 ± 0.007 | 0.735 ± 0.008 | +0.007 |
+| Grounding Specificity | QWK | 0.723 ± 0.008 | 0.749 ± 0.008 | +0.026 | 0.678 ± 0.003 | 0.706 ± 0.013 | +0.027 |
+| Helpfulness | QWK | 0.714 ± 0.005 | 0.727 ± 0.013 | +0.014 | 0.678 ± 0.012 | 0.682 ± 0.033 | +0.004 |
+| Verifiability | QWK | 0.740 ± 0.003 | 0.768 ± 0.004 | +0.028 | 0.674 ± 0.009 | 0.667 ± 0.013 | -0.007 |
+| Coherence | Macro-F1 | 0.776 ± 0.008 | 0.804 ± 0.018 | +0.028 | 0.781 ± 0.003 | 0.792 ± 0.006 | +0.011 |
+| Positioning Check | Macro-F1 | 0.998 ± 0.002 | 0.999 ± 0.001 | +0.001 | 0.996 ± 0.002 | 0.996 ± 0.001 | +0.000 |
+| Positioning Type | Macro-F1 | 1.000 ± 0.000 | 1.000 ± 0.000 | +0.000 | 1.000 ± 0.000 | 1.000 ± 0.000 | +0.000 |
+
+在 DS 接口上，DIBS 相比 Mix 在 7 个任务中的 5 个任务取得提升、1 个任务持平，仅 Actionability 下降 0.007；在 RF 接口上，4 个任务提升、2 个任务持平，仅 Verifiability 下降 0.007。综合指标上，取消分支级 loss balance 后，DS 的 7 任务主指标下降 0.013，RF 下降 0.006。因此，新增 DS prompt 分支解决了模型训练时没有见过 DS 指令与输出格式的问题，而分别归一化两个分支的 loss 则在此基础上进一步带来平均收益，并且这种收益在 DS 接口上更明显。
+
+需要说明的是，DIBS 的两个分支不是为了把同一条 RS 输出形式化成两个任务，而是因为原有训练只有 RF prompt，必须额外补入此前缺失的 DS prompt。对同一个训练样本，具体使用下面两个分支：
+
+1. **DS prompt 补充分支**：加入模型此前没有见过的 DS system prompt，要求模型直接输出分数，监督目标记为
+
+   $$
+   y^{\mathrm{D}}=\texttt{<score>}\;s\;\texttt{</score>}.
+   $$
+
+2. **RF 原有分支**：保留原有 RS 使用的 RF system prompt，要求模型先生成 rationale，再输出分数，监督目标记为
+
+   $$
+   y^{\mathrm{R}}=\texttt{<reasoning>}\;r\;\texttt{</reasoning><score>}\;s\;\texttt{</score>}.
+   $$
+
+两个分支包含相同的 user prompt 内容和真实分数，但 system prompt 与 assistant completion 分别对应 DS 和 RF 接口。DS prompt 补充分支直接训练模型遵循 score-only 指令并生成完整分数格式；RF 原有分支则继续训练 rationale 生成和 rationale-first 评分。
+
+设 DS prompt 补充分支的 completion 包含 $N_{\mathrm{D}}$ 个 token，RF 原有分支的 completion 包含 $N_{\mathrm{R}}$ 个 token。模型通过 teacher forcing 同时计算两个分支，并屏蔽各自的输入 prompt，只在 assistant completion 上计算 token 级交叉熵。DS 补充分支的 loss 为：
+
+$$
+\mathcal{L}_{\mathrm{D}}
+=-\frac{1}{N_{\mathrm{D}}}
+\sum_{i=1}^{N_{\mathrm{D}}}
+\log p_\theta
+\left(y_i^{\mathrm{D}}\mid x^{\mathrm{D}},y_{<i}^{\mathrm{D}}\right),
+$$
+
+RF 原有分支的 loss 为：
+
+$$
+\mathcal{L}_{\mathrm{R}}
+=-\frac{1}{N_{\mathrm{R}}}
+\sum_{j=1}^{N_{\mathrm{R}}}
+\log p_\theta
+\left(y_j^{\mathrm{R}}\mid x^{\mathrm{R}},y_{<j}^{\mathrm{R}}\right).
+$$
+
+这里的 $\mathcal{L}_{\mathrm{R}}$ 是整个 RF 分支 completion 的平均 loss，其中同时包含 rationale 和其后的 score。关键在于，$\mathcal{L}_{\mathrm{D}}$ 与 $\mathcal{L}_{\mathrm{R}}$ 先分别除以各自的 token 数，因此较长的 RF completion 不会自动获得更大的分支权重。
+
+两个分支的 loss 随后按预先设定的系数组合：
+
+$$
+\mathcal{L}_{\mathrm{DIBS}}
+=\lambda_{\mathrm{D}}\mathcal{L}_{\mathrm{D}}
++\lambda_{\mathrm{R}}\mathcal{L}_{\mathrm{R}},
+\qquad
+\lambda_{\mathrm{D}}+\lambda_{\mathrm{R}}=1.
+$$
+
+本实验设置 $\lambda_{\mathrm{D}}=\lambda_{\mathrm{R}}=0.5$，因此：
+
+$$
+\mathcal{L}_{\mathrm{DIBS}}
+=0.5\mathcal{L}_{\mathrm{D}}
++0.5\mathcal{L}_{\mathrm{R}}.
+$$
+
+例如，若 DS prompt 补充分支的 completion 有 5 个 token，而 RF 原有分支的 completion 有 205 个 token，普通 token 平均会使两个分支的隐式权重分别为 $5/210\approx2.38\%$ 和 $205/210\approx97.62\%$。DIBS 在分别归一化后固定采用 $50\%$ 和 $50\%$，因此权重不再由输出长度决定。
+
+**DIBS 的反向传播。** DS prompt 补充分支与 RF 原有分支共享同一组模型参数。训练时先计算上面的两个分支 loss，再将它们合成为一个标量 $\mathcal{L}_{\mathrm{DIBS}}$，最后对这个总 loss 执行一次反向传播。分别记两个分支的梯度为：
+
+$$
+\mathbf{g}_{\mathrm{D}}=\nabla_\theta\mathcal{L}_{\mathrm{D}},
+\qquad
+\mathbf{g}_{\mathrm{R}}=\nabla_\theta\mathcal{L}_{\mathrm{R}}.
+$$
+
+则总梯度为：
+
+$$
+\mathbf{g}_{\mathrm{DIBS}}
+=\nabla_\theta\mathcal{L}_{\mathrm{DIBS}}
+=\lambda_{\mathrm{D}}\mathbf{g}_{\mathrm{D}}
++\lambda_{\mathrm{R}}\mathbf{g}_{\mathrm{R}}.
+$$
+
+在本实验的等权设置下，有：
+
+$$
+\mathbf{g}_{\mathrm{DIBS}}
+=0.5\mathbf{g}_{\mathrm{D}}
++0.5\mathbf{g}_{\mathrm{R}}.
+$$
+
+优化器随后使用这一合成梯度更新同一个模型：
+
+$$
+\theta^{(t+1)}
+=\theta^{(t)}-\eta\mathbf{g}_{\mathrm{DIBS}}.
+$$
+
+因此，DIBS 不是先用 DS 分支的 loss 更新一次模型、再用 RF 分支的 loss 更新一次模型，而是在同一个优化步骤中先合并两个训练信号，再进行一次反向传播和参数更新。这样既补充了 DS prompt 的训练，也保留了模型生成 rationale 的能力，并避免直接评分信号因为序列过短而在梯度中被长 rationale 淹没。
+
+这里的改动不只是重新平衡 loss。原来的训练样本只通过 RF system prompt 进入模型；DIBS 为同一份 user prompt 额外构造 DS system prompt 和 score-only assistant completion，从而形成 RF 原有分支与 DS prompt 补充分支。每个分支先计算自身监督 token 的平均 loss；当 batch 大于 1 时，先汇总该分支内所有样本的监督 token，再得到对应的分支平均 loss。
+
+所以，不管 batch 多少，DIBS 都分别计算 DS prompt 补充分支和 RF 原有分支的平均 token loss，再按权重组合成总 loss 并进行一次反向传播。Mix 消融保留相同的两个分支，只取消分支级归一化与加权。上面的三 seed 结果显示，取消分支级 loss balance 后，DS 和 RF 的 7 任务主指标分别下降 0.013 和 0.006，说明新增 DS prompt 分支负责补齐缺失的 DS 训练接口，分支级 loss balance 则进一步改善总体效果。
+
+### 3. 同时解决两个问题
+
+上面的两个方法分别缓解了传统 RS 训练相比 SO 训练存在的两个问题：
+
+- 第一个问题发生在 RF 推理路径中：标准 RS 使用教师模型生成的 rationale 进行训练，但在 RF 推理时，学生模型必须根据自己的参数生成 rationale。教师 rationale 与学生自身推理逻辑之间存在分布偏差，学生一旦在 rationale 开头错误理解评分标准，后续分数就容易被错误推理引导。因此，即使 RS 能够生成 rationale，`RS_RF` 的评分效果仍然低于 `SO_RF`。Self-correct 针对的是这一训练—推理偏差：先让学生模型生成符合自身推理方式的 rationale，再用这些 rationale 重新训练，从而使第二阶段训练所见的推理路径更接近实际 RF 推理。实验中，`SCRS_RF` 的序数 QWK 比 `RS_RF` 提高 0.028（2.8 个百分点），说明该方法确实改善了 RF 路径；但它没有处理 DS 接口，因为第二阶段训练仍然只包含 RF prompt。结果是 `SCRS_DS` 出现大量格式无效输出，即使采用宽松抽取，其序数 QWK 也只比 `RS_DS` 提高 0.011（1.1 个百分点）。所以，self-correct 解决的是 RF 下的 rationale 分布偏差，而不是 loss 不平衡或 DS prompt 缺失。
+
+- 第二个问题同时涉及训练目标和接口覆盖。标准 RS 对整个 completion 的 token loss 求平均，较长的 rationale 占据了绝大多数监督位置，使较短的 score 部分权重过低；与此同时，RS、SCRS 以及只在单条 RF 序列内划分 loss 的 SSA 都没有使用 DS prompt 训练，因此模型切换到 DS 接口时容易出现格式失效。DIBS 分别针对这两个原因进行修改：保留原有 RF 分支以学习 rationale，同时加入使用 DS system prompt 和 score-only completion 的补充分支，让模型在训练阶段直接见到 DS 指令与输出格式；两个分支的 loss 分别归一化后再加权，避免 score 监督再次被长 rationale 稀释。实验中，`DIBS_DS` 的 7 任务主指标达到 0.833，高于 `RS_DS` 的 0.768，也超过 `SO_DS` 的 0.825，说明它解决了 RS 在 DS 接口上落后于 SO 的问题；`DIBS_RF` 为 0.797，虽然高于 `RS_RF` 的 0.783，但仍低于 `SO_RF` 的 0.803。也就是说，DIBS 已经补上 DS prompt 并改善 score 学习，但 RF 路径仍存在尚未完全解决的性能差距。
+
+于是，我们将 self-correct 与 DIBS 结合，并把联合方法记为 `SC-DIBS`。两个方法处理的是不同环节：self-correct 调整 rationale 的来源，DIBS 补充 DS prompt 并平衡 score loss，因此二者可以互补。
+
+| 方法 | 已解决的问题 | 实验结果 | 单独使用时的不足 |
+| --- | --- | --- | --- |
+| Self-correct | 缩小教师 rationale 与学生 RF 推理逻辑的偏差 | `SCRS_RF` 的序数 QWK 比 `RS_RF` 提高 0.028 | 没有训练 DS prompt；`SCRS_DS` 格式无效率为 47.74%，宽松 QWK 仅提高 0.011 |
+| DIBS | 补充 DS prompt，并平衡 rationale 与 score 的 loss | `DIBS_DS` 的 7 任务主指标为 0.833，高于 `RS_DS` 的 0.768 和 `SO_DS` 的 0.825 | RF 分支仍使用教师 rationale；`DIBS_RF` 为 0.797，仍低于 `SO_RF` 的 0.803 |
+| SC-DIBS | 同时保留上述两项改进 | 尚待实验验证 | 需要验证 RF 指标、DS 格式和 rationale 质量 |
+
+联合训练按下面的顺序进行：
+
+1. **用数据 A 训练模型 A。** 数据 A 包含教师 rationale 和 gold score。使用 DIBS 从 base model 训练模型 A：RF 分支学习 rationale，DS prompt 分支学习直接评分格式，两个分支分别计算平均 loss 后再加权。这一步先处理 loss 不平衡和 DS prompt 缺失。
+2. **用模型 A 生成数据 B。** 模型 A 在 RF prompt 下重新生成训练集 rationale。数据 B 只替换 rationale，system/user prompt、样本 ID 和 gold score 保持不变，因此不会把模型 A 的错误分数传给最终模型。这一步缩小 rationale 的训练—推理偏差。
+3. **用数据 B 训练模型 B。** 再次从 base model 出发使用 DIBS。RF 分支学习模型 A 生成的 rationale，DS prompt 分支继续学习直接评分格式，两个分支都使用 gold score，并继续保持 loss balance。
+
+这样组合后，DIBS 先保证模型 A 具备较好的评分能力并见过 DS prompt；模型 A 再生成更接近学生自身推理方式的 rationale；第二阶段的 DIBS 则把更新后的 rationale 用于 RF 分支，同时继续保留 DS prompt 和 score 监督。它避免了 self-correct 单独使用时改善 RF 却破坏 DS 格式的问题，也补上了 DIBS 单独使用时 RF 分支仍依赖教师 rationale 的不足。
+
+对于 rationale，联合方法要解决的不是“生成得更长”，而是减少学生在 RF 推理时生成的 rationale 与训练 rationale 之间的偏差，并减少早期错误推理对最终分数的误导。由于数据 B 保留 gold score，模型 B 学习的是“更接近学生自身推理方式的 rationale + 正确分数”，而不是模型 A 可能生成的错误分数。联合实验完成后，应重点比较 `DIBS_RF` 与 `SC-DIBS_RF` 在相同样本上的 rationale：是否更支持 gold score、是否减少前几句中的错误，以及这些变化是否同步提高 RF 主指标。
+
+目前的实验只能证明 self-correct 和 DIBS 分别解决了各自的子问题；`SC-DIBS` 是否能够同时超过 `SO_DS` 和 `SO_RF`，仍需通过联合训练结果确认。
+
+- 联合训练结果
+
+三 seed 的宽松抽取结果如下。前四个序数任务使用 QWK、后三个分类任务使用 Macro-F1，7 任务主指标平均为七项主指标的算术平均。
+
+| 推理接口 | SO 基线 | DIBS | SC-DIBS | Δ（SC-DIBS−SO） | Δ（SC-DIBS−DIBS） | SC-DIBS 严格格式有效率 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| DS | 0.825 | 0.833 | **0.832** | +0.007 | -0.001 | 100.00% |
+| RF | 0.803 | 0.797 | **0.817** | +0.014 | +0.020 | 100.00% |
+
+结果表明，SC-DIBS_DS 的 7 任务主指标为 0.832，超过 SO_DS 的 0.825，并保持 100.00% 的严格格式有效率；它仅比单独的 DIBS_DS 低 0.001，说明 self-correct 的加入没有破坏 DIBS 在 DS 接口上的收益。
+
+在 RF 接口上，SC-DIBS_RF 达到 0.817，同时超过 SO_RF 的 0.803 和 DIBS_RF 的 0.797。与 DIBS 相比提升的 0.020 表明，DIBS 补齐 DS prompt 和 score 监督后，self-correct 进一步缓解了 RF 路径中教师 rationale 与学生自身推理之间的偏差。因此，联合方法已经在各自对应的 DS 与 RF 基线上同时取得提升；正在进行的同样本 rationale 审计将进一步检验这种 RF 提升是否伴随更多 rationale 支持 gold score 和更少的早期错误句。

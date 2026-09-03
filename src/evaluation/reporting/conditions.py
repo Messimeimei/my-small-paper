@@ -63,6 +63,27 @@ def infer_eval_condition(
         or "/paper_align/" in adapter_path
     ):
         train_mode = "PA"
+    elif (
+        "#ssa_v3#" in text
+        or "ssa_v3.yaml" in config_path
+        or "/ssa_v3/" in config_path
+        or "/ssa_v3/" in adapter_path
+    ):
+        train_mode = "SSA3"
+    elif (
+        "#ssa_v2#" in text
+        or "ssa_v2.yaml" in config_path
+        or "/ssa_v2/" in config_path
+        or "/ssa_v2/" in adapter_path
+    ):
+        train_mode = "SSA2"
+    elif (
+        "#ssa#" in text
+        or "ssa.yaml" in config_path
+        or "/ssa/" in config_path
+        or "/ssa/" in adapter_path
+    ):
+        train_mode = "SSA"
     elif "#ft#label_only" in text or text.endswith("#label_only"):
         train_mode = "L"
     elif "#ft#cot" in text or text.endswith("#cot"):
@@ -92,6 +113,12 @@ def infer_eval_condition(
         ("PA", "cot"): "PAC",
         ("MIX", "label_only"): "MIX-L",
         ("MIX", "cot"): "MIX-C",
+        ("SSA", "label_only"): "SSAL",
+        ("SSA", "cot"): "SSAC",
+        ("SSA2", "label_only"): "SSA2L",
+        ("SSA2", "cot"): "SSA2C",
+        ("SSA3", "label_only"): "SSA3L",
+        ("SSA3", "cot"): "SSA3C",
         ("SC", "label_only"): "SCL",
         ("SC", "cot"): "SCC",
         ("SCA", "label_only"): "SCAL",

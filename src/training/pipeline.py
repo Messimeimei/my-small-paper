@@ -127,6 +127,26 @@ def prepare_run_context(args: argparse.Namespace) -> dict[str, Any]:
         data_summary["pairing"] = (
             "Each CoT source row is paired by ID with one label-only row."
         )
+    elif training_method == "ssa":
+        data_summary["ssa_train_samples"] = len(train_rows)
+        data_summary["ssa_regions_per_sample"] = ["rationale", "score"]
+        data_summary["ssa_partition"] = (
+            "Each CoT completion is partitioned once at its <score> tag."
+        )
+    elif training_method == "ssa_v2":
+        data_summary["ssa_v2_train_samples"] = len(train_rows)
+        data_summary["ssa_v2_regions_per_sample"] = ["rationale", "score"]
+        data_summary["ssa_v2_score_context"] = (
+            "CoT prompt plus score-prefix tokens; rationale attention is blocked."
+        )
+        data_summary["ssa_v2_score_opening_tag_loss"] = "rationale"
+    elif training_method == "ssa_v3":
+        data_summary["ssa_v3_train_samples"] = len(train_rows)
+        data_summary["ssa_v3_regions_per_sample"] = ["rationale", "score"]
+        data_summary["ssa_v3_attention_context"] = (
+            "Assistant queries attend only to the formatted system/user prompt."
+        )
+        data_summary["ssa_v3_score_opening_tag_loss"] = "score"
 
     resolved_config = {
         **config,

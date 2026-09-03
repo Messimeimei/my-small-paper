@@ -1,0 +1,43 @@
+# SSA v2: one CoT sample, with score attention isolated from rationale.
+experiment_name: rev_util_helpfulness#qwen3_4b#ssa_v2
+model_name_or_path: model/Qwen3-4B
+dataset_path: data/rev_util_helpfulness/cot/train_cot.jsonl
+split_path: data/rev_util_helpfulness/cot/splits/train_cot_seed20260720.json
+output_root: checkpoints/rev_util_helpfulness/ssa_v2
+
+split_seed: 20260720
+validation_ratio: 0.10
+
+supervision:
+  method: ssa_v2
+  rationale_coeff: 0.5
+  score_coeff: 0.5
+
+lora:
+  target_modules: all-linear
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+
+training:
+  max_length: 8192
+  learning_rate: 0.0001
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  num_train_epochs: 3
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  max_grad_norm: 0.3
+  bf16: true
+  gradient_checkpointing: true
+  # Required for the custom boolean 4D branch-attention mask.
+  attn_implementation: sdpa
+  logging_steps: 10
+  save_total_limit: 1
+  report_to: tensorboard
+
+generation:
+  batch_size: 8
+  max_new_tokens: 512
