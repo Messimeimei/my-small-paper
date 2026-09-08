@@ -1,0 +1,182 @@
+\documentclass[tikz,border=3pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+
+\pgfplotsset{compat=1.18}
+
+% 在仓库根目录运行：make -C paper figure-training-targets
+% 图中所有柱高均从下面的 CSV 文件读取，不需要手工同步两份数据。
+\newcommand{\ordinaldatafile}{../../analysis/derived/training_target_ordinal_means.csv}
+\newcommand{\binarydatafile}{../../analysis/derived/training_target_binary_means.csv}
+
+% 四种训练目标 + 推理接口组合的固定配色。
+\definecolor{sods}{HTML}{7A2430}
+\definecolor{rsds}{HTML}{B45D68}
+\definecolor{sorf}{HTML}{174D68}
+\definecolor{rsrf}{HTML}{5E8497}
+
+% 公共坐标轴样式。bar width 与相邻 bar shift 的差值相同，因此组内柱子紧贴。
+\pgfplotsset{
+  common axis/.style={
+    ybar,
+    axis lines*=left,
+    axis y discontinuity=parallel,
+    grid=major,
+    xmajorgrids=false,
+    grid style={draw=black!18, densely dashed, line width=0.35pt},
+    axis line style={draw=black!80, line width=0.65pt},
+    tick style={draw=black!80, line width=0.55pt},
+    tick label style={font=\sffamily\scriptsize},
+    label style={font=\sffamily\small},
+    title style={font=\sffamily\small\bfseries, yshift=1pt},
+    xticklabel style={font=\sffamily\scriptsize, align=center},
+    enlarge x limits=0.11,
+    clip=true,
+  },
+  SO-DS/.style={
+    fill=sods,
+    draw=black!80,
+    line width=0.45pt,
+    bar width=9pt,
+    bar shift=-13.5pt,
+  },
+  RS-DS/.style={
+    fill=rsds,
+    draw=black!80,
+    line width=0.45pt,
+    bar width=9pt,
+    bar shift=-4.5pt,
+  },
+  SO-RF/.style={
+    fill=sorf,
+    draw=black!80,
+    line width=0.45pt,
+    bar width=9pt,
+    bar shift=4.5pt,
+  },
+  RS-RF/.style={
+    fill=rsrf,
+    draw=black!80,
+    line width=0.45pt,
+    bar width=9pt,
+    bar shift=13.5pt,
+  },
+}
+
+% 两个面板分别读取独立 CSV，因此不依赖版本相关的行过滤行为。
+
+\begin{document}
+\begin{tikzpicture}
+
+% 左侧面板：四个序数任务。修改 width/height 可调整面板尺寸。
+\begin{axis}[
+  common axis,
+  name=ordinal,
+  width=10.3cm,
+  height=6.6cm,
+  title={Ordinal tasks},
+  ylabel={QWK},
+  ymin=0.62,
+  ymax=0.82,
+  ytick={0.64,0.68,0.72,0.76,0.80},
+  xmin=-0.55,
+  xmax=3.55,
+  xtick={0,1,2,3},
+  xticklabels={
+    Actionability,
+    {Grounding\\Specificity},
+    Helpfulness,
+    Verifiability
+  },
+]
+\addplot+[SO-DS] table[
+  col sep=comma,
+  x=x,
+  y=SO_DS,
+] {\ordinaldatafile};
+\addplot+[RS-DS] table[
+  col sep=comma,
+  x=x,
+  y=RS_DS,
+] {\ordinaldatafile};
+\addplot+[SO-RF] table[
+  col sep=comma,
+  x=x,
+  y=SO_RF,
+] {\ordinaldatafile};
+\addplot+[RS-RF] table[
+  col sep=comma,
+  x=x,
+  y=RS_RF,
+] {\ordinaldatafile};
+
+% 无边框、无背景的四色说明，纵向位置严格位于 QWK 0.76--0.80。
+\path[fill=sods, draw=black!80, line width=0.35pt]
+  (axis cs:1.47,0.792) rectangle (axis cs:1.60,0.798);
+\node[anchor=west, font=\sffamily\tiny] at (axis cs:1.67,0.795)
+  {Score-only + Direct scoring (SO--DS)};
+
+\path[fill=rsds, draw=black!80, line width=0.35pt]
+  (axis cs:1.47,0.782) rectangle (axis cs:1.60,0.788);
+\node[anchor=west, font=\sffamily\tiny] at (axis cs:1.67,0.785)
+  {Rationale-supervised + Direct scoring (RS--DS)};
+
+\path[fill=sorf, draw=black!80, line width=0.35pt]
+  (axis cs:1.47,0.772) rectangle (axis cs:1.60,0.778);
+\node[anchor=west, font=\sffamily\tiny] at (axis cs:1.67,0.775)
+  {Score-only + Rationale-first (SO--RF)};
+
+\path[fill=rsrf, draw=black!80, line width=0.35pt]
+  (axis cs:1.47,0.762) rectangle (axis cs:1.60,0.768);
+\node[anchor=west, font=\sffamily\tiny] at (axis cs:1.67,0.765)
+  {Rationale-supervised + Rationale-first (RS--RF)};
+\end{axis}
+
+% 右侧面板：三个二分类任务。xshift 控制两个面板之间的距离。
+\begin{axis}[
+  common axis,
+  at={(ordinal.east)},
+  anchor=west,
+  xshift=1.05cm,
+  width=8.5cm,
+  height=6.6cm,
+  title={Binary tasks},
+  ylabel={Macro-F1},
+  ymin=0.60,
+  ymax=1.03,
+  ytick={0.60,0.70,0.80,0.90,1.00},
+  xmin=-0.55,
+  xmax=2.55,
+  xtick={0,1,2},
+  xticklabels={
+    Coherence,
+    {Positioning\\Check},
+    {Positioning\\Type}
+  },
+]
+\addplot+[SO-DS] table[
+  col sep=comma,
+  x=x,
+  y=SO_DS,
+] {\binarydatafile};
+\addplot+[RS-DS] table[
+  col sep=comma,
+  x=x,
+  y=RS_DS,
+] {\binarydatafile};
+\addplot+[SO-RF] table[
+  col sep=comma,
+  x=x,
+  y=SO_RF,
+] {\binarydatafile};
+\addplot+[RS-RF] table[
+  col sep=comma,
+  x=x,
+  y=RS_RF,
+] {\binarydatafile};
+\end{axis}
+
+\end{tikzpicture}
+\end{document}

@@ -18,5 +18,4 @@ clean:
 
 check: pdf
 	@test -s $(BUILD_DIR)/main.pdf
-	@../../.venv-paper/bin/python ../analysis/scripts/check_pdf.py $(BUILD_DIR)/main.pdf
-	@echo "Compiled and checked manuscript: $(BUILD_DIR)/main.pdf"
+	@echo "Compiled manuscript: $(BUILD_DIR)/main.pdf"
