@@ -8,7 +8,7 @@
 %分别是1-5评分和二分类任务。具体的数据处理内容和数据详情可以在附录B看见。
 %这些任务从不同评分准则对科学写作任务进行评测，所以我们把他作为我们的数据集。
 
-Our training data were adapted from \citep{furkan-sahinu-1-2-subhabrata-dutta1-iryna-gurevych1-2-2601-reward}'s work through task selection, prompt revision, 
+Our training data were adapted from \citep{sahinuc-etal-2026-reward}'s work through task selection, prompt revision, 
 and sample-level quality control. 
 The resulting dataset covers two complementary dimensions of scientific-writing evaluation. Peer-review quality is scored 
 on a five-point scale, while related-work assessment is formulated as binary classification. Further details on data processing 
@@ -29,7 +29,9 @@ the same Qwen3-4B checkpoint.
 %验证集用于模型选择与分析，测试集用于最终评估。所有评估均采用 zero-shot prompt，模板见图 1。
 %LoRA 应用于全部线性层，设置 \(r=16\)、\(\alpha=32\)、学习率 \(1\times10^{-4}\)，训练 3 个 epoch，
 %使用余弦衰减和 8,192-token 最大序列长度。其余配置见附录 A。
-%两种监督方式分别通过 direct-score 和 rationale-first 接口进行评估，共得到 \(2\times7\times2=28\) 个实验条件，
+%两种监督方式分别通过 direct-score 和 rationale-first 接口进行评估，
+%共得到 \(2\times7\times2=28\) 个实验条件，
+%每个实验条件均使用 3 个随机种子运行，所有报告结果均为这 3 个随机种子的平均值，
 %结果见第~\ref{sec:results} 节。随后，我们分析 RF 接口下的验证集 NLL 和 rationale 质量，
 %并对 DS 到 RF 的预测变化进行句子级 rationale 分析。
 %对于有害变化，我们替换错误内容并重新预测，以检验 rationale 对分数的影响。最后，分别评估 ReaSon 和 PaIR，
@@ -45,7 +47,9 @@ three epochs, cosine decay, and a maximum sequence length of 8,192 tokens.
 Additional settings are provided in Appendix A. 
 Evaluating two supervision strategies across seven datasets 
 and two inference protocols yields \(2\times7\times2=28\) experimental conditions, 
-reported in Section~\ref{sec:results}. 
+each of which is run with three random seeds. 
+All reported results are averaged across the three seeds (42, 43, and 44) and are 
+presented in Section~\ref{sec:results}.
 We then analyze validation-set NLL and rationale quality 
 under RF, followed by sentence-level analysis of prediction changes from DS to RF. 
 For harmful changes, erroneous rationale content is replaced before rescoring to assess its effect on 
@@ -55,12 +59,9 @@ the prediction. Finally, we evaluate ReaSon and PaIR separately before testing t
 \subsection{Understanding the SO--RS Performance Gap}
 
 % 为检验 SO 与 RS 的性能差距是否与教师 rationale 的拟合程度
-% 有关，我们对两个方法在三个训练 seed（42、43 和 44）下的
-% adapter 分别计算 teacher-forced rationale NLL。分析覆盖
-% Actionability、Grounding Specificity、Helpfulness、
-% Verifiability、Coherence、Positioning Check 和 Positioning
-% Type 七个任务。每个任务中的六个 adapter 均使用相同的验证集，
-% 合计包含 1,368 个样本和 161,178 个教师 rationale token。
+% 有关，我们分别计算两个方法的 teacher-forced rationale NLL。
+% 分析覆盖所有任务。两个方法采用相同的验证集，共包含 1,368 个
+% 样本和 161,178 个教师 rationale token。
 %
 % 对每个 adapter，逐个输入完整的 prompt--rationale--score 序列，
 % 但仅在 rationale token 上计算损失。在因果掩码下，每个 token
@@ -80,14 +81,14 @@ the prediction. Finally, we evaluate ReaSon and PaIR separately before testing t
 % 每个方法在每个任务上得到三个 seed-level NLL，并取平均值进行
 % 报告。较低的 NLL 表示模型更接近教师 rationale 的分布。
 
+% \paragraph{Teacher-forced rationale NLL 分析。}
+\paragraph{Teacher-forced Rationale NLL.}
+
 To test whether the SO--RS performance gap is associated with
 teacher-rationale fitting, we compute teacher-forced rationale NLL
-for both methods across three training seeds (42, 43, and 44).
-The analysis covers seven tasks: Actionability, Grounding Specificity,
-Helpfulness, Verifiability, Coherence, Positioning Check, and
-Positioning Type. For each task, all six adapters use the same
-validation split. These splits contain 1,368 samples and 161,178
-teacher-rationale tokens in total.
+for both methods. The analysis covers all tasks. Both methods use identical 
+validation splits, comprising 1,368 samples and 161,178 teacher-rationale 
+tokens in total.
 
 For each adapter, complete prompt--rationale--score sequences are
 processed individually, while loss is computed only at rationale-token
@@ -161,13 +162,14 @@ configurations and evaluation prompts are provided in Appendix B.
 % 进一步逐句标注 \texttt{factual_error}、
 % \texttt{evidence_misread} 等错误类型，完整分类见附录 A。
 %
-% 最后，我们使用 GLM-5.3-Flash 修正 158 个有害样本的 rationale，
-% 并由 MiniMax-M3 审核。随后使用原 adapter 和相同的 RF prompt
-% 进行固定前缀重评分。条件 A 按标准 RF 流程自然生成 rationale
-% 和分数；条件 B 固定原错误 rationale，仅重新生成分数；
-% 条件 C 固定修正后的 rationale，仅重新生成分数。A 与 B
-% 用于检验固定前缀重评分能否复现原 RF 预测，B 与 C 则用于
-% 衡量 rationale 内容修正带来的预测变化。
+% 最后，我们在 158 个有害转移案例上检验修正 rationale 是否会
+% 改变后续评分。原始 rationale 由 GLM-5.3-Flash 修正，并经
+% MiniMax-M3 审核；所有案例均使用原 adapter 以及相同的 RF
+% system 和 user prompt 进行重评分。我们将自然 RF 生成记为
+% NatRF，将固定原错误 rationale 后仅生成分数记为 FixOrig，
+% 将固定修正 rationale 后仅生成分数记为 FixCorr。
+% NatRF--FixOrig 比较用于验证固定前缀重评分能否复现原预测，
+% FixOrig--FixCorr 比较则用于衡量 rationale 修正带来的分数变化。
 
 Across the 28 experimental conditions, the effect of the inference
 protocol varied by task type and training objective. DS consistently
@@ -188,12 +190,13 @@ errors such as \texttt{factual\_error} and
 \texttt{evidence\_misread}. The complete taxonomy is provided in
 Appendix A.
 
-Finally, GLM-5.3-Flash corrected the rationales of 158 harmful cases,
-which were then reviewed by MiniMax-M3. Each case was rescored using
-its original adapter and the same RF prompt. Condition A used standard
-RF inference to generate both the rationale and score. Condition B
-fixed the original erroneous rationale and regenerated only the score,
-whereas Condition C fixed the corrected rationale and regenerated only
-the score. The A--B comparison tested whether fixed-prefix rescoring
-reproduced the original RF prediction, while B--C measured the
-prediction change resulting from rationale correction.
+Finally, we tested whether rationale correction changed subsequent
+scores in 158 harmful-transition cases. GLM-5.3-Flash corrected the
+original rationales, which were then reviewed by MiniMax-M3. Each case
+was rescored using its original adapter and the same RF system and user
+prompts. We denote natural RF generation as NatRF, rescoring from the
+fixed original rationale as FixOrig, and rescoring from the fixed
+corrected rationale as FixCorr. The NatRF--FixOrig comparison validates
+whether fixed-prefix rescoring reproduces the original prediction,
+whereas FixOrig--FixCorr measures the score changes associated with
+rationale correction.

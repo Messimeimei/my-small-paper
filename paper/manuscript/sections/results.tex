@@ -18,7 +18,8 @@ reported in Appendix A.
 % 优于 rationale-and-score training，direct-score inference 优于
 % rationale-first inference。
 
-Figure~2 reports QWK on the four ordinal tasks. With score-only training, 
+Figure~\ref{fig:training-targets-by-task-type} (left) reports QWK on the 
+four ordinal tasks. With score-only training, 
 direct-score and rationale-first inference achieve mean QWK scores of 0.747 and 0.712, 
 respectively. With rationale-and-score training, the corresponding scores are 0.696 and 0.679. 
 This pattern is consistent across tasks: score-only training outperforms rationale-and-score 
@@ -32,7 +33,8 @@ training, and direct-score inference outperforms rationale-first inference.
 % 取决于推理接口：score-only training 仅在 direct-score inference
 % 下表现出明显优势。
 
-Figure~3 reports Macro-F1 on the binary tasks. With score-only training, direct-score and 
+Figure~\ref{fig:training-targets-by-task-type} (right) reports Macro-F1 on the binary 
+tasks. With score-only training, direct-score and 
 rationale-first inference perform similarly, scoring 0.928 and 0.923, respectively. 
 With rationale-and-score training, rationale-first inference reaches 0.922, compared 
 with 0.843 under direct-score inference. The effect of the training objective therefore 
@@ -41,20 +43,27 @@ direct-score inference.
 
 % \textbf{Rationale supervision 增强了教师 rationale 拟合，但这一优势并未转化为更好的评分性能。}
 % 我们通过 teacher-forced rationale NLL 衡量模型对教师 rationale
-% 的建模程度。未经任务微调的 Qwen3-4B（Base）平均 NLL 为
-% 3.4480，经过 score-only 和 rationale-and-score training 后
+% 的建模程度。表~\ref{tab:rationale-nll} 报告了 Base、score-only training
+% 和 rationale-and-score training 在各任务上的 NLL 结果，其中较低的 NLL
+% 表示模型对教师 rationale 分布的拟合程度更高。
+% 如表~\ref{tab:rationale-nll} 所示，未经任务微调的 Qwen3-4B（Base）
+% 平均 NLL 为 3.4480，经过 score-only 和 rationale-and-score training 后
 % 分别降至 1.6964 和 0.7793。Rationale-and-score training 在
 % 所有任务上均取得最低 NLL，表明直接监督 rationale 能够显著
 % 增强对教师 rationale token 的预测，但不能保证更好的评分结果。
 
-\textbf{Rationale supervision improves teacher-rationale fitting, but this 
-advantage does not translate into better scoring.} 
-We measure teacher-rationale modeling using teacher-forced rationale NLL. 
-The original Qwen3-4B without task-specific fine-tuning (Base) obtains a mean NLL of 3.4480, 
-which decreases to 1.6964 with score-only training and 0.7793 
-with rationale-and-score training. 
-Rationale-and-score training achieves the lowest NLL on every task, 
-showing that direct rationale supervision improves teacher-token prediction 
+\textbf{Rationale supervision improves teacher-rationale fitting, but this
+advantage does not translate into better scoring.}
+We measure teacher-rationale modeling using teacher-forced rationale NLL.
+Table~\ref{tab:rationale-nll} reports the task-level NLL results for Base,
+score-only training, and rationale-and-score training, where lower values indicate
+closer fitting to the teacher-rationale distribution.
+As shown in Table~\ref{tab:rationale-nll}, the original Qwen3-4B without
+task-specific fine-tuning (Base) obtains a mean NLL of 3.4480,
+which decreases to 1.6964 with score-only training and 0.7793
+with rationale-and-score training.
+Rationale-and-score training achieves the lowest NLL on every task,
+showing that direct rationale supervision improves teacher-token prediction
 but does not guarantee better scoring performance.
 
 % 各任务的 teacher-forced rationale NLL。Base 表示未经任务微调的
@@ -89,29 +98,35 @@ Average               & 3.4480 & 1.6964 & \textbf{0.7793} & $-$0.9171 \\
 \end{table}
 
 % \textbf{Rationale-and-score training 生成了质量更高的 rationale。}
-% 外部 LLM 比较了 350 组配对 rationale，其中 248 组（70.9\%）
-% 更偏好 rationale-and-score training 的结果，25 组（7.1\%）
-% 更偏好 score-only training，其余 77 组（22.0\%）基本相当。
+% 外部 LLM 比较了 350 组配对 rationale。表~\ref{tab:rationale-quality-consistency}
+% 报告了整体偏好结果、四个质量维度的评分以及 rationale 与预测分数的一致率。
+% 如表~\ref{tab:rationale-quality-consistency} 所示，248 组（70.9%）
+% 更偏好 rationale-and-score training 的结果，25 组（7.1%）
+% 更偏好 score-only training，其余 77 组（22.0%）基本相当。
 % 这一偏好在所有评测任务上均保持一致。Rationale-and-score
 % training 在评分标准理解、证据支撑、关键信息覆盖和无依据陈述
 % 控制四个维度上均取得更高分，其中关键信息覆盖的差距最大。
 % 其四维平均分为 2.832，高于 score-only training 的 2.400；
-% 与预测分数的一致率也更高，分别为 96.6\% 和 74.3\%。
+% 与预测分数的一致率也更高，分别为 96.6% 和 74.3%。
 
-\textbf{Rationale-and-score training produces higher-quality rationales.} 
-External LLMs compared 350 paired rationales and preferred those from rationale-and-score 
-training in 248 cases (70.9\%). Score-only rationales were preferred in 25 cases (7.1\%), 
-while 77 cases (22.0\%) were comparable. This preference was consistent across all 
-evaluation tasks. Rationale-and-score training scored higher on rubric understanding, 
-evidence grounding, key-information coverage, and unsupported-claim control, 
-with the largest difference in key-information coverage. Its mean score across the four 
-dimensions was 2.832, compared with 2.400 for score-only training, and its rationale--score 
+\textbf{Rationale-and-score training produces higher-quality rationales.}
+External LLMs compared 350 paired rationales.
+Table~\ref{tab:rationale-quality-consistency} reports the overall preference results,
+scores across four rationale-quality dimensions, and rationale--score consistency rates.
+As shown in Table~\ref{tab:rationale-quality-consistency}, rationales from
+rationale-and-score training were preferred in 248 cases (70.9\%).
+Score-only rationales were preferred in 25 cases (7.1\%),
+while 77 cases (22.0\%) were comparable. This preference was consistent across all
+evaluation tasks. Rationale-and-score training scored higher on rubric understanding,
+evidence grounding, key-information coverage, and unsupported-claim control,
+with the largest difference in key-information coverage. Its mean score across the four
+dimensions was 2.832, compared with 2.400 for score-only training, and its rationale--score
 consistency was also higher at 96.6\% versus 74.3\%.
 
 % 外部 LLM 对 rationale 的整体偏好、质量评分和分数一致性评估。
 % 两条实线分别分隔 Pairwise Preference、Quality 和 Consistency。
 
-\begin{table*}[t]
+\begin{table*}[!t]
 \centering
 \small
 \setlength{\tabcolsep}{9pt}
@@ -157,117 +172,244 @@ it reports RS minus SO, with percentage differences in percentage points.}
 \label{tab:rationale-quality-consistency}
 \end{table*}
 
-% \subsection{RQ2：为什么 RF 在序数任务上弱于 DS？}
-\paragraph{RQ2: Why Does RF Underperform DS on Ordinal Tasks?}
+% \paragraph{RQ2：DS 与 RF 在序数评分上有何差异？}
+\paragraph{RQ2: How Do DS and RF Differ in Ordinal Scoring?}
 
-% 我们在四个序数任务和三个 seed 上追踪 DS 到 RF 的样本级预测
-% 转移，每种训练目标包含 11,364 个 seed-level 配对事件。切换到
-% RF 后，SO 和 RS 的平均 QWK 分别下降 0.035 和 0.017。在 SO
-% 条件下，准确率下降 3.52 个百分点，严重错误增加 3.98 个百分点；
-% 在 RS 条件下，准确率虽然提高 3.49 个百分点，严重错误仍增加
-% 4.26 个百分点。由于 QWK 对跨档距离赋予更高惩罚，严重错误的
-% 增加抵消了正确样本增加带来的收益。格式无效率变化不足
-% 0.25 个百分点，并非 QWK 下降的主要来源。
-We traced sample-level DS-to-RF transitions across four ordinal tasks
-and three seeds, yielding 11,364 paired events per supervision
-objective. Switching to RF reduced mean QWK by 0.035 under SO and
-0.017 under RS. Under SO, accuracy decreased by 3.52 percentage points,
-while severe errors increased by 3.98 points. Under RS, accuracy rose
-by 3.49 points, yet severe errors increased by 4.26 points. Because QWK
-penalizes cross-level errors more heavily, this increase offset the
-gain in exact predictions. Invalid-output rates changed by less than
-0.25 points and were not the main source of the QWK decline.
+% 为刻画推理接口对序数评分的影响，我们在两种监督目标下配对
+% 比较同一样本的 direct-score 与 rationale-first 预测，共分析
+% 11,364 个预测转移，并将结果划分为正确、相邻错误、严重错误
+% 和格式无效。表~\ref{tab:ordinal-interface-changes} 报告了从
+% direct-score 切换至 rationale-first inference 后的平均变化。
+%
+% 在 score-only training 下，QWK 下降 0.035，准确率下降
+% 3.52 个百分点，严重错误率增加 3.98 个百分点。在
+% rationale-and-score training 下，准确率虽然提高 3.49 个
+% 百分点，但相邻错误率下降 7.51 个百分点，严重错误率增加
+% 4.26 个百分点，QWK 仍下降 0.017。由于 QWK 对远距离错误
+% 的惩罚更高，预测向严重错误的转移抵消了准确率提升带来的
+% 收益。两种训练条件下的格式无效率变化均小于 0.25 个百分点。
 
-% 为定位严重错误的来源，我们抽取了 296 个预测发生有害或有益
-% 转移的案例，其中 278 个形成有效裁判共识。裁判认为 158 条
-% RF rationale 支持错误分数，120 条支持 gold score。句子级分析
-% 显示，评分标准误用最为常见，分数映射错误、证据误读和事实错误
-% 也频繁出现。首个错误平均约出现在第 2 句，约 69\% 的案例在
-% 前两句内已经出现错误。这些结果表明 rationale 方向与预测转移
-% 高度相关，但仅凭观察性审计仍不能确定因果关系。
-To localize these severe errors, we audited 296 harmful or beneficial
-transition cases, of which 278 reached valid judge consensus. The
-judges found that 158 RF rationales supported an incorrect score,
-whereas 120 supported the gold score. Rubric misapplication was the
-most frequent sentence-level error, followed by score-mapping errors,
-evidence misreadings, and factual errors. The first error appeared near
-the second sentence on average, and about 69\% occurred within the
-first two sentences. These observations linked rationale direction to
-prediction transitions, but did not establish causality.
+To characterize how the inference protocol affects ordinal scoring, we
+paired direct-score and rationale-first predictions for the same samples
+under both supervision objectives, yielding 11,364 prediction transitions.
+Predictions were categorized as correct, adjacent errors, severe errors,
+or format-invalid. Table~\ref{tab:ordinal-interface-changes} summarizes
+the average changes after switching from direct-score to rationale-first
+inference.
 
-% 因此，我们对 158 个支持错误分数的案例实施固定前缀干预。
-% 条件 A 使用自然 RF 输出，条件 B 固定原错误 rationale 并重新
-% 生成分数，条件 C 则固定修正后的 rationale。条件 B 在 157/158
-% 个案例中复现了条件 A 的原预测，说明固定前缀本身很少改变分数。
-% 从 B 切换到 C 后，158 个分数全部变化，其中 142 个（89.87\%）
-% 恢复为 gold score，其余 16 个均缩小为相邻错误；MAE 也从
-% 2.044 降至 0.101。该干预证明了所选案例的分数会响应显式
-% rationale 内容，但不证明模型隐藏计算过程的完全忠实性。
-We therefore applied a fixed-prefix intervention to the 158 cases
-whose rationales supported an incorrect score. Condition A used the
-natural RF output. Condition B fixed the original erroneous rationale,
-whereas Condition C fixed its corrected counterpart before regenerating
-the score. Condition B reproduced 157 of 158 original predictions,
-showing that prefix fixation rarely changed the score by itself.
-Replacing B with C changed every prediction and restored 142 cases
-(89.87\%) to gold. The remaining 16 became adjacent errors, while MAE
-fell from 2.044 to 0.101. This intervention establishes sensitivity to
-the exposed rationale on the selected cases, not complete faithfulness
-of the model's hidden computations.
+With score-only training, QWK decreased by 0.035, accuracy by 3.52
+percentage points, and the severe-error rate increased by 3.98 points.
+With rationale-and-score training, accuracy increased by 3.49 points,
+but adjacent errors decreased by 7.51 points while severe errors increased
+by 4.26 points, resulting in a QWK decrease of 0.017. Because QWK
+penalizes distant errors more heavily, the shift toward severe errors
+offset the gain in exact predictions. Invalid-output rates changed by
+less than 0.25 percentage points under both training objectives.
+
+% 从 direct-score inference 切换到 rationale-first inference 后，
+% 序数任务的平均指标和预测类型变化。
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.4pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrrrrr}
+\toprule
+Training & $\Delta$QWK & $\Delta$Acc. & $\Delta$Adj. &
+$\Delta$Severe & $\Delta$Invalid \\
+\midrule
+SO & $-$0.035 & $-$3.52 pp & $-$0.52 pp & +3.98 pp & +0.07 pp \\
+RS & $-$0.017 & +3.49 pp & $-$7.51 pp & +4.26 pp & $-$0.23 pp \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Macro-averaged changes from direct-score to rationale-first
+inference on the ordinal tasks. Prediction-category changes are
+reported in percentage points.}
+\label{tab:ordinal-interface-changes}
+\end{table}
+
+% \textbf{RF rationale 与预测转移高度一致，且错误通常较早出现。}
+% 在每种监督目标的 11,364 个 DS--RF 配对预测中，score-only
+% training 产生 377 个有害转移和 151 个有益转移，
+% rationale-and-score training 则产生 338 个和 269 个。
+% 最终完成 1,119/1,135 个案例的裁判，详细统计见附录 A。
+%
+% 在 701 个有害转移中，700 条 rationale 支持错误分数；418 个
+% 有益转移的 rationale 则全部支持 gold score。这一结果与 RQ1
+% 中的 rationale--score 一致性相符。
+%
+% 图~\ref{fig:rationale-error-analysis} 展示了明确错误句子的类型
+% 及首错位置。在两种训练方式合计的 1,115 个明确标注错误句子中，
+% 评分标准误用（37.8\%）和分数映射错误（18.3\%）最为常见，
+% 合计占 56.1\%，表明错误主要源于评分标准的应用及其向分数的映射。
+% 合并两种训练方式后，74.9\% 的首错出现在 rationale 的前半部分，
+% 其中 38.8\% 位于前 25\%，说明错误通常在推理早期形成，
+% 并可能持续影响后续推理和最终评分。
+
+\textbf{RF rationales closely align with prediction transitions, and
+their errors often emerge early.}
+Across 11,364 DS-to-RF prediction pairs per objective, score-only
+training produced 377 harmful and 151 beneficial transitions, whereas
+rationale-and-score training produced 338 and 269. Judging was
+completed for 1,119 of 1,135 selected cases, with detailed counts
+reported in Appendix A.
+
+Among 701 harmful transitions, 700 rationales supported an incorrect
+score. In contrast, all 418 beneficial-transition rationales supported
+the gold score. This result is consistent with the rationale--score
+alignment observed in RQ1.
+
+Figure~\ref{fig:rationale-error-analysis} summarizes the types and
+positions of sentence-level errors. Across the two training conditions,
+rubric misapplication (37.8\%) and score-mapping errors (18.3\%) were
+the two most common types among 1,115 definitively labeled error
+sentences, together accounting for 56.1\%, which indicates that errors
+primarily arise from applying the rubric and mapping the resulting
+judgment to a score. When the two training conditions are combined,
+74.9\% of first errors occur in the first half of the rationale,
+including 38.8\% in the first quarter, suggesting that errors typically
+emerge early and may continue to shape the subsequent reasoning and
+final score.
+
+% 有害 DS--RF 转移中的句子级错误类型与首错相对位置。
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/rationale_error_pies.pdf}
+\caption{Sentence-level errors in harmful DS-to-RF transitions.
+The left panel shows the distribution of 1,115 sentences assigned a
+definitive error label; the right panel shows the relative position
+of the first error across 701 harmful transitions.}
+\label{fig:rationale-error-analysis}
+\end{figure}
+
+% FixCorr 在各任务和训练目标下的 gold-score recovery。
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.8pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+& \multicolumn{2}{c}{RS} & \multicolumn{2}{c}{SO} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Task & $n$ & FixCorr & $n$ & FixCorr \\
+\midrule
+Actionability         & 22 & 95.45 & 25 & 96.00 \\
+Grounding Specificity & 25 & 96.00 & 18 & 100.00 \\
+Helpfulness           & 4  & 100.00 & -- & -- \\
+Verifiability         & 35 & 74.29 & 29 & 86.21 \\
+\midrule
+Overall               & 86 & \textbf{87.21} & 72 & \textbf{93.06} \\
+\bottomrule
+\end{tabular}%
+}
+
+% 数值为 FixCorr 的 gold-score accuracy（\%）；FixOrig 因样本
+% 筛选条件在所有组中均为 0。“--”表示没有对应案例。
+\caption{Gold-score recovery after rationale correction in 158
+selected harmful cases. Values report FixCorr accuracy (\%); all
+FixOrig predictions are incorrect by construction.}
+\label{tab:rationale-correction}
+\end{table}
+
+% \textbf{修正 rationale 大幅改善了所选有害案例的评分。}
+% FixOrig 在 157/158 个案例中复现了 NatRF 的原预测，复现率为
+% 99.37\%。两种设置均产生合法分数，MAE 也基本不变
+% （2.038 对 2.044），说明固定前缀本身很少改变模型预测。
+% 完整的分任务复现结果见附录 A。
+%
+% 相比 FixOrig，FixCorr 改变了全部 158 个预测。如
+% 表~\ref{tab:rationale-correction} 所示，142 个案例
+% （89.87\%）恢复为 gold score，其余 16 个均由严重错误缩小为
+% 相邻错误，MAE 从 2.044 降至 0.101。在 FixOrig 成功复现
+% NatRF 的 157 个案例中，141 个（89.81\%）恢复正确，表明总体
+% 改善并非由单个复现失败案例造成。
+% 各任务和训练目标下均观察到预测恢复，说明修正 rationale
+% 能够稳定地引导模型生成更准确的分数。Verifiability 的恢复率
+% 相对较低，表明改善幅度存在任务差异。总体而言，错误 rationale
+% 是有害预测的重要来源，纠正其内容能够有效改善后续评分。
+
+\textbf{Rationale correction substantially improved scoring in the
+selected harmful cases.}
+FixOrig reproduced the NatRF prediction in 157 of 158 cases, yielding
+a 99.37\% reproduction rate. Both settings produced valid scores, and
+their MAE values were nearly identical (2.038 versus 2.044), indicating
+that fixed-prefix rescoring rarely changed the original prediction.
+Full task-level reproduction results are provided in Appendix A.
+
+Relative to FixOrig, FixCorr changed all 158 predictions. As shown in
+Table~\ref{tab:rationale-correction}, 142 cases (89.87\%) returned to
+the gold score, while the remaining 16 improved from severe to adjacent
+errors. MAE decreased from 2.044 to 0.101. Among the 157 cases in which
+FixOrig reproduced NatRF, 141 (89.81\%) recovered, showing that the
+aggregate improvement was not driven by the single reproduction
+failure. Recovery was observed across all evaluated task--training groups,
+showing that rationale correction consistently guided the model toward
+more accurate scores. The lower recovery rate for Verifiability
+indicates that the magnitude of improvement varies across tasks.
+Overall, erroneous rationale content was an important source of harmful
+predictions, and correcting it substantially improved subsequent scoring.
 
 % \subsection{RQ3：如何同时保持 rationale 质量与评分性能？}
-\subsection{RQ3: How Can RS Preserve Rationale Quality and Scoring Performance?}
+\paragraph{RQ3: How Can RS Preserve Rationale Quality and Scoring Performance?}
 
-% ReaSon 首先针对 RF 路径中的 rationale 来源进行调整。在 RF 下，
-% 它将四个序数任务的平均 QWK 从 0.679 提高到 0.707，并将 MAE
-% 从 0.583 降至 0.534；分类 Macro-F1 基本不变，七任务平均从
-% 0.783 提高到 0.799。在原 RS 的 338 个有害转移事件中，ReaSon
-% 使 172 个（50.9\%）案例的误差减小。然而，其 DS 宽松解析
-% 七任务平均仅变化 $-$0.001，严格格式无效率却达到 47.74\%。
-% 因此，ReaSon 的收益主要集中在 RF，且未解决 DS 接口覆盖问题。
-ReaSon first changed the rationale source used along the RF path.
-It increased mean ordinal QWK from 0.679 to 0.707 and reduced MAE
-from 0.583 to 0.534. Classification Macro-F1 remained nearly
-unchanged, raising the seven-task mean from 0.783 to 0.799. ReaSon
-also reduced the error in 172 of 338 original RS harmful transitions
-(50.9\%). However, its relaxed DS mean changed by only $-$0.001,
-while its strict invalid-output rate reached 47.74\%. The gains were
-therefore concentrated under RF and did not resolve DS interface
-coverage.
+% 针对前文发现的 rationale 来源问题和训练--推理接口失配问题，
+% 我们分别提出 ReaSon 和 PaIR：前者调整 rationale 监督的来源，
+% 后者通过配对接口监督改善 DS 与 RF 的适配。由于两种方法解决的
+% 问题具有互补性，我们进一步将其结合为 RePaIR。图
+% \ref{fig:rq3-method-results} 展示了三种方法在相同推理接口下
+% 相对于标准 RS 的序数 QWK 和二分类 Macro-F1 变化。总体而言，
+% RePaIR 在保留 DS 性能的同时取得了最大的 RF 序数评分提升，
+% 在两个推理接口间表现出最均衡的整体性能。
 
-% 仅在单条 RF 序列内重新加权同样无法解决这一问题：在已完成的
-% 34 个评测中，DS 产生了 2,387 个严格格式错误，其中 2,378 个
-% 虽可由宽松解析恢复，仍表明模型没有稳定遵循 DS 协议。PaIR
-% 通过配对 DS 和 RF 训练视图处理接口覆盖问题。其 DS 七任务平均
-% 达到 0.833，高于 SO\_DS 的 0.825 和 RS\_DS 的 0.768；
-% RF 平均为 0.797，高于 RS\_RF 的 0.783，但仍低于 SO\_RF
-% 的 0.803。与使用相同配对数据的 Mix 相比，PaIR 在 DS 和 RF
-% 下分别提高 0.013 和 0.006，表明分支级归一化带来了额外收益。
-Reweighting a single RF sequence did not solve this problem. Across
-34 completed evaluations, DS produced 2,387 strict-format failures,
-although relaxed parsing recovered 2,378 of them. PaIR instead paired
-DS and RF training views to provide explicit interface coverage.
-Its seven-task DS mean reached 0.833, exceeding SO\_DS (0.825) and
-RS\_DS (0.768). Its RF mean reached 0.797, exceeding RS\_RF (0.783)
-but remaining below SO\_RF (0.803). Against Mix, which used the same
-paired data, PaIR gained 0.013 under DS and 0.006 under RF. This matched
-ablation supports an additional benefit from branch-wise normalization.
+To address the rationale-source problem and the mismatch between training
+and inference interfaces identified above, we introduced ReaSon and PaIR.
+ReaSon modifies the source of rationale supervision, whereas PaIR improves
+adaptation to both DS and RF through paired-interface supervision. Because
+the two methods target complementary aspects of RS, we further combined
+them into RePaIR. Figure~\ref{fig:rq3-method-results} shows the changes in
+ordinal QWK and binary Macro-F1 for all three methods relative to standard
+RS under the same inference protocol. Overall, RePaIR retained DS
+performance while achieving the largest improvement in RF ordinal scoring,
+providing the most balanced performance across the two inference protocols.
 
-% 最后，RePaIR 联合 ReaSon 的 rationale 重生成与 PaIR 的配对接口
-% 监督。RePaIR\_DS 的七任务平均为 0.832，比 SO\_DS 高 0.007，
-% 仅比 PaIR\_DS 低 0.001；RePaIR\_RF 达到 0.817，分别比
-% SO\_RF 和 PaIR\_RF 高 0.014 和 0.020。两种接口的严格格式
-% 有效率均为 100\%。因此，RePaIR 基本保留了 PaIR 的 DS 收益，
-% 同时补充了 ReaSon 在 RF 路径上的增益，在两个接口上取得了
-% 最均衡的整体结果。现有结果验证了评分和格式收益，但 RePaIR
-% 是否保留 ReaSon 的 rationale 质量收益仍需同样本审计。
-Finally, RePaIR combined ReaSon's rationale regeneration with PaIR's
-paired-interface supervision. RePaIR\_DS achieved a seven-task mean
-of 0.832, which was 0.007 above SO\_DS and 0.001 below PaIR\_DS.
-RePaIR\_RF reached 0.817, exceeding SO\_RF by 0.014 and PaIR\_RF
-by 0.020. Both interfaces maintained 100\% strict-format validity.
-RePaIR therefore preserved nearly all of PaIR's DS gain while adding
-the RF benefit of rationale regeneration, yielding the most balanced
-aggregate performance across the two interfaces. These results verify
-the scoring and formatting gains. A matched audit is still needed to
-test whether RePaIR retains ReaSon's rationale-quality improvement.
+% \textbf{PaIR 通过配对接口监督同时改善了接口覆盖和分支学习。}
+% PaIR 在 DS 下取得 0.757 的序数 QWK、0.476 的 MAE 和
+% 0.934 的分类 Macro-F1，在 RF 下分别达到 0.698、0.555
+% 和 0.929，且两个接口的严格格式有效率均为 100\%。相较于
+% 使用相同配对数据的 Mix，PaIR 在 DS 和 RF 下分别将 QWK
+% 提高 0.015 和 0.008，将 MAE 降低 0.022 和 0.016，并将
+% Macro-F1 提高 0.010 和 0.004。这一对照表明，接口配对解决了
+% DS 覆盖问题，分支级归一化则进一步提升了评分效果。
+
+\textbf{PaIR improves both interface coverage and branch learning
+through paired supervision.}
+PaIR achieved ordinal QWK, MAE, and classification Macro-F1 scores of
+0.757, 0.476, and 0.934 under DS, and 0.698, 0.555, and 0.929 under
+RF, with 100\% strict-format validity at both interfaces. Relative to
+Mix using the same paired data, PaIR increased QWK by 0.015 and 0.008,
+reduced MAE by 0.022 and 0.016, and increased Macro-F1 by 0.010 and
+0.004 under DS and RF, respectively. These results show that paired
+supervision provides DS coverage, while branch-wise normalization
+offers an additional scoring benefit.
+
+% \textbf{RePaIR 联合了 ReaSon 和 PaIR 的互补收益。}
+% RePaIR 在 DS 下取得 0.758 的 QWK、0.476 的 MAE 和
+% 0.931 的 Macro-F1，与 PaIR 的 0.757、0.476 和 0.934
+% 基本一致。在 RF 下，RePaIR 将 PaIR 的 QWK 从 0.698
+% 提高到 0.735，并将 MAE 从 0.555 降至 0.502，而
+% Macro-F1 仅由 0.929 变为 0.926。两个接口均保持 100\%
+% 的严格格式有效率。因此，RePaIR 保留了 PaIR 的 DS 能力，
+% 同时将 rationale 重生成带来的收益集中体现于 RF 序数评分，
+% 从而在两个接口间取得更均衡的表现。
+
+\textbf{RePaIR combines the complementary gains of ReaSon and PaIR.}
+Under DS, RePaIR achieved a QWK of 0.758, an MAE of 0.476, and a
+Macro-F1 of 0.931, closely matching PaIR at 0.757, 0.476, and 0.934.
+Under RF, RePaIR increased PaIR's QWK from 0.698 to 0.735 and reduced
+MAE from 0.555 to 0.502, while Macro-F1 changed only from 0.929 to
+0.926. Both interfaces retained 100\% strict-format validity. RePaIR
+therefore preserves PaIR's DS capability while concentrating the
+benefit of rationale regeneration on RF ordinal scoring, producing
+more balanced performance across the two interfaces.
