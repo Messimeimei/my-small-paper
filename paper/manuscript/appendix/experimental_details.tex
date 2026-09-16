@@ -1,0 +1,38 @@
+\section{Experimental Details}
+\label{app:experimental-details}
+
+% 为确保不同方法之间的比较具有可比性，所有方法均采用相同的 Qwen3-4B 基础模型、LoRA 配置和固定数据划分。
+% 具体而言，LoRA 应用于所有线性层，秩为 $r\!=\!16$、缩放系数为 $\alpha\!=\!32$、dropout 为 $0.05$，
+% 且设置 \texttt{bias=none}；数据划分采用 \texttt{split\_seed}=20260720，验证集比例为 $0.1$。
+% 在训练阶段，所有方法均使用 $1\!\times\!10^{-4}$ 的学习率并采用余弦衰减，
+% 同时设置 $0.03$ 的预热比例、3 个 epoch、$0.3$ 的最大梯度范数和 8 步梯度累积。
+% SO、RS 和 ReaSon 采用标准 SFT，单设备训练和评估批大小均为 2；
+% Mix、PaIR 和 RePaIR 采用配对训练目标，单设备训练批大小为 1，
+% 每个训练样本包含配对的 DS 和 RF 视图，而评估批大小仍为 2。
+% 此外，模型以 BF16 精度训练，采用 SDPA 注意力和梯度检查点（\texttt{use\_reentrant=False}）；
+% 每个 epoch 结束时进行评估并保存 checkpoint，仅保留一个 checkpoint，并选择最终 checkpoint。
+% 在推理阶段，采用 bfloat16 vLLM 和确定性的贪心解码；
+% 其他训练与推理配置汇总于表~\ref{tab:train-infer-configs}。
+
+To ensure comparability across methods, all methods use the same Qwen3-4B base model, 
+LoRA configuration, and fixed data split. Specifically, LoRA is applied to all linear 
+layers with rank $r\!=\!16$, scaling factor $\alpha\!=\!32$, a dropout rate of $0.05$, 
+and \texttt{bias=none}; the data split is fixed using \texttt{split\_seed}=20260720 with 
+a validation ratio of $0.1$. 
+During training, we use a learning rate of $1\!\times\!10^{-4}$ 
+with cosine decay, together with a warm-up ratio of $0.03$, three epochs, a maximum gradient 
+norm of $0.3$, and eight gradient-accumulation steps. 
+SO, RS, and ReaSon use standard SFT with per-device training and evaluation
+batch sizes of 2. Mix, PaIR, and RePaIR instead use paired training objectives
+with a per-device training batch size of 1, where each training example contains
+paired DS and RF views, while the evaluation batch size remains 2.
+Models are trained in BF16 using SDPA attention and gradient checkpointing 
+(\texttt{use\_reentrant=False}); evaluation and checkpoint saving are performed after 
+each epoch, only one checkpoint is retained, and the final checkpoint is selected. 
+At inference time, we use bfloat16 vLLM with deterministic greedy decoding.
+
+Other training and inference configurations for all methods are summarized in 
+Table~\ref{tab:train-infer-configs}.
+
+\newcolumntype{W}[1]{>{\hsize=#1\hsize\raggedright\arraybackslash}X}
+\newcolumntype{N}[1]{>{\hsize=#1\hsize\centering\arraybackslash}X}

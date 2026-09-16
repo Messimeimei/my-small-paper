@@ -1,0 +1,75 @@
+% 需要:\usepackage{booktabs,tabularx,array}
+\begin{table*}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}
+  l                                   % Method
+  >{\raggedright\arraybackslash}X     % Supervision target
+  >{\raggedright\arraybackslash}X     % Loss
+  c                                   % Train prompt
+  c                                   % Train/Eval batch
+  c                                   % Gen. val. batch/tokens
+  >{\raggedright\arraybackslash}X     % Inference
+@{}}
+\toprule
+& \multicolumn{5}{c}{\textbf{Training}} & \textbf{Inference} \\
+\cmidrule(lr){2-6}\cmidrule(lr){7-7}
+\textbf{Method} &
+\textbf{Supervision target} &
+\textbf{Loss} &
+\shortstack{\textbf{Train}\\\textbf{prompt}} &
+\shortstack{\textbf{Train/}\\\textbf{Eval batch}} &
+\shortstack{\textbf{Gen.\ val.}\\\textbf{batch/tokens}} &
+\shortstack{\textbf{Mode (max tokens)}\\\textbf{/ Infer.\ prompt}} \\
+\midrule
+SO & Score & Token-level CE
+  & Fig.~\ref{fig:so} & $2/2$ & $16/32$
+  & DS ($32$), Fig.~\ref{fig:so}\newline RF ($512$), Fig.~\ref{fig:rs} \\
+\addlinespace[2pt]
+RS & Rationale + Score & Token-level CE
+  & Fig.~\ref{fig:rs} & $2/2$ & $8/512$
+  & DS ($32$), Fig.~\ref{fig:so}\newline RF ($512$), Fig.~\ref{fig:rs} \\
+\addlinespace[2pt]
+ReaSon$^{\dagger}$ & Rationale + Score & Token-level CE
+  & Fig.~\ref{fig:rs} & $2/2$ & $8/512$
+  & DS ($32$), Fig.~\ref{fig:so}\newline RF ($512$), Fig.~\ref{fig:rs} \\
+\addlinespace[2pt]
+Mix & Rationale + Score & Token-level CE
+  & Figs.~\ref{fig:so},~\ref{fig:rs} & $1^{\ddagger}/2$ & $8/512$
+  & DS ($32$), Fig.~\ref{fig:so}\newline RF ($512$), Fig.~\ref{fig:rs} \\
+\addlinespace[2pt]
+PaIR & Rationale + Score & $0.5\bar{L}_{\mathrm{lab}}+0.5\bar{L}_{\mathrm{rsn}}$
+  & Figs.~\ref{fig:so},~\ref{fig:rs} & $1^{\ddagger}/2$ & $8/512$
+  & DS ($32$), Fig.~\ref{fig:so}\newline RF ($512$), Fig.~\ref{fig:rs} \\
+\addlinespace[2pt]
+RePaIR & Rationale + Score & Same as PaIR
+  & Figs.~\ref{fig:so},~\ref{fig:rs} & $1^{\ddagger}/2$ & $8/512$
+  & DS ($32$), Fig.~\ref{fig:so}\newline RF ($512$), Fig.~\ref{fig:rs} \\
+\bottomrule
+\multicolumn{7}{@{}p{\textwidth}@{}}{%
+\footnotesize
+Supervision target: ``Score'' supervises only the final score;
+``Rationale + score'' supervises both the rationale and the final score.
+All methods use eight gradient-accumulation steps and a maximum model
+sequence length of $8192$ (\texttt{max\_model\_len}).
+``Train / Eval batch'' reports per-device training and evaluation batch
+sizes; ``Gen.\ val.\ batch / tokens'' reports the batch size and maximum
+generation length used for generation-based validation.
+DS denotes direct-score inference (at most 32 generated tokens);
+RF denotes rationale-first inference (at most 512 generated tokens).
+$^{\dagger}$ \texttt{max\_new\_tokens} is omitted in the ReaSon YAML and
+defaults to 512 in the strategy code.
+$^{\ddagger}$ The paired-view collator expands each source row into two
+sequences (a label-only view and a CoT view).} \\
+\end{tabularx}
+\caption{Training and inference configurations of each method, each evaluated
+under both direct-score (DS) and rationale-first (RF) inference. The train and
+inference prompt columns list \emph{system} prompts by reference to the
+templates in Fig.~\ref{fig:so} (label-only) and Fig.~\ref{fig:rs} (CoT); the
+accompanying user prompt is identical across all methods and both inference
+modes and is listed in Table~\ref{tab:user-prompts}. PaIR and RePaIR use the
+loss $0.5\bar{L}_{\mathrm{label}}+0.5\bar{L}_{\mathrm{reason}}$.}
+\label{tab:train-infer-configs}
+\end{table*}

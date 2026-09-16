@@ -3,16 +3,28 @@
 
 \paragraph{Datasets.}
 
-% 我们的训练数据来源于的工作，并对其进行了任务删减，提示词修改，和样本清洗。
-%最后得到了包括同行评审和相关工作两类评测数据集，
-%分别是1-5评分和二分类任务。具体的数据处理内容和数据详情可以在附录B看见。
-%这些任务从不同评分准则对科学写作任务进行评测，所以我们把他作为我们的数据集。
+% 我们的训练数据基于 \citep{sahinuc-etal-2026-reward} 的数据构建，
+% 并进行了任务筛选、提示词修改和样本级质量控制。
+% 随后，我们采用模型蒸馏为每个样本生成教师 rationale。
+% 数据覆盖两类科学写作评测任务：
+% 同行评审质量评分（五级）和相关工作评测（二分类）。
+% 除标准的 SO 与 RS 训练实例外，
+% 我们还基于适配后的样本，
+% 为 ReaSon 与 RePaIR 构造了 regenerated-rationale 训练数据。
+% PaIR 的配对 DS/RF 训练视图构建方式、
+% 完整的数据处理流程及数据统计信息见附录 A。
 
-Our training data were adapted from \citep{sahinuc-etal-2026-reward}'s work through task selection, prompt revision, 
-and sample-level quality control. 
-The resulting dataset covers two complementary dimensions of scientific-writing evaluation. Peer-review quality is scored 
-on a five-point scale, while related-work assessment is formulated as binary classification. Further details on data processing 
-and dataset statistics are provided in Appendix B.
+Our training data is built upon the work of \citet{sahinuc-etal-2026-reward}.
+We apply task filtering, prompt revision, and sample-level quality control.
+Teacher rationales are then generated via model distillation.
+The data covers two scientific writing evaluation tasks:
+peer review quality rating (five-point scale) and related-work evaluation (binary classification).
+In addition to standard SO and RS training instances,
+we construct regenerated-rationale training data
+for ReaSon and RePaIR based on the adapted samples.
+Details on constructing PaIR's paired DS/RF training views,
+the full data processing pipeline, and dataset statistics
+are provided in Appendix A.
 
 \paragraph{Models.}
 
@@ -26,9 +38,9 @@ the same Qwen3-4B checkpoint.
 
 %我们使用 LoRA 比较 rationale-and-score 与 score-only 两种监督方式在科学写作评估中的效果。
 %七个数据集采用相同的训练、验证和测试划分：训练集用于为每个任务和方法独立训练 adapter，
-%验证集用于模型选择与分析，测试集用于最终评估。所有评估均采用 zero-shot prompt，模板见图 1。
+% 验证集用于逐 epoch 监控，最终保留第 3 个 epoch 的 adapter；测试集用于最终评估。所有评估均采用 zero-shot prompt，模板见图 1。
 %LoRA 应用于全部线性层，设置 \(r=16\)、\(\alpha=32\)、学习率 \(1\times10^{-4}\)，训练 3 个 epoch，
-%使用余弦衰减和 8,192-token 最大序列长度。其余配置见附录 A。
+% 使用余弦衰减和 8,192-token 最大序列长度。其余配置见附录 B。
 %两种监督方式分别通过 direct-score 和 rationale-first 接口进行评估，
 %共得到 \(2\times7\times2=28\) 个实验条件，
 %每个实验条件均使用 3 个随机种子运行，所有报告结果均为这 3 个随机种子的平均值，
@@ -40,11 +52,11 @@ the same Qwen3-4B checkpoint.
 We use LoRA to compare RS and SO supervision for scientific-writing evaluation. 
 All seven datasets share the same training, validation, 
 and test splits. Separate adapters are trained for each task and method, 
-while the validation and test sets are used for model selection, analysis, and final evaluation. 
+while validation generation is logged after each epoch and the final epoch adapter is retained for final evaluation. 
 All evaluations use zero-shot prompts, with templates shown in Figure~\ref{fig:scirm-evaluation}.
 LoRA is applied to all linear layers with \(r=16\), \(\alpha=32\), a learning rate of \(1\times10^{-4}\), 
 three epochs, cosine decay, and a maximum sequence length of 8,192 tokens. 
-Additional settings are provided in Appendix A. 
+Additional settings are provided in Appendix B. 
 Evaluating two supervision strategies across seven datasets 
 and two inference protocols yields \(2\times7\times2=28\) experimental conditions, 
 each of which is run with three random seeds. 
@@ -160,7 +172,7 @@ configurations and evaluation prompts are provided in Appendix B.
 % gold score、DS 与 RF 预测及 RF rationale，判断 rationale
 % 支持 gold score、错误预测，还是缺乏充分证据。对于有害转移，
 % 进一步逐句标注 \texttt{factual_error}、
-% \texttt{evidence_misread} 等错误类型，完整分类见附录 A。
+% \texttt{evidence_misread} 等错误类型，完整分类见附录 B。
 %
 % 最后，我们在 158 个有害转移案例上检验修正 rationale 是否会
 % 改变后续评分。原始 rationale 由 GLM-5.3-Flash 修正，并经

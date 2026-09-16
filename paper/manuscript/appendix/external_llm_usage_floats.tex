@@ -1,0 +1,58 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{
+  >{\raggedright\arraybackslash}p{0.20\textwidth}
+  >{\raggedright\arraybackslash}p{0.21\textwidth}
+  >{\centering\arraybackslash}p{0.08\textwidth}
+  >{\centering\arraybackslash}p{0.07\textwidth}
+  >{\raggedright\arraybackslash}X
+}
+\toprule
+Workflow & Model (role) & Temp.\,/\,top-$p$ & Max tokens & Notes \\
+\midrule
+Teacher distillation
+& \texttt{deepseek-v4-pro} (teacher)
+& 0 / 1.0
+& 2{,}048
+& Explicitly sets \(n{=}1\), \texttt{temp}{=}0, \texttt{top\_p}{=}1; responses still contain internal reasoning. V4 preview: 24 Apr 2026. \\
+\addlinespace
+Rationale quality evaluation, Rounds 1--2
+(Figs.~\ref{fig:judge-r1} and \ref{fig:judge-r2});
+DS--RF transition audit
+(Figs.~\ref{fig:transition-audit-p1}--\ref{fig:transition-audit-p2})
+& \texttt{glm-5.3-flash}, \texttt{doubao-seed-2.0-lite} (primary judges)
+& 0 / 1.0$^{\dagger}$
+& 4{,}096
+& Identical decoding and judge lineup for both workflows; JSON mode. \texttt{temp}{=}0 set, \texttt{top\_p} omitted (compat.\ default \(1\)); reasoning effort unset (provider default), yet internal reasoning tokens observed. \\
+& \texttt{MiniMax-M3} (adjudicator)
+& 0 / 1.0$^{\dagger}$
+& 4{,}096
+& Same decoding as the primary judges; no \texttt{reasoning\_content} or reasoning tokens observed in logs. Invoked when a primary judge fails or cannot be parsed, the primaries disagree on the preference, the two support judgments differ, or any quality dimension differs by 2 or more points. \\
+\addlinespace
+Rationale correction and review
+(Figs.~\ref{fig:rationale-correction-p1} and \ref{fig:rationale-correction-p2})
+& \texttt{glm-5.3-flash} (rationale editor)
+& 0 / 1.0$^{\dagger}$
+& 3{,}000
+& Reasoning effort explicitly set to \texttt{low}, with \texttt{enable\_thinking{=}true}. JSON mode. \\
+& \texttt{MiniMax-M3} (independent reviewer)
+& 0 / 1.0$^{\dagger}$
+& 3{,}000
+\quad
+& \texttt{reasoning\_effort} not sent (no thinking observed). JSON mode. \\
+\bottomrule
+\end{tabularx}
+\caption{Third-party model configurations for teacher distillation and the
+three rationale-audit workflows (quality evaluation, DS--RF transition
+audit, and rationale correction). ``Max tokens'' is the completion budget
+(\texttt{max\_tokens}), not an input-length limit.
+$^{\dagger}$\texttt{top\_p} was omitted in the request and follows the
+OpenAI-compatible provider default of \(1.0\); only teacher distillation
+set \texttt{top\_p} explicitly. ``Unset'' means the parameter was not sent:
+GLM, Doubao, and DeepSeek still returned internal reasoning under the
+default, whereas MiniMax showed no reasoning tokens in our logs.}
+\label{tab:teacher-config}
+\end{table*}
