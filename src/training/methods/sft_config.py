@@ -56,6 +56,7 @@ def build_sft_config_kwargs(
         "save_strategy": "epoch",
         "load_best_model_at_end": False,
         "save_total_limit": 1,
+        "save_only_model": bool(training.get("save_only_model", False)),
         "report_to": report_to,
     }
     if pretokenized:

@@ -37,6 +37,7 @@ from training.lifecycle import (
 from training.methods import get_supervision_strategy, resolve_training_method
 from training.methods.interfaces import TrainingBuildContext
 from training.methods.paper_align_data import validate_and_pair_rows
+from training.storage import hardlink_identical_adapter_weight
 
 
 _PAIRED_VIEW_METHODS = frozenset(
@@ -414,6 +415,11 @@ def run_training(context: dict[str, Any]) -> None:
         ).resolve()
         if not final_checkpoint.is_dir():
             raise RuntimeError(f"Final checkpoint was not saved: {final_checkpoint}")
+        save_only_model = bool((config.get("training") or {}).get("save_only_model", False))
+        adapter_weight_storage = hardlink_identical_adapter_weight(
+            adapter_directory, final_checkpoint
+        )
+        checkpoint_retention = "last_model_only" if save_only_model else "last"
         final_epoch = (
             float(trainer.state.epoch) if trainer.state.epoch is not None else None
         )
@@ -425,7 +431,7 @@ def run_training(context: dict[str, Any]) -> None:
             "training_method": context["training_method"],
             "model_name_or_path": str(model_path),
             "seed": args.seed,
-            "checkpoint_retention": "last",
+            "checkpoint_retention": checkpoint_retention,
             "final_checkpoint": str(final_checkpoint),
             "final_checkpoint_epoch": final_epoch,
             "final_checkpoint_step": int(trainer.state.global_step),
@@ -438,6 +444,7 @@ def run_training(context: dict[str, Any]) -> None:
             "language_model_validation": language_model_metrics,
             "generation_validation": validation_metrics,
             "adapter_directory": str(adapter_directory),
+            "adapter_weight_storage": adapter_weight_storage,
             "resume_from_checkpoint": str(resume_checkpoint) if resume_checkpoint else None,
             "resume_from_step": int(resume_state["global_step"]) if resume_state else None,
             "resolved_config": context["resolved_config"],

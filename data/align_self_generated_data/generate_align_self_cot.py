@@ -18,9 +18,9 @@ from typing import Any, Iterable
 
 SCRIPT_PATH = Path(__file__).resolve()
 PROJECT_ROOT = SCRIPT_PATH.parents[2]
-TRAINING_DIR = PROJECT_ROOT / "training"
-if str(TRAINING_DIR) not in sys.path:
-    sys.path.insert(0, str(TRAINING_DIR))
+SRC_DIR = PROJECT_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 DEFAULT_SOURCE_ROOT = PROJECT_ROOT / "data"
 DEFAULT_OUTPUT_ROOT = SCRIPT_PATH.parent
@@ -425,7 +425,7 @@ def generate_file(
     batch_size: int,
     enable_thinking: bool,
 ) -> dict[str, dict[str, Any]]:
-    from evaluation.rail_scoring import format_prompts
+    from evaluation.inference.rail_scoring import format_prompts
 
     cached = load_cached_generations(cache_file)
     expected_ids = {str(row["id"]) for row in rows}
@@ -592,7 +592,7 @@ def summarize_generations(
 
 
 def resolve_inputs(args: argparse.Namespace) -> dict[str, Any]:
-    from evaluation.model_loading import normalize_adapter
+    from models.adapters import normalize_adapter
 
     args.dataset_name = validate_dataset_name(args.dataset_name)
     source_root = resolve_project_path(args.source_root)
@@ -660,14 +660,13 @@ def main(argv: list[str] | None = None) -> None:
     run_dir = resolved["output_root"] / ".runs" / args.dataset_name
     prepare_run_directory(run_dir, signature, restart=args.restart)
 
-    from evaluation.defaults import DEFAULT_MERGE_CACHE
-    from evaluation.model_loading import (
+    from evaluation.config import DEFAULT_MERGE_CACHE
+    from models.adapters import (
         adapter_weight_file,
         ensure_merged_model,
-        init_vllm,
         remove_merged_model,
-        set_seed,
     )
+    from models.vllm import init_vllm, set_seed
 
     set_seed(args.seed)
     adapter_weight_file(resolved["adapter_path"])
