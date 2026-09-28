@@ -11,6 +11,7 @@
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{float}
+\usepackage{flafter}
 \usepackage{array}
 \usepackage{tabularx}
 \usepackage{multirow}
@@ -18,21 +19,63 @@
 \usepackage[table]{xcolor}
 \usepackage{amssymb}
 
+% Keep stacked double-column result floats top-aligned; leave unused space below.
+\makeatletter
+\setlength{\@dblfptop}{0pt}
+\setlength{\@dblfpsep}{14pt}
+\setlength{\@dblfpbot}{0pt plus 1fil}
+\makeatother
 
+% 标题，先问句后回答，现象是 rationales 对大模型评测效果不好；然后给出提供 rationales 的影响研究
+\title{Why Better Rationales Don’t Score Better: \\The Effects of Providing Rationales in LLM Scientific-Writing Evaluation}
 
-
-
-
-\title{Working Title}
+% arr 双盲评审，作者要你命
 \author{Anonymous ACL submission}
 
 \begin{document}
-\maketitle
+\maketitle  % 打印标题和作者
+
+% 在基于 LLM 的科学写作评估中，评分前先生成 rationale 已成为常见做法，
+% 用以支持基于评分标准的可解释判断；然而现有工作往往将提示格式、训练目标与
+% 推理协议一并改变，收益难以归因于 rationale 本身。
+% 为此，本文构建 2×2 因子框架，将仅分数监督（SO）与理由+分数监督（RS）
+% 同直接打分（DS）与理由优先推理（RF）交叉，在七个科学写作评估任务上
+% 产生 28 个实验条件，并从理由 NLL、理由质量、DS–RF 预测转变与
+% 句级错误标注四个层面进行解析。
+% 实验发现：（1）RS 改善理由拟合与质量，却未带来更好的打分，序数任务上 RF 反而
+% 增加严重错误并降低 QWK；（2）有害转变中的理由多支持错误分数，主要源于评分标准
+% 误用与分数映射，修正后 158 例中 142 例恢复黄金分数；（3）据此提出 RePaIR，
+% 其在两种推理接口上均取得最高的序数 QWK（DS：0.696→0.758；RF：0.679→0.735），
+% 并保持 100% 严格格式有效率。结果表明，理由质量并非打分能力的可靠代理，
+% 监督目标应与推理协议联合设计。
 
 \begin{abstract}
+Eliciting rationales before scoring has become a common practice
+in LLM-based scientific-writing evaluation,
+supporting interpretable, rubric-grounded judgments;
+yet prior work often changes prompt formats, training objectives, and inference protocols together,
+leaving the gains hard to attribute to rationales themselves.
+We therefore build a 2$\times$2 factorial framework
+that crosses score-only supervision (SO) and rationale-and-score supervision (RS)
+with direct-score (DS) and rationale-first (RF) inference,
+yielding 28 conditions over seven scientific-writing tasks
+analyzed via rationale NLL, rationale-quality assessment, DS--RF prediction transitions,
+and sentence-level error annotation.
+Experiments yield three findings:
+(1) RS improves rationale fitting and quality but not scoring,
+while RF increases severe errors and lowers QWK on ordinal tasks.
+(2) Rationales in harmful transitions mostly support incorrect scores,
+mainly through rubric misapplication and score mapping;
+correcting them restores the gold score in 142 of 158 cases.
+(3) We further propose RePaIR, which attains the highest ordinal QWK
+under both interfaces (DS: 0.696$\rightarrow$0.758; RF: 0.679$\rightarrow$0.735)
+with 100\% strict-format validity.
+These results indicate that rationale quality is not a reliable proxy for scoring ability,
+and supervision objectives should be co-designed with the inference protocol.
 \end{abstract}
 
-% 图1
+
+% 图1，展示整体的 SO 和 RS 训练 prompt 模板
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\textwidth]
@@ -51,38 +94,13 @@
 
 \input{sections/experiments_setup}
 
-\begin{figure*}[!t]
-    \centering
-    \includegraphics[width=\textwidth]
-    {figures/training_targets_by_task_type.pdf}
-    \caption{
-        Performance across training objectives and inference protocols.
-        The left panel reports QWK on ordinal tasks, and the right panel
-        reports Macro-F1 on binary tasks.
-    }
-    \label{fig:training-targets-by-task-type}
-\end{figure*}
-
 \input{sections/results}
-
-% 三种方法相对于标准 RS 在 DS 和 RF 接口下的性能变化。
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\columnwidth]
-    {figures/rq3_method_results.pdf}
-    \caption{Performance changes relative to standard RS under DS and RF.
-    QWK is averaged across four ordinal tasks and Macro-F1 across three
-    binary tasks; error bars show the standard deviation across seeds.
-    ReaSon--DS QWK is unavailable under strict parsing.}
-    \label{fig:rq3-method-results}
-\end{figure}
 
 \input{sections/conclusion}
 
 \bibliography{references}
 
 
-\clearpage
 \appendix
 \input{appendix/dataset}
 \input{appendix/experimental_details}
@@ -92,15 +110,10 @@
 \input{appendix/external_llm_usage}
 
 % All non-dataset appendix floats are collected after the six text modules.
-\clearpage
 \input{appendix/experimental_details_floats}
-\clearpage
 \input{appendix/prompt_floats}
-\clearpage
 \input{appendix/full_results_floats}
-\clearpage
 \input{appendix/rationale_analysis_floats}
-\clearpage
 \input{appendix/external_llm_usage_floats}
 
 \end{document}

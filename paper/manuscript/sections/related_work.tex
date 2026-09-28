@@ -6,96 +6,133 @@
 % 科学写作评价正从通用文本相似度转向针对具体任务的质量判断。
 % 早期研究主要通过与人类评审意见的重合度和作者感知的有用性
 % 评价模型生成的论文反馈~\citep{liang-etal-2024-large-scale}。
-% 在科学文本修改中，LLM judge 更擅长判断指令遵循而非内容正确性，
-% 因此仍需结合任务特定指标~\citep{jourdan-etal-2025-identifying}。
 
 Scientific-writing evaluation is moving beyond generic text similarity
 toward task-specific quality judgments.
-Early work evaluates generated paper feedback through overlap with human reviews
+Early work evaluated generated paper feedback through overlap with human reviews
 and author-perceived usefulness~\citep{liang-etal-2024-large-scale}.
-For scientific text revision, LLM judges assess instruction following more reliably
-than correctness and therefore remain complementary to task-specific metrics
-~\citep{jourdan-etal-2025-identifying}.
 
-% 近期方法进一步依据显式维度和评分标准评价不同的科学写作产物。
-% 相关工作分别覆盖评审意见效用、专家偏好驱动的相关工作评价、
-% 基于引用决策的学术定位以及面向综述的多维评分
+% 近期方法使用任务特定的维度和标准评价不同的科学写作产物，
+% 涵盖评审意见、相关工作和学术定位等任务
 % ~\citep{sadallah-etal-2025-good,sahinuc-etal-2025-expert,
-% xie-etal-2026-rwgbench,zhang-etal-2026-surveyreview}。
-% 跨任务评价器还通过动态标准和 rubric 联合生成 rationale 与分数
-% ~\citep{sahinuc-etal-2026-reward}。
-% 然而，这些方法通常同时改变数据构造、训练目标和推理格式，
-% 因而无法确定更好的 rationale 建模是否会提高评分可靠性，
-% 以及这一作用是否依赖 rationale-first inference。
+% xie-etal-2026-rwgbench}。在这类研究中，SurveyReview 将 rationale
+% 质量与分数对齐分开评价~\citep{zhang-etal-2026-surveyreview}；
+% Think-Probe-Respond 进一步发现，即使 rationale 接近专家推理，
+% 最终判断仍可能存在偏差，说明这种区分具有必要性
+% ~\citep{schopf-etal-2026-think-probe-respond}。
+% 然而，rationale supervision 和推理协议如何分别影响
+% rationale 质量与评分表现仍不清楚。
 
-Recent methods further assess different scientific-writing artifacts
-against explicit dimensions and scoring criteria.
-They cover review-comment utility, expert-preference-based related-work evaluation,
-citation-level scholarly positioning, and multidimensional survey assessment
+Recent work uses task-specific criteria to evaluate diverse
+scientific-writing artifacts, including review comments, related work,
+and scholarly positioning
 ~\citep{sadallah-etal-2025-good,sahinuc-etal-2025-expert,
-xie-etal-2026-rwgbench,zhang-etal-2026-surveyreview}.
-Cross-task evaluators also jointly generate rationales and scores
-under dynamically specified criteria and rubrics
-~\citep{sahinuc-etal-2026-reward}.
-However, these methods typically change data construction, training objectives,
-and inference formats together. They therefore do not establish whether
-better rationale modeling improves scoring reliability or whether its effect
-depends on rationale-first inference.
+xie-etal-2026-rwgbench}.
+Within this line of work, SurveyReview evaluates rationale quality
+separately from score alignment~\citep{zhang-etal-2026-surveyreview}.
+Think-Probe-Respond further shows why this distinction matters:
+even expert-like rationales can accompany miscalibrated final judgments
+~\citep{schopf-etal-2026-think-probe-respond}.
+However, how rationale supervision and inference protocols separately
+affect rationale quality and scoring performance remains unclear.
+
+% SciRM 更直接地体现了这一归因问题：它在动态标准和 rubric 下联合生成
+% rationale 与分数，同时结合领域偏好优化、reasoning/self-verification
+% 和 rationale-first 输出协议。因此，无法分别归因监督目标、
+% 推理协议及其交互的影响~\citep{sahinuc-etal-2026-reward}。
+
+SciRM more directly exposes this attribution problem: it jointly generates
+rationales and scores under dynamic criteria and rubrics while combining
+domain-preference optimization, reasoning/self-verification, and a
+rationale-first output protocol. Because these components change together,
+their effects cannot be attributed separately to the supervision target,
+inference protocol, or their interaction~\citep{sahinuc-etal-2026-reward}
 
 \subsection{Rationales in LLM Training and Inference}
 
-% 在推理阶段，LLM evaluator 通常先生成 rationale，再输出最终判断。
-% G-Eval 通过预先生成任务特定的评价步骤来引导评分，并提高了与人类判断的相关性
-% ~\citep{liu-etal-2023-g}。然而，后续研究发现，CoT 可能压缩分数分布，
-% 并在常用分数读出方式下降低评价性能~\citep{wang-etal-2025-improving-llm-judge}。
-% 因此，rationale-first inference 不仅引入了额外推理，
-% 也改变了分数生成与读出的路径。
-
-At inference time, LLM evaluators often generate a rationale before the final judgment.
-G-Eval elicits task-specific evaluation steps before scoring
-and reports stronger correlation with human judgments~\citep{liu-etal-2023-g}.
-However, later work shows that CoT can collapse the judgment distribution
-and reduce evaluation performance under common score readouts
-~\citep{wang-etal-2025-improving-llm-judge}.
-Rationale-first inference therefore changes not only the reasoning context
-but also the path through which the score is produced and extracted.
-
-% 在训练阶段，教师模型生成的 rationale 可作为额外监督信号。
-% Prometheus 联合学习评价反馈和分数，TRACT 则将 CoT 监督、
-% 回归感知分数学习和自生成 rationale 相结合
+% 在训练阶段，evaluator rationale 可以与分数共同作为监督目标，
+% 但现有方法采用了不同的训练设计。Prometheus 联合学习评价反馈和分数；
+% TRACT 则使用模型自生成的 reasoning trace 作为 rationale，
+% 将预测分数替换为 gold score，并采用回归感知的分数学习目标
 % ~\citep{kim-etal-2024-prometheus-iclr,chiang-etal-2025-tract}。
-% 这些方法虽然报告了性能提升，但同时改变了训练目标、损失函数和 rationale 来源，
-% 因而无法确定 rationale supervision 本身的独立贡献。
+% 由于这些设计同时改变 rationale 来源和训练目标，
+% rationale supervision 本身的影响难以单独识别。
+% 这一归因问题也反映在不同的实验结果中：inferred thinking traces
+% 可以提高 LLM rater 与人类判断的一致性
+% ~\citep{zhang-etal-2025-judge-eyes}，但在临床预测中，
+% 即使 rationale 准确且有证据支撑，rationale SFT 仍弱于
+% label-only training~\citep{su-etal-2026-rationale-disease}。
+% 因此，rationale supervision 在何种条件下有效仍不清楚。
 
-At training time, teacher-generated rationales can serve as additional supervision.
-Prometheus jointly learns evaluative feedback and scores,
-whereas TRACT combines CoT supervision, regression-aware score learning,
-and self-generated rationales
+At training time, evaluator rationales can be supervised alongside scores,
+but existing methods implement this supervision differently.
+Prometheus jointly learns evaluative feedback and scores, whereas TRACT uses
+self-generated reasoning traces as rationales, replaces their predicted scores
+with gold scores, and applies a regression-aware objective
 ~\citep{kim-etal-2024-prometheus-iclr,chiang-etal-2025-tract}.
-Although these methods report performance gains, they jointly change
-the training targets, loss functions, and rationale sources,
-leaving the independent contribution of rationale supervision unclear.
+Because these designs change the rationale source and training objective
+together, the effect of rationale supervision is difficult to isolate.
+This attribution problem is also reflected in mixed empirical results:
+inferred thinking traces improve LLM--human agreement
+~\citep{zhang-etal-2025-judge-eyes}, whereas rationale SFT underperforms
+label-only training in clinical prediction even with accurate, grounded
+rationales~\citep{su-etal-2026-rationale-disease}.
+It therefore remains unclear when rationale supervision is beneficial.
 
-% 现有受控研究进一步表明，rationale 的作用取决于任务、模型规模和输出约束。
-% CoT 的稳定收益主要集中在数学或符号推理任务
-% ~\citep{sprague-etal-2025-cot}；在 NLU 中，其推理收益随模型规模变化，
-% 且多数 rationale-augmented training 方法弱于 label-only training
-% ~\citep{shi-etal-2025-investigating}。在固定格式的文学评价中，
-% reasoning supervision 还可能增加解析失败并降低整体性能
-% ~\citep{liu-etal-2026-when}。
-% 然而，这些研究没有在科学写作序数评分中完整交叉
-% score-only 与 rationale-and-score supervision 以及 DS 与 RF，
-% 也未同时区分格式失败和合法分数的偏移。
+% 在推理阶段，许多 LLM evaluator 会先生成 rationale，再给出分数。
+% G-Eval 使用任务特定的评价步骤引导评分，并报告了更高的人类相关性
+% ~\citep{liu-etal-2023-g}。但先生成分析再评分也可能压缩分数分布，
+% 降低常用读出方式下的评价性能
+% ~\citep{wang-etal-2025-improving-llm-judge}。
+% Pointwise reranking 实验同样发现，即使采用针对性训练干预，
+% CoT scoring 与 direct scoring 的性能差距仍然存在
+% ~\citep{chen-etal-2026-beyond-polarization}。
+% 因此，rationale-first inference 可能提高与人类判断的一致性，
+% 也可能导致分数分布偏移；造成这些相反结果的原因仍不清楚。
 
-Controlled studies further show that the effect of rationales depends on
-the task, model scale, and output constraints.
-Consistent CoT gains are concentrated mainly in mathematical or symbolic reasoning
-~\citep{sprague-etal-2025-cot}.
-On NLU tasks, inference gains vary with model scale,
-and most rationale-augmented training methods underperform label-only training
-~\citep{shi-etal-2025-investigating}.
-For fixed-format literary evaluation, reasoning supervision can also increase
-parsing failures and reduce overall performance~\citep{liu-etal-2026-when}.
-These studies, however, do not fully cross score-only and rationale-and-score
-supervision with DS and RF in ordinal scientific-writing evaluation,
-or jointly separate format failures from valid-score shifts.
+At inference time, many LLM evaluators generate a rationale before assigning
+a score. G-Eval uses task-specific evaluation steps and reports stronger
+correlation with human judgments~\citep{liu-etal-2023-g}.
+Conversely, generating an analysis before scoring can narrow the score
+distribution and reduce performance under common readouts
+~\citep{wang-etal-2025-improving-llm-judge}.
+Pointwise-reranking experiments likewise find a persistent disadvantage for
+CoT scoring relative to direct scoring despite targeted training interventions
+~\citep{chen-etal-2026-beyond-polarization}.
+Thus, rationale-first inference may improve human alignment but also distort
+score distributions; the source of these conflicting effects remains unclear.
+
+% 更广泛的 CoT 研究表明，显式推理的收益具有任务依赖性：
+% 稳定增益主要集中在数学或符号推理任务
+% ~\citep{sprague-etal-2025-cot}；对 LLM judge 的受控比较也发现，
+% reasoning 有益于结构化验证，但在简单评价任务上的收益有限甚至为负
+% ~\citep{zhang-etal-2026-reasoning-not-free}。
+% 因此，有必要在科学写作评价中单独检验 rationale-based 方法。
+
+Broader CoT studies show that explicit reasoning is task-dependent:
+consistent gains concentrate mainly in mathematical or symbolic reasoning
+~\citep{sprague-etal-2025-cot}, while controlled judge comparisons find
+benefits for structured verification but limited or negative gains on simpler
+evaluations~\citep{zhang-etal-2026-reasoning-not-free}.
+These findings motivate a domain-specific examination of rationale-based
+methods in scientific-writing evaluation.
+
+% 现有受控研究已开始区分训练阶段的 rationale supervision 与推理阶段的
+% reasoning。NLURC 比较 NLU 任务上的 label-only 与 rationale-augmented
+% training，但未在两种输出接口下完整评估各训练方法
+% ~\citep{shi-etal-2025-investigating}。TTCW 进一步交叉比较
+% reasoning supervision 与 inference-time thinking，但研究的是长篇文学评论生成，
+% 且性能下降主要来自解析失败~\citep{liu-etal-2026-when}。
+% 因此，现有研究尚未在科学写作评分中完整交叉监督目标与推理协议，
+% 也没有区分格式失败和合法分数中的评分错误。
+
+Controlled studies have begun to separate training-time rationale supervision
+from inference-time reasoning. NLURC compares label-only and
+rationale-augmented training on NLU tasks but does not evaluate each method
+under both output interfaces~\citep{shi-etal-2025-investigating}.
+TTCW crosses reasoning supervision with inference-time thinking but studies
+long-form literary review generation, where degradation is driven mainly by
+parsing failures~\citep{liu-etal-2026-when}.
+Existing work therefore neither fully crosses supervision targets with
+inference protocols in scientific-writing scoring nor distinguishes format
+failures from errors among valid scores.
