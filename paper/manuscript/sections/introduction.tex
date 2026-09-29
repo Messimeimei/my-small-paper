@@ -1,0 +1,160 @@
+\section{Introduction}
+\label{sec:introduction}
+
+% LLM-as-a-judge 已成为开放式生成评价中的常用范式；
+% 为支持按评价标准进行的判断，并提高最终分数的可解释性与可审查性，
+% 许多方法要求模型先生成 rationale——即基于评价标准给出的显式自然语言解释——
+% 再给出分数，我们将这一设计称为 rationale-first
+% ~\citep{liu-etal-2023-g,kim-etal-2024-prometheus-iclr}。
+% 在科学写作评价中，判断往往依赖领域知识和多个评价维度，
+% 这一设计尤为相关
+% ~\citep{sadallah-etal-2025-good,sahinuc-etal-2026-reward,zhang-etal-2026-surveyreview}。
+
+LLM-as-a-judge has become a widely used paradigm for evaluating open-ended generations;
+to support criterion-grounded judgments and make final scores more interpretable and auditable,
+many methods elicit rationales---explicit natural-language justifications
+grounded in the evaluation criteria---before assigning a score,
+a design we refer to as \emph{rationale-first}
+~\citep{liu-etal-2023-g,kim-etal-2024-prometheus-iclr}.
+In scientific-writing evaluation, where judgments hinge on
+domain knowledge and multiple quality dimensions,
+this design is particularly relevant
+~\citep{sadallah-etal-2025-good,sahinuc-etal-2026-reward,zhang-etal-2026-surveyreview}.
+
+% 现有评价方法已通过提示、监督蒸馏和强化学习等方式引入 rationale，
+% 并普遍报告了更高的人类相关性、judge agreement 或泛化能力
+% ~\citep{liu-etal-2023-g,kim-etal-2024-prometheus-iclr,sahinuc-etal-2026-reward}。
+% 这些结果表明，显式 rationale 有助于模型在复杂评价标准下组织文本证据和评分判断。
+% 然而，现有实验往往将 rationale 生成与提示格式、训练目标、优化策略、
+% 推理协议一并改变，难以判断提升究竟来自 rationale 本身还是完整评价配置。
+% 例如，G-Eval 的提升同时依赖 evaluation-step prompting 和其评分机制；
+% SciRM 的提升也同时包含领域偏好优化、reasoning/self-verification 训练
+% 和 rationale-first 输出，使 rationale supervision 与 rationale-first inference
+% 的独立作用仍不清楚
+% ~\citep{liu-etal-2023-g,sahinuc-etal-2026-reward}。
+
+Existing evaluation methods have introduced rationales through prompting,
+supervised distillation and reinforcement learning,
+and have generally reported higher human correlation, judge agreement or generalization ability
+~\citep{liu-etal-2023-g,kim-etal-2024-prometheus-iclr,sahinuc-etal-2026-reward}.
+These results suggest that explicit rationales can help models organize textual evidence
+and scoring decisions under complex evaluation criteria.
+However, existing experiments often change rationale generation together with prompt format,
+training objective, optimization strategy and inference protocol,
+making it difficult to determine whether the gains come from rationales themselves
+or from the full evaluation configuration.
+For example, the gains of G-Eval depend jointly on evaluation-step prompting and its scoring mechanism;
+the improvements of SciRM also combine domain-preference optimization,
+reasoning/self-verification training and rationale-first outputs,
+leaving the independent effects of rationale supervision and rationale-first inference unclear
+~\citep{liu-etal-2023-g,sahinuc-etal-2026-reward}.
+
+% 这一担忧被来自其他任务家族的证据进一步加深：
+% rationale augmentation 可能降低任务性能
+% ~\citep{zhu-etal-2025-rationales}，
+% 而 CoT 的收益主要集中在数学或符号推理任务，在其他任务上并不稳定
+% ~\citep{sprague-etal-2025-cot}。
+% 为判断性能变化究竟来自训练时学习 rationale，还是推理时先生成 rationale 再评分
+% ——我们称之为 rationale supervision 与 rationale-first inference 两个因素——
+% 现有归因研究考察了这两种设置，
+% 但几乎全部在科学写作评价之外的任务上进行，如通用推理和 NLU
+% ~\citep{wadhwa-etal-2024-investigating,shi-etal-2025-investigating}。
+% 而在科学写作评价中，模型需要整合领域知识、权衡开放式文本证据、
+% 并将多维 rubric 标准映射到序数量表上。
+
+The concern is compounded by evidence from other task families:
+rationale augmentation can degrade task performance
+~\citep{zhu-etal-2025-rationales},
+while CoT gains are concentrated mainly in mathematical or symbolic reasoning tasks
+and remain inconsistent elsewhere
+~\citep{sprague-etal-2025-cot}.
+To determine whether performance changes arise from learning rationales during training
+or from generating rationales before scoring at inference time
+---the two factors we term \emph{rationale supervision} and \emph{rationale-first inference}---
+existing attribution studies have examined both settings,
+but almost exclusively on tasks outside scientific-writing evaluation,
+such as general reasoning and NLU
+~\citep{wadhwa-etal-2024-investigating,shi-etal-2025-investigating}.
+In scientific-writing evaluation, the model must instead integrate
+domain knowledge, weigh open-ended textual evidence, and map
+multidimensional rubric criteria onto an ordinal scale.
+
+% 本文系统研究 rationale supervision 与 rationale-first inference
+% 如何影响基于大模型的科学写作评价。
+% 我们构建统一的受控实验框架，在七项科学写作评价任务上
+% 交叉比较两种监督目标与两种推理协议。
+% 在此基础上，我们从整体性能、样本级预测变化和句子级错误三个层面
+% 分析 rationale 的作用，并针对发现的问题设计相应的训练方法。
+
+\paragraph{Our work.}
+In this work, we systematically investigate the effects of rationales on LLM-based scientific-writing evaluation.
+We establish a unified controlled framework that crosses two supervision targets
+with two inference protocols across seven scientific-writing evaluation tasks.
+We then analyze the role of rationales through aggregate performance,
+sample-level prediction changes, and sentence-level errors,
+and develop targeted training methods based on the identified problems.
+
+% 本文的贡献主要包括三个方面。
+% \textbf{(C1)} 我们构建 $2\times2$ 析因设计，将
+% score-only supervision（SO）和 rationale-and-score supervision（RS）
+% 分别与 direct-score inference（DS）和 rationale-first inference（RF）组合。
+% 该设计包含 28 个实验条件，每个条件使用三个随机种子，
+% 用于区分监督目标、推理协议及其交互作用。
+% \textbf{(C2)} 我们建立多层次分析流程，包括 teacher-forced rationale NLL、
+% rationale 质量与一致性评价、配对 DS--RF 预测转移、
+% 句子级错误标注以及固定 rationale 后的受控重评分。
+% \textbf{(C3)} 我们提出三种针对性方法：
+% Regenerated Rationales with Gold-Score Restoration（ReaSon）
+% 使用学生模型生成的 rationale 替换教师 rationale 并恢复 gold score；
+% Paired-Interface Reweighting（PaIR）通过配对 DS 和 RF 训练视图
+% 及等权分支损失缓解训练--推理接口失配；
+% Regenerated-Rationale Paired-Interface Reweighting（RePaIR）
+% 则将上述两种设计相结合。
+
+\paragraph{Contributions and Findings}
+Our contributions are threefold.
+\textbf{(C1)} We construct a $2\times2$ factorial design that crosses
+score-only supervision (SO) and rationale-and-score supervision (RS)
+with direct-score inference (DS) and rationale-first inference (RF).
+The design comprises 28 experimental conditions,
+each evaluated with three random seeds,
+to separate the effects of supervision targets, inference protocols,
+and their interaction.
+\textbf{(C2)} We develop a multilevel analysis pipeline combining
+teacher-forced rationale NLL, rationale quality and consistency assessment,
+paired DS--RF prediction transitions, sentence-level error annotation,
+and controlled rescoring with fixed rationales.
+\textbf{(C3)} We introduce three targeted methods:
+Regenerated Rationales with Gold-Score Restoration (ReaSon)
+replaces teacher rationales with student-generated ones while restoring gold scores;
+Paired-Interface Reweighting (PaIR) trains on paired DS and RF views
+with equally weighted branch losses to address training--inference interface mismatch;
+and Regenerated-Rationale Paired-Interface Reweighting (RePaIR)
+combines the two designs.
+
+% 实验得到三个主要发现。
+% \textbf{(F1)} RS 改善了教师 rationale 拟合、生成质量和
+% rationale--score 一致性，但这些优势并未转化为更好的评分性能。
+% \textbf{(F2)} 有害转移中的 rationale 通常支持错误分数，
+% 且错误主要来自评分标准误用和分数映射。
+% 修正错误 rationale 后，158 个所选有害案例中有 142 个恢复为 gold score，
+% 表明 rationale 内容能够显著影响这些案例中的后续评分。
+% \textbf{(F3)} ReaSon 改善了 RF 序数评分，但未能保持 DS 性能；
+% PaIR 主要提升了 DS 推理接口下的评分性能；
+% RePaIR 在 DS 推理下取得最佳性能，同时将 RF 的 QWK 从 0.698 提升至 0.735。
+
+Our experiments yield three main findings.
+\textbf{(F1)} RS improves teacher-rationale fitting,
+generated-rationale quality, and rationale--score consistency,
+but these gains do not translate into better scoring performance.
+\textbf{(F2)} Rationales in harmful transitions typically support
+the incorrect score, with errors arising primarily
+from rubric misapplication and score mapping.
+Correcting erroneous rationales restores the gold score
+in 142 of 158 selected harmful cases,
+showing that rationale content can substantially affect subsequent scoring
+in these cases.
+\textbf{(F3)} ReaSon improves RF ordinal scoring
+but does not preserve DS performance;
+PaIR primarily improves scoring performance under DS inference;
+RePaIR achieves the best performance under DS inference while raising RF QWK from 0.698 to 0.735.

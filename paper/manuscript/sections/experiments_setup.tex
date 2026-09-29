@@ -1,0 +1,231 @@
+\section{Experiments}
+\label{sec:experimental-design}     % 内部引用符，文章中其他部分可以引用这里
+
+\paragraph{Datasets.}
+
+% 我们的训练数据基于 \citep{sahinuc-etal-2026-reward} 的数据构建，
+% 并进行了任务筛选、提示词修改和样本级质量控制。
+% 随后，我们采用模型蒸馏为每个样本生成教师
+% rationale~\citep{hsieh-etal-2023-distilling}。
+% 数据覆盖两类科学写作评测任务：
+% 同行评审质量评分（五级）和相关工作评测（二分类）。
+% 除标准的 SO 与 RS 训练实例外，
+% 我们还基于适配后的样本，
+% 为 ReaSon 与 RePaIR 构造了 regenerated-rationale 训练数据。
+% PaIR 的配对 DS/RF 训练视图构建方式、
+% 完整的数据处理流程及数据统计信息见附录 A。
+
+Our training data is built upon the work of \citet{sahinuc-etal-2026-reward}.
+We apply task filtering, prompt revision, and sample-level quality control.
+Teacher rationales are then generated via model
+distillation~\citep{hsieh-etal-2023-distilling}.
+The data covers two scientific writing evaluation tasks:
+peer review quality rating (five-point scale) and related-work evaluation (binary classification).
+In addition to standard SO and RS training instances,
+we construct regenerated-rationale training data
+for ReaSon and RePaIR based on the adapted samples.
+Details on constructing PaIR's paired DS/RF training views,
+the full data processing pipeline, and dataset statistics
+are provided in Appendix~\ref{app:dataset}.
+
+\paragraph{Models.}
+
+% 我们以 Qwen3-4B~\citep{yang-etal-2025-qwen3} 作为主要基础模型，
+% 并针对每个任务--方法组合分别训练模型。为检验主要发现对模型规模的
+% 适用性，我们进一步在 Qwen3-0.6B 和 Qwen3-8B 上进行验证。此外，
+% 我们使用面向科学写作评价微调的 SciRM-7B
+% ~\citep{sahinuc-etal-2026-reward} 作为领域模型对照，并在相同的
+% 测试集和推理接口下进行评估。
+
+We use Qwen3-4B~\citep{yang-etal-2025-qwen3} as the primary backbone
+and train a separate model for each task--method combination. To
+examine whether the main findings generalize across model scales, we
+further conduct validation experiments with Qwen3-0.6B and Qwen3-8B.
+We additionally evaluate SciRM-7B
+~\citep{sahinuc-etal-2026-reward}, a model fine-tuned for
+scientific-writing evaluation, as a domain-specific comparator under
+the same test sets and inference interfaces.
+
+\paragraph{Implementation details.}
+
+% \subparagraph{实验设计。}
+% 主实验在七个任务上交叉比较 SO/RS 两种监督目标与 DS/RF 两种
+% 推理协议，共形成 \(2\times7\times2=28\) 个实验条件。每个条件
+% 使用随机种子 42、43 和 44 独立运行，主要模型比较报告三次运行的均值。
+% 序数任务以 quadratic weighted kappa（QWK）
+% ~\citep{cohen-1968-weighted} 为主要指标，二分类任务以 Macro-F1
+% 为主要指标。
+
+The main factorial experiment crosses the SO and RS supervision
+targets with the DS and RF inference protocols across seven tasks,
+yielding \(2\times7\times2=28\) conditions. Each condition is run
+independently with seeds 42, 43, and 44, and the primary model
+comparisons report the mean across these runs.
+We use quadratic weighted kappa
+(QWK)~\citep{cohen-1968-weighted} as the primary metric for ordinal
+tasks and Macro-F1 for binary tasks.
+
+% \subparagraph{实现细节。}
+% 所有任务模型均使用 LoRA~\citep{hu-etal-2022-lora} 进行微调。
+% 每个任务采用固定的训练、验证和测试划分，并为每种训练方法单独
+% 训练 adapter。每个 epoch 后执行验证与 checkpoint 保存，最终使用
+% 第 3 个 epoch 的 adapter 进行测试。LoRA 应用于全部线性层，设置
+% \(r=16\)、\(\alpha=32\)、学习率 \(1\times10^{-4}\)，训练
+% 3 个 epoch，并采用余弦衰减和 8,192-token 最大序列长度。
+% 所有评估均使用 zero-shot DS/RF prompt；其格式见图
+% \ref{fig:scirm-evaluation}，完整模板见附录~\ref{app:prompts}。
+% 其余配置见附录~\ref{app:experimental-details}。
+
+All task-specific models are fine-tuned using
+LoRA~\citep{hu-etal-2022-lora}. Each task uses fixed training,
+validation, and test splits, with a separate adapter trained for each
+method. Validation and checkpoint saving are performed after every
+epoch, and the epoch-3 adapter is used for final evaluation. LoRA is
+applied to all linear layers with \(r=16\), \(\alpha=32\), a learning
+rate of \(1\times10^{-4}\), three training epochs, cosine decay, and a
+maximum sequence length of 8,192 tokens. All evaluations use zero-shot
+DS/RF prompts; their format is illustrated in
+Figure~\ref{fig:scirm-evaluation}, and the complete templates are
+provided in Appendix~\ref{app:prompts}. Additional settings are
+reported in Appendix~\ref{app:experimental-details}.
+
+% RQ1：为什么 score-only 训练效果，比 rationale-and-score 训练效果更好
+\subsection{Diagnosing the Scoring Gap between SO and RS Supervision}
+
+% \paragraph{教师强制 Rationale NLL。}
+%
+% 为检验 SO 与 RS 监督之间的评分差距是否与教师 rationale 的
+% 拟合程度相关，我们在每个任务的验证集上分别计算两种设置的
+% teacher-forced rationale NLL。对于每个 adapter，我们输入完整的
+% prompt--rationale--score 序列，但仅在 rationale token 上计算损失。
+% 在因果掩码下，每个 rationale token 仅以 prompt 和此前的教师
+% rationale token 为条件。随后，我们在所有 rationale token 上
+% 对损失进行 micro-average：
+% \[
+% \operatorname{NLL}_{\mathrm{rat}}
+% =
+% \frac{
+% \sum_n\sum_{t\in R_n}
+% -\log p_\theta(r_{n,t}\mid x_n,r_{n,<t})
+% }{
+% \sum_n |R_n|
+% }.
+% \]
+% 其中，\(R_n\) 表示样本 \(n\) 中的 rationale token 位置；
+% 较低的 NLL 表示模型更接近教师 rationale 的分布。
+% 完整的逐任务 NLL 诊断结果见表~\ref{tab:full-nll-diagnostics}。
+
+\paragraph{Teacher-forced Rationale NLL.}
+
+To examine whether the scoring gap between SO and RS supervision is
+associated with teacher-rationale fitting, we compute teacher-forced
+rationale NLL on the validation set of each task. For each adapter,
+we process the complete prompt--rationale--score sequence but compute
+loss only over rationale tokens. Under causal masking, each rationale
+token conditions only on the prompt and preceding teacher-rationale
+tokens. We then micro-average the loss over all rationale tokens:
+\[
+\operatorname{NLL}_{\mathrm{rat}}
+=
+\frac{
+\sum_n\sum_{t\in R_n}
+-\log p_\theta(r_{n,t}\mid x_n,r_{n,<t})
+}{
+\sum_n |R_n|
+}.
+\]
+Here, \(R_n\) denotes the rationale-token positions in sample \(n\);
+lower NLL indicates closer fitting to the teacher-rationale
+distribution. Full task-level NLL diagnostics are reported in Table~\ref{tab:full-nll-diagnostics}.
+
+\paragraph{Rationale Quality Comparison.}
+
+% 为比较 SO 与 RS 监督训练模型在 RF 接口下生成的 rationale，
+% 我们从 rationale 的内容质量及其与预测分数的一致性两个方面
+% 进行评估~\citep{liu-etal-2023-g,zhang-etal-2026-surveyreview}。
+% 内容质量包括评分标准理解、证据支撑、关键信息覆盖
+% 和无依据陈述控制四个维度；一致性评估判断 rationale 的内容
+% 是否支持模型给出的预测分数。各评判维度和一致性标签的具体定义
+% 见表~\ref{tab:eval-dimensions}。
+%
+% GLM-5.3-Flash 和 Doubao-Seed-2.0-Lite 作为主裁判，
+% MiniMax-M3 作为仲裁裁判。评测提示词见图~\ref{fig:judge-r1}
+% 和图~\ref{fig:judge-r2}，模型配置见表~\ref{tab:teacher-config}。
+% 四个质量维度的总体得分及总体一致性结果见
+% 表~\ref{tab:rationale-quality-consistency}，逐任务的一致性结果见
+% 表~\ref{tab:full-rationale-quality-task}。
+
+To compare rationales generated under RF inference by models trained
+with SO and RS supervision, we evaluate both their content quality
+and their consistency with predicted
+scores~\citep{liu-etal-2023-g,zhang-etal-2026-surveyreview}.
+Content quality covers
+four dimensions: rubric understanding, evidence grounding,
+key-information coverage, and unsupported-claim control. Consistency
+indicates whether the rationale content supports the model's predicted
+score. Detailed definitions of the quality dimensions and consistency
+labels are provided in Table~\ref{tab:eval-dimensions}.
+
+GLM-5.3-Flash and Doubao-Seed-2.0-Lite serve as primary judges, with
+MiniMax-M3 as the adjudicator. The evaluation prompts are shown in
+Figures~\ref{fig:judge-r1} and~\ref{fig:judge-r2}, and the model
+configurations are listed in Table~\ref{tab:teacher-config}. Aggregate
+scores for the four quality dimensions and overall consistency results
+are reported in Table~\ref{tab:rationale-quality-consistency}, while
+task-level consistency results are provided in
+Table~\ref{tab:full-rationale-quality-task}.
+
+% RQ2：为什么在相同训练方法下，RF 推理在序数任务上的 QWK 低于 DS 推理？
+\subsection{Diagnosing the Scoring Gap between DS and RF Inference}
+
+% 表~\ref{tab:full-so-rs-strict-qwk} 和
+% 表~\ref{tab:full-so-rs-strict-f1} 所报告的 28 个实验条件表明，
+% DS 与 RF 的相对表现因任务类型和监督目标而异。为分析这一差异，
+% 我们选取推理接口从 DS 切换至 RF 后预测结果发生变化的样本。
+% 其中，有害转移指 DS 预测正确而 RF 产生严重错误，有益转移
+% 指 DS 产生严重错误而 RF 预测正确。
+%
+% 对于这些转移样本，我们沿用三裁判机制，判断 RF rationale
+% 支持 gold score、错误分数，还是均缺乏充分支持。对于有害转移，
+% 裁判进一步逐句标注 \texttt{factual\_error}、
+% \texttt{evidence\_misread} 等错误类型。完整的判断标签和错误
+% 类型见图~\ref{fig:transition-audit-p2}。
+%
+% 最后，参考通过干预生成推理并重新评估下游预测的研究
+% ~\citep{lanham-etal-2023-measuring,
+% li-chaturvedi-2026-inter-dimension}，我们检验修正 rationale 是否会
+% 改变后续评分。我们将自然
+% RF 生成记为 NatRF，将固定原始错误 rationale 后仅生成分数记为
+% FixOrig，将固定修正后 rationale 后仅生成分数记为 FixCorr。
+% NatRF--FixOrig 用于验证固定前缀重评分能否复现原预测，
+% FixOrig--FixCorr 则用于衡量 rationale 修正带来的分数变化。
+
+The 28 experimental conditions reported in
+Tables~\ref{tab:full-so-rs-strict-qwk}
+and~\ref{tab:full-so-rs-strict-f1} show that the relative performance
+of DS and RF varies across task types and supervision targets. To
+analyze this variation, we select samples whose predictions change
+after switching the inference interface from DS to RF. A harmful
+transition occurs when DS predicts the correct score but RF produces
+a severe error, whereas a beneficial transition occurs when DS
+produces a severe error but RF predicts the correct score.
+
+For these transition cases, we apply the same three-judge protocol
+to determine whether the RF rationale supports the gold score, the
+incorrect score, or neither. For harmful transitions, the judges
+further annotate sentence-level errors such as
+\texttt{factual\_error} and \texttt{evidence\_misread}. The complete
+decision labels and error taxonomy are shown in
+Figure~\ref{fig:transition-audit-p2}.
+
+Finally, following prior work that intervenes on generated reasoning
+and re-evaluates downstream predictions
+~\citep{lanham-etal-2023-measuring,
+li-chaturvedi-2026-inter-dimension}, we test whether correcting the
+rationale changes subsequent scoring. NatRF denotes natural RF
+generation, FixOrig fixes the
+original erroneous rationale and generates only the score, and
+FixCorr fixes the corrected rationale and generates only the score.
+The NatRF--FixOrig comparison tests whether fixed-prefix rescoring
+reproduces the original prediction, whereas FixOrig--FixCorr measures
+the score change associated with rationale correction.
