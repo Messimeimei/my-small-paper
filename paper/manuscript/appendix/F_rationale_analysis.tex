@@ -1,0 +1,203 @@
+\begin{table*}[!t]
+\hfuzz=2pt
+\centering
+\begin{minipage}{\linewidth}
+\section{Illustrative Examples}
+\label{app:rationale-analysis}
+Tables~\ref{tab:rationale-quality-example}--\ref{tab:rationale-correction-example}
+retain the task, gold label, score-determining input and rationale evidence,
+predictions, and audit outcomes while omitting repeated full outputs.
+Tables~\ref{tab:rationale-quality-example} and~\ref{tab:rationale-consistency-example} contrast external quality preference with support for each model's own score. Tables~\ref{tab:rationale-sentence-example} and~\ref{tab:rationale-correction-example} trace a rubric error through correction and fixed-prefix rescoring.
+\end{minipage}
+
+\vspace{0.7\baselineskip}
+\begin{minipage}{\textwidth}
+\hfuzz=2pt
+\normalsize\linespread{1.05}\selectfont
+\renewcommand{\arraystretch}{1.08}
+\textbf{Task: Grounding Specificity}\hfill\textbf{Gold: 3}\\[2pt]
+\begin{tabularx}{0.95\linewidth}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}X@{}}
+\toprule
+Evaluation input & \textit{``Limitations of modeling with GP: We know that the
+required number of samples to accurately model the objective function grows
+exponentially, leading to increased computational complexity and potentially
+reduced accuracy. Do you plan to address this limitation in future work?''} \\
+\midrule
+SO rationale (pred. 1) & Treats the comment as a general GP limitation and
+concludes that it does not identify a specific part or paper-specific issue. \\
+RS rationale (pred. 3) & Distinguishes grounding from specificity: the paper
+location is imprecise, but exponential sample growth and its consequences form
+a clearly specified issue. \\
+\bottomrule
+\end{tabularx}
+\vspace{2pt}
+{\normalsize
+\setlength{\tabcolsep}{0.6pt}
+\begin{tabular*}{0.95\linewidth}{@{\extracolsep{\fill}}lrrrrl@{}}
+& Rubric & Evidence & Coverage & Unsup. & Pref. \\
+SO & 1.0 & 1.0 & 1.5 & 1.0 & \\
+RS & 3.0 & 3.0 & 3.0 & 3.0 & \textbf{RS} \\
+\end{tabular*}}
+\captionsetup{hypcap=false,width=0.96\linewidth}
+\captionof{table}{Rationale-quality example. The four columns report rubric
+correctness, evidence grounding, decision coverage, and unsupported-claim
+control; the aggregated preference is RS.}
+\label{tab:rationale-quality-example}
+\end{minipage}
+\vspace{0.8\baselineskip}
+\begin{minipage}{\textwidth}
+\normalsize\linespread{1.05}\selectfont
+\setlength{\tabcolsep}{7pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}X|X@{}}
+\toprule
+\multicolumn{2}{@{}p{\dimexpr\linewidth-2\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{Task: Helpfulness} \quad $\vert$ \quad
+\textbf{Evaluation: Rationale--Score Consistency Assessment} \hfill
+\textbf{Gold label $=5$}} \\
+\midrule
+\multicolumn{2}{@{}>{\raggedright\arraybackslash}p{\dimexpr\linewidth-2\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{Evaluation input:} \textit{Overall training time. The overall training
+time and the bandwidth of exchanging hidden vectors should be mentioned. If the
+network size of the exchanged information is too high and bandwidth is limited
+in wireless communication, a single iteration will take too much time or fail
+because of communication-protocol constraints. For example, in an IoT setting,
+the maximum payload length is only 65,535 bytes. Please discuss the size of the
+exchanged information (hidden vectors or gradients) and the total training time
+in the revision.}} \\
+\midrule
+\rowcolor{gray!12}
+\textbf{SO\textsubscript{RF} rationale} \hfill \textbf{predicts 5} &
+\textbf{RS\textsubscript{RF} rationale} \hfill \textbf{predicts 4} \\
+Calls the feedback comprehensive and detailed because it identifies
+training-time and bandwidth constraints and requests concrete reporting. &
+Recognizes that the request is clear and actionable, but could provide more
+detail about how to measure or report the quantities. \\
+\end{tabularx}
+\nopagebreak
+\vspace{-2pt}
+\begin{tabularx}{\linewidth}{@{}l
+    >{\centering\arraybackslash}p{0.22\linewidth}
+    >{\raggedright\arraybackslash}X@{}}
+\midrule
+ & \textbf{Verdict} & \textbf{Judge explanation} \\
+\textbf{Judge on SO} & \texttt{partially\_}\allowbreak\texttt{supported} &
+The rationale identifies genuine strengths but overstates breadth and
+implementation guidance. \\
+\rowcolor{gray!12}
+\textbf{Judge on RS} & \textbf{\texttt{supported}} &
+The stated limitation supports the model's own score; overall preference is RS. \\
+\midrule
+\multicolumn{3}{@{}p{\dimexpr\linewidth-2\tabcolsep\relax}@{}}{%
+\hfill \textbf{Overall preference: \underline{RS}.}} \\
+\bottomrule
+\end{tabularx}
+\captionsetup{hypcap=false}
+\captionof{table}{Internal rationale--score consistency example. The verdicts
+assess support for each model's own prediction, not correctness against gold.}
+\label{tab:rationale-consistency-example}
+\end{minipage}
+\end{table*}
+
+\begin{table*}[!t]
+\hfuzz=2pt
+\centering
+\begin{minipage}{\textwidth}
+\normalsize\linespread{1.05}\selectfont
+\renewcommand{\arraystretch}{1.08}
+\textbf{Task: Actionability}\hfill
+\textbf{SO seed 42; Gold/DS/RF: 3/3/5}\\[2pt]
+\begin{tabularx}{0.99\linewidth}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}X@{}}
+\toprule
+Evaluation input & \textit{The comment questions the motivation for a
+convolutional-coding-based DUN because its coefficients and dictionary are
+learned end to end, argues that added hidden-layer channels may provide the same
+capacity, and asks the authors to give more convincing motivation, e.g., a
+theorem or experiments.} \\
+\midrule
+RF rationale & ``The answer provides a specific suggestion for the authors to
+`give more convincing motivation (e.g., theorem, experiments).' This is an
+explicit action with concrete details on how to implement it. The authors can
+directly identify what needs to be done and how to apply the action. Therefore,
+this meets the criteria for a score of 5.'' \\
+\bottomrule
+\end{tabularx}
+\vspace{2pt}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.37\linewidth}>{\raggedright\arraybackslash}p{0.25\linewidth}X@{}}
+\toprule
+Flagged sentence & Error type & Judge basis \\
+\midrule
+``This is an explicit action with concrete details on how to implement it.'' &
+Rubric misapplication & Naming evidence categories does not provide concrete
+implementation details. \\
+``The authors can directly identify what needs to be done and how to apply the
+action.'' & Unsupported inference & The comment supplies no experimental design
+or theorem statement. \\
+``Therefore, this meets the criteria for a score of 5.'' & Score mapping error &
+The preceding reasoning supports an explicit but vague action. \\
+\bottomrule
+\end{tabularx}
+\captionsetup{hypcap=false}
+\captionof{table}{Sentence-level error example. The unanimous consensus is
+\texttt{supports\_wrong\_score}.}
+\label{tab:rationale-sentence-example}
+\end{minipage}
+\vspace{0.8\baselineskip}
+\begin{minipage}{\textwidth}
+\normalsize\linespread{1.05}\selectfont
+\setlength{\tabcolsep}{7pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}X|X@{}}
+\toprule
+\multicolumn{2}{@{}p{\dimexpr\linewidth-2\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{Task: Actionability} \quad $\vert$ \quad
+\textbf{Evaluation: Rationale Correction \& Rescoring} \hfill
+\textbf{Gold label $=5$}} \\
+\midrule
+\multicolumn{2}{@{}p{\dimexpr\linewidth-2\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{DS prediction: 5 \,(\textcolor{green!50!black}{correct})}
+\hfill
+\textbf{NatRF prediction: 3 \,(\textcolor{red!70!black}{severe error})}} \\
+\midrule
+\multicolumn{2}{@{}>{\raggedright\arraybackslash}p{\dimexpr\linewidth-2\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{Evaluation input:} \textit{The training time of supernet should also be
+listed for comparison.}} \\
+\midrule
+\rowcolor{gray!12}
+\multicolumn{1}{@{}p{\dimexpr 0.5\linewidth-1.5\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{Original rationale}} &
+\multicolumn{1}{@{}p{\dimexpr 0.5\linewidth-1.5\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{Corrected rationale}} \\
+The request is a direct instruction, but it is
+\textcolor{red!70!black}{judged explicit yet vague because it does not specify
+where to list training time, which format to use, or how to compute it.} &
+\textcolor{blue!70!black}{The requested addition is itself concrete and
+executable: report the supernet's training time for comparison. The rubric
+concerns whether the modification is specific, not presentation details such
+as table placement or formatting.} \\
+\midrule
+\multicolumn{2}{@{}p{\dimexpr\linewidth-2\tabcolsep-\arrayrulewidth\relax}@{}}{%
+\textbf{Record:} \texttt{actionability\_test\_0295}. \hfill
+\textbf{Review:} GLM edit; MiniMax approved.} \\
+\end{tabularx}
+\nopagebreak
+\vspace{-2pt}
+\begin{tabularx}{\linewidth}{@{}l>{\centering\arraybackslash}X@{}}
+\midrule
+ & \textbf{Rescored prediction} \\
+\textbf{A: natural rationale and score (NatRF)} & $3$ \\
+\textbf{B: fixed original rationale and score (FixOrig)} & $3$ \\
+\rowcolor{gray!12}
+\textbf{C: fixed corrected rationale and score (FixCorr)} & \textbf{$5$} \\
+\midrule
+\multicolumn{2}{@{}p{\dimexpr\linewidth-2\tabcolsep\relax}@{}}{%
+\hfill \textbf{Result: B reproduces A; C recovers the gold label.}} \\
+\bottomrule
+\end{tabularx}
+\captionsetup{hypcap=false}
+\captionof{table}{Rationale correction and fixed-prefix rescoring. FixOrig
+reproduces NatRF, whereas FixCorr recovers the gold label.}
+\label{tab:rationale-correction-example}
+\end{minipage}
+
+\end{table*}

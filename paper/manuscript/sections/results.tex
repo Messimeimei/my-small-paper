@@ -2,14 +2,11 @@
 \label{sec:results}
 \raggedbottom
 
-% 除非另有说明，正文均报告严格解析结果：仅符合规定输出格式的分数
-% 被视为有效，格式无效的输出在 Accuracy 和 Macro-F1 中计为错误，
-% 并从 QWK、Pearson 和 MAE 的计算中排除。
-
-Unless otherwise noted, all main results use strict parsing, under which
-only scores matching the required output format are considered valid;
-format-invalid outputs count as errors for Accuracy and Macro-F1 and are
-excluded from QWK, Pearson, and MAE.
+% 除非另有说明，正文结果均采用严格解析。具体的分数提取规则和各指标分母
+% 定义见附录~\ref{app:score-extraction}。
+Unless otherwise noted, all main results use strict parsing. Detailed
+score-extraction rules and metric-specific denominators are provided in
+Appendix~\ref{app:score-extraction}.
 
 % \paragraph{RQ1：为什么 RS 改善了 rationale，却未改善评分？}
 \paragraph{RQ1: Why Does RS Improve Rationales but Not Scoring?}
@@ -32,137 +29,70 @@ binary tasks (right), SO has a larger advantage under DS (0.928 versus
 overall, while RS approaches SO only on binary tasks under RF. Full
 task-level results are provided in Appendix~\ref{app:full-results}.
 
-\begin{figure*}[!t]
-    \centering
-    \includegraphics[width=\textwidth]
-    {figures/training_targets_by_task_type.pdf}
-    \caption{
-        Performance across training objectives and inference protocols.
-        The left panel reports QWK on ordinal tasks, and the right panel
-        reports Macro-F1 on binary tasks.
-    }
-    \label{fig:training-targets-by-task-type}
-\end{figure*}
 
-% \textbf{RS 更好地拟合教师 rationale，但未获得评分优势。}
-% Table~\ref{tab:rationale-nll} 显示，Base、SO 和 RS 的平均
-% teacher-forced rationale NLL 分别为 3.4480、1.6964 和 0.7793，
-% 且 RS 在所有任务上均取得最低值。% 结合 Figure~\ref{fig:training-targets-by-task-type} 中 RS 较弱的
-% 评分表现，这表明 RS 虽然更好地拟合了教师 rationale，但这种
-% 拟合并没有带来更好的评分能力。
+% \paragraph{RS 改善理由拟合与质量，但未改善评分。}
+% 表~\ref{tab:rationale-summary} 汇总了 Qwen3-4B 的 rationale 诊断结果。
+% 与 SO 相比，RS 在每个任务上都取得更低的 teacher-forced rationale NLL、
+% 更高的平均 rationale 质量，以及更强的 rationale--score 一致性。
+% 在配对比较中，350 例里 RS rationale 获得 248 次偏好，SO rationale
+% 获得 25 次，其余 77 组被判断为相当。尽管具有这些优势，RS 在 DS 和
+% RF 推理下的序数 QWK 均低于 SO。因此，更好的 rationale 拟合以及
+% 对模型自身预测的更强支持，并不必然意味着评分更准确。完整 NLL 诊断和
+% rationale 评测结果分别见表~\ref{tab:rationale-nll-full} 和
+% 表~\ref{tab:rationale-quality-full}。
 
-\textbf{RS fits teacher rationales better without gaining a scoring
-advantage.}
-Table~\ref{tab:rationale-nll} shows that the mean teacher-forced
-rationale NLL decreases from 3.4480 for Base to 1.6964 for SO and
-0.7793 for RS, with RS attaining the lowest value on every task.
-Together with the weaker scoring performance of RS in
-Figure~\ref{fig:training-targets-by-task-type}, these results show that
-although RS fits teacher rationales better, this improved fit does not
-lead to better scoring performance.
+\paragraph{RS improves rationale fit and quality without improving scoring.}
+Table~\ref{tab:rationale-summary} summarizes the rationale diagnostics
+for Qwen3-4B.
+Compared with SO, RS achieves lower teacher-forced rationale NLL
+on every task, higher mean rationale quality,
+and stronger rationale--score consistency.
+In the paired comparison, RS rationales are preferred in 248 of
+350 cases, SO rationales in 25 cases, and the remaining 77 pairs
+are judged comparable.
+Despite these advantages, RS has lower ordinal QWK than SO
+under both DS and RF inference.
+Thus, better rationale fitting and stronger support for the
+model's own prediction do not necessarily imply more accurate scores.
+Full NLL diagnostics and rationale-evaluation results are provided
+in Tables~\ref{tab:rationale-nll-full}
+and~\ref{tab:rationale-quality-full}, respectively.
 
-% 各任务的 teacher-forced rationale NLL。Base 表示未经任务微调的
-% Qwen3-4B，数值越低表示对教师 rationale token 的拟合越好。
-
+% Qwen3-4B 的 rationale 诊断摘要；support 指 rationale 是否支持模型自身预测。
 \begin{table}[t]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrrr}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lrr@{}}
 \toprule
-Task & Base & SO & RS & RS $-$ SO \\
+Measure & SO & RS \\
 \midrule
-Actionability         & 3.3984 & 1.5891 & \textbf{0.7894} & $-$0.7997 \\
-Grounding Specificity & 3.6439 & 1.6757 & \textbf{0.6761} & $-$0.9996 \\
-Helpfulness           & 3.5397 & 1.7811 & \textbf{0.8856} & $-$0.8955 \\
-Verifiability         & 3.5677 & 1.9243 & \textbf{0.8401} & $-$1.0842 \\
-Coherence             & 3.4272 & 1.4634 & \textbf{0.7852} & $-$0.6782 \\
-Positioning Check     & 3.1925 & 1.5362 & \textbf{0.7112} & $-$0.8250 \\
-Positioning Type      & 3.3664 & 1.9051 & \textbf{0.7676} & $-$1.1375 \\
-\midrule
-Average               & 3.4480 & 1.6964 & \textbf{0.7793} & $-$0.9171 \\
+Rationale NLL $\downarrow$
+    & 1.696 & \textbf{0.779} \\
+Mean quality $\uparrow$
+    & 2.400 & \textbf{2.832} \\
+Full score support (\%) $\uparrow$
+    & 74.3 & \textbf{96.6} \\
 \bottomrule
-\end{tabular}%
+\end{tabular*}
+\caption{
+Rationale diagnostics for Qwen3-4B.
+NLL is the mean across seven tasks, each averaged over three seeds.
+Quality and support are evaluated on 350 paired RF rationales
+from seed-42 models.
+Quality averages four dimensions scored on a 1--3 scale;
+full score support means that a rationale fully supports
+its own predicted score.
 }
-
-% 各任务的 teacher-forced rationale NLL；数值越低越好。
-
-\caption{Teacher-forced rationale NLL by task; lower is better.}
-\label{tab:rationale-nll}
+\label{tab:rationale-summary}
 \end{table}
 
-% \textbf{RS 生成了质量更高的 rationale。}
-% Table~\ref{tab:rationale-quality-consistency} 显示，在 350 组配对
-% 比较中，RS rationale 获得 248 次偏好，而 SO 仅获得 25 次，
-% 其余 77 组基本相当。RS 在四个质量维度上均取得更高得分，四维
-% 平均分由 2.400 提高到 2.832，rationale--score 一致率也由
-% 74.3\% 提高到 96.6\%。因此，RS 的优势体现在生成 rationale
-% 的质量与一致性上，而非最终评分性能上。
+% \paragraph{RQ2：RF 推理如何影响评分性能？}
+\paragraph{RQ2: How Does RF Inference Affect Scoring Performance?}
 
-\textbf{RS produces higher-quality rationales.}
-Table~\ref{tab:rationale-quality-consistency} shows that RS rationales
-were preferred in 248 of the 350 paired comparisons, compared with only
-25 preferences for SO; the remaining 77 pairs were comparable. RS also
-scored higher on all four quality dimensions, increasing the
-four-dimension mean from 2.400 to 2.832 and rationale--score consistency
-from 74.3\% to 96.6\%. Thus, the advantage of RS lies in rationale
-quality and consistency rather than final scoring performance.
-
-% 外部 LLM 对 rationale 的整体偏好、质量评分和分数一致性评估。
-% 两条实线分别分隔 Pairwise Preference、Quality 和 Consistency。
-
-\begin{table*}[!t]
-\centering
-\small
-\setlength{\tabcolsep}{9pt}
-\renewcommand{\arraystretch}{1.05}
-\begin{tabular}{llrrr}
-\toprule
-Analysis & Measure & SO & RS & Comparison \\
-\midrule
-Pairwise Preference
-& Preferred rationale, $n$ (\%)
-& 25 (7.1) & \textbf{248 (70.9)} & Tie: 77 (22.0) \\
-\midrule
-Quality
-& Rubric understanding
-& 2.379 & \textbf{2.848} & +0.469 \\
-& Evidence grounding
-& 2.495 & \textbf{2.837} & +0.342 \\
-& Key-information coverage
-& 2.273 & \textbf{2.833} & +0.560 \\
-& Unsupported-claim control
-& 2.453 & \textbf{2.811} & +0.358 \\
-& Four-dimension mean
-& 2.400 & \textbf{2.832} & +0.433 \\
-\midrule
-Consistency
-& Supported (\%)
-& 74.3 & \textbf{96.6} & +22.3 pp \\
-& Partially supported (\%)
-& 20.0 & \textbf{3.1} & $-$16.9 pp \\
-& Not supported (\%)
-& 5.7 & \textbf{0.3} & $-$5.4 pp \\
-\bottomrule
-\end{tabular}
-
-% 外部 LLM 对 350 组 rationale 的配对评估结果。质量维度采用
-% 1--3 分量表。Comparison 在偏好行报告平局数量，其余行报告
-% RS 减 SO 的差值，其中比例差以百分点表示。
-
-\caption{External-LLM evaluation of 350 paired rationales generated
-under rationale-first inference. Quality dimensions use a 1--3 scale.
-For pairwise preference, Comparison reports tied judgments; elsewhere,
-it reports RS minus SO, with percentage differences in percentage points.}
-\label{tab:rationale-quality-consistency}
-\end{table*}
-
-% \paragraph{RQ2：RF 推理为何会降低评分性能？}
-\paragraph{RQ2: Why Does RF Inference Degrade Scoring Performance?}
-
-% Table~\ref{tab:interface-changes-by-task-type} 汇总了从 DS 切换至
-% RF 后的变化。在四个序数任务上，SO 和 RS 的 QWK 分别下降
+% 我们分析 Qwen3-4B 从 DS 切换至 RF 后的评分表现变化。
+% 表~\ref{tab:interface-changes-by-task-type} 分别汇总序数与二分类任务的变化。
+% 在四个序数任务上，SO 和 RS 的 QWK 分别下降
 % 0.035 和 0.017；RS 的准确率虽提高 3.49 个百分点，但严重错误率
 % 同时增加 4.26 个百分点，抵消了精确预测增加带来的收益。在三个
 % 二分类任务上，RF 使 SO 的 Macro-F1 小幅下降 0.006，却使 RS
@@ -170,8 +100,10 @@ it reports RS minus SO, with percentage differences in percentage points.}
 % 3.45 个百分点。因此，SO 在两类任务上均更适合 DS，而 RS 仅在
 % 二分类任务上受益于 RF。
 
-Table~\ref{tab:interface-changes-by-task-type} summarizes the changes
-after switching from DS to RF. On the four ordinal tasks, QWK decreases
+We analyze how switching from DS to RF affects scoring performance on
+Qwen3-4B. Table~\ref{tab:interface-changes-by-task-type} summarizes the
+changes separately for ordinal and binary tasks. On the four ordinal tasks,
+QWK decreases
 by 0.035 under SO and 0.017 under RS. Although RS gains 3.49 percentage
 points in accuracy, its severe-error rate also rises by 4.26 points,
 offsetting the increase in exact predictions. On the three binary tasks,
@@ -180,42 +112,8 @@ by 0.079, while reducing the RS incorrect-output and format-invalid rates
 by 5.59 and 3.45 points, respectively. Thus, SO favors DS across both
 task types, whereas RS benefits from RF only on binary tasks.
 
-% \textbf{RF 推理可能在早期形成错误判断，并将其延续至最终评分。}
-% Table~\ref{tab:full-interface-transitions} 显示，当推理协议从 DS
-% 切换至 RF 时，在 SO 和 RS 两种监督目标下，有害预测转移均多于
-% 有益预测转移，但 RS 下两者的差距较小。在从 DS 切换至 RF 后
-% 预测结果发生转移的 1,119 个样本中，701 个有害转移中有 700 个
-% 的完整 RF rationale 支持错误的 RF 分数，而 418 个有益转移的
-% rationale 均支持 gold score。Figure~\ref{fig:rationale-error-analysis}
-% 进一步显示，评分标准误用和分数映射错误是最常见的错误类型，且
-% 74.9\% 的首个错误出现在 rationale 的前半部分。综合来看，这些
-% 结果表明，RF 推理会影响最终评分，其影响更多表现为有害转移，
-% 且相关错误通常在 rationale 的早期阶段出现。完整统计和裁判协议
-% 见 Appendix~\ref{app:sentence-level-analysis}。
-
-\textbf{RF inference can form erroneous judgments early and carry them
-into the final score.}
-Table~\ref{tab:full-interface-transitions} shows that, when the inference
-protocol switches from DS to RF, harmful prediction transitions
-outnumber beneficial ones under both supervision targets, SO and RS,
-although the gap is smaller under RS. Among the 1,119 samples whose
-predictions changed after switching from DS to RF, the complete RF
-rationale supported the incorrect RF score in 700 of the 701 harmful
-transitions, whereas the rationales for all 418 beneficial transitions
-supported the gold score. Figure~\ref{fig:rationale-error-analysis}
-further shows that rubric misapplication and score-mapping errors are
-the most common error types, with 74.9\% of first errors occurring in
-the first half of the rationale. Taken together, these results suggest
-that RF inference affects the final score, with its effects more often
-manifesting as harmful transitions and the associated errors typically
-emerging early in the rationale. Full statistics and the adjudication
-protocol are provided in Appendix~\ref{app:sentence-level-analysis}.
-
-% 推理接口变化与有害转移中的 rationale 错误分析。
-\begin{figure*}[!t]
-\centering
-\begin{minipage}[t]{0.48\textwidth}
-\vspace{0pt}
+% Qwen3-4B 从 DS 切换到 RF 后的宏平均指标变化。
+\begin{table}[!t]
 \centering
 \small
 \renewcommand{\arraystretch}{1.2}
@@ -237,159 +135,204 @@ SO & $-0.006$ & $-0.65$ & $+0.51$ & $+0.14$ \\
 RS & $+0.079$ & $+9.04$ & $-5.59$ & $-3.45$ \\
 \bottomrule
 \end{tabular}
-\captionof{table}{Macro-averaged changes from direct-score to
-rationale-first inference. $\Delta$QWK and $\Delta$Macro-F1 are raw
+\caption{Macro-averaged changes from direct-score to rationale-first
+inference for Qwen3-4B. $\Delta$QWK and $\Delta$Macro-F1 are raw
 differences; all other columns are in percentage points. Error denotes
 a format-valid but incorrect binary prediction; Severe denotes an
 ordinal prediction with an absolute score error of at least two.}
 \label{tab:interface-changes-by-task-type}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.48\textwidth}
-\vspace{0pt}
+\end{table}
+
+% 提前声明跨栏错误分析图，使其在后续正文之前排入页顶。
+% 图中缩写类别名对应表~\ref{tab:full-sentence-errors}中的完整错误分类。
+\begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/rationale_error_pies.pdf}
-\captionof{figure}{Sentence-level errors in harmful DS-to-RF
-transitions. The left panel shows the distribution of 1,115 sentences
-assigned a definitive error label; the right panel shows the relative
-position of the first error across 701 harmful transitions.}
+\includegraphics[width=\textwidth]{figures/rationale_error_bars.pdf}
+\caption{Qwen3-4B sentence-level error analysis in harmful DS-to-RF
+transitions. Left: distribution of 1,115 erroneous sentences assigned a
+definitive error label. Right: relative position of the first flagged sentence across
+701 harmful transitions, including unresolved error-type ties. Bar labels report percentages, with counts in
+parentheses. Category labels abbreviate the full taxonomy names reported
+in Table~\ref{tab:full-sentence-errors}.}
 \label{fig:rationale-error-analysis}
-\end{minipage}
 \end{figure*}
 
+% \textbf{RF 推理可能在早期形成错误判断，并将其延续至最终评分。}
+% Table~\ref{tab:full-interface-transitions} 显示，当推理协议从 DS
+% 切换至 RF 时，在 SO 和 RS 两种监督目标下，有害预测转移均多于
+% 有益预测转移，但 RS 下两者的差距较小。在完成共识判定的
+% 1,119 个所选转移中，701 个有害转移中有 700 个
+% 的完整 RF rationale 支持错误的 RF 分数，而 418 个有益转移的
+% rationale 均支持 gold score。Figure~\ref{fig:rationale-error-analysis}
+% 进一步显示，评分标准误用和分数映射错误是最常见的错误类型，且
+% 74.9\% 的首个错误出现在 rationale 的前半部分。综合来看，这些
+% 结果表明，RF 推理会影响最终评分，其影响更多表现为有害转移，
+% 且相关错误通常在 rationale 的早期阶段出现。完整统计和裁判协议
+% 见 Appendix~\ref{app:sentence-level-analysis}。
+
+\textbf{RF inference can form erroneous judgments early and carry them
+into the final score.}
+Table~\ref{tab:full-interface-transitions} shows that, when the inference
+protocol switches from DS to RF, harmful prediction transitions
+outnumber beneficial ones under both supervision targets, SO and RS,
+although the gap is smaller under RS. Among the 1,119 selected transitions
+with completed consensus judgments, the complete RF rationale supported
+the incorrect RF score in 700 of the 701 harmful transitions, whereas the
+rationales for all 418 beneficial transitions supported the gold score.
+Figure~\ref{fig:rationale-error-analysis}
+further shows that rubric misapplication and score-mapping errors are
+the most common error types, with 74.9\% of first flagged sentences occurring in
+the first half of the rationale; unresolved error-type ties count as flags in
+this position statistic. Taken together, these results suggest
+that RF inference affects the final score, with its effects more often
+manifesting as harmful transitions and the associated flags typically
+emerging early in the rationale. Full statistics and the adjudication
+protocol are provided in Appendix~\ref{app:sentence-level-analysis}.
+
+
 % \textbf{RF rationale 校正后的评分恢复为推理错误影响最终评分提供了干预证据。}
-% FixOrig 在 157/158 个案例中复现了 NatRF 的原错误分数，验证了
-% 固定前缀重评分设置的可靠性。在此基础上，FixCorr 进一步使
-% 142/158 个案例恢复为 gold score，其余 16 个均由严重错误缩小为
-% 相邻错误，MAE 也由 2.044 降至 0.101
-%（Table~\ref{tab:rationale-correction}）。这些干预结果进一步表明，
-% 在所选有害案例中，RF 推理错误会影响后续评分。
+% 表~\ref{tab:rationale-correction} 比较了 158 个所选有害案例上的三种条件。
+% NatRF 和 FixOrig 的准确率均为 0\%，MAE 也基本一致（2.038 对 2.044）。
+% FixOrig 精确复现了 157/158 个 NatRF 预测
+%（Appendix~\ref{app:full-results}，表~\ref{tab:full-correction-aggregate}），
+% 从而验证固定前缀重评分对照。FixCorr 将准确率提高至 89.87\%，
+% 并将 MAE 降至 0.101；其余 16 个预测均由严重错误缩小为相邻错误。
+% 事后规则一致性审查发现两条 Actionability 修正将给出直接行动的问句
+% 判为 implicit；排除这两条后，FixCorr 仍有 140/156（89.74\%）恢复 gold，
+% MAE 为 0.103。
+% 逐任务恢复率见表~\ref{tab:full-correction-task}。
 
 \textbf{Score recovery after RF rationale correction provides
 intervention evidence that reasoning errors affect final scoring.}
-FixOrig reproduced the original NatRF error in 157 of 158 cases,
-confirming the reliability of the fixed-prefix rescoring setup. With
-this setup validated, FixCorr restored the gold score in 142 of 158
-cases, while all remaining 16 cases improved from severe to adjacent
-errors, reducing MAE from 2.044 to 0.101
-(Table~\ref{tab:rationale-correction}). These intervention results
-further show that, within the selected harmful cases, errors in RF
-reasoning affect subsequent scoring.
+Table~\ref{tab:rationale-correction} compares the three conditions on 158
+selected harmful cases.
+NatRF and FixOrig both have 0\% accuracy,
+with nearly identical MAE (2.038 versus 2.044).
+FixOrig exactly reproduces 157 of 158 NatRF predictions
+(Appendix~\ref{app:full-results},
+Table~\ref{tab:full-correction-aggregate}),
+validating the fixed-prefix rescoring control.
+FixCorr raises accuracy to 89.87\%
+while reducing MAE to 0.101; all remaining 16 predictions improve
+from severe to adjacent errors. A post hoc rubric-consistency review flagged
+two Actionability edits that treated direct-action questions as implicit.
+Excluding these edits, FixCorr still recovers 140 of 156 cases (89.74\%)
+with an MAE of 0.103. Per-task recovery rates are reported in
+Table~\ref{tab:full-correction-task}.
 
-% \paragraph{RQ3：PaIR 和 RePaIR 如何缓解这两个问题？}
-\paragraph{RQ3: How Do PaIR and RePaIR Address These Problems?}
-
-% Figure~\ref{fig:rq3-method-results} 比较了 ReaSon、PaIR 和 RePaIR
-% 相对标准 RS 的变化。ReaSon 将 RF 序数 QWK 从 0.679 提高到
-% 0.707.PaIR 主要改善 DS 性能，而
-% RePaIR 在保持 DS 表现的同时取得最大的 RF 序数提升。完整的
-% 逐任务结果见 Appendix~\ref{app:full-results}。
-
-Figure~\ref{fig:rq3-method-results} compares ReaSon, PaIR, and RePaIR
-against standard RS. ReaSon raises RF ordinal QWK from 0.679 to 0.707. 
-PaIR primarily improves DS performance, whereas
-RePaIR retains the DS gains while producing the largest improvement in
-RF ordinal scoring. Full task-level results are provided in
-Appendix~\ref{app:full-results}.
-
-% \textbf{ReaSon 主要改善了 RF 分支的序数评分。}
-% Table~\ref{tab:full-method-task-level} 显示，在 RF 下，ReaSon 将
-% 四个序数任务的平均 QWK 从 0.679 提高到 0.707，且每个任务均
-% 有所提升，而二分类任务的 Macro-F1 基本不变（0.922 对 0.921）。
-% ReaSon 的增益主要集中在 RF 序数评分；由于训练中未包含 DS prompt，
-% 其 DS 输出存在明显的格式问题
-%（Table~\ref{tab:strict-invalid-rates-all-methods}）。
-
-\textbf{ReaSon primarily improves ordinal scoring on the RF branch.}
-Table~\ref{tab:full-method-task-level} shows that, under RF, ReaSon
-raises the mean QWK across the four ordinal tasks from 0.679 to 0.707,
-with improvements on every task, while leaving binary Macro-F1 nearly
-unchanged (0.922 versus 0.921). ReaSon's gains are therefore
-concentrated in RF ordinal scoring; because DS prompts are absent during
-training, its DS outputs exhibit substantial formatting failures
-(Table~\ref{tab:strict-invalid-rates-all-methods}).
-
-% \textbf{PaIR 主要改善了 DS 分支的评分性能。}
-% Table~\ref{tab:full-method-task-level} 显示，在 DS 下，PaIR 相比
-% 标准 RS 将四个序数任务的平均 QWK 从 0.696 提高到 0.757，
-% 并将三个二分类任务的平均 Macro-F1 从 0.843 提高到 0.934，
-% 且七个任务均有所提升。Table~\ref{tab:pair-mix-ablation} 中的
-% Mix 消融实验进一步显示，在配对训练数据保持一致时，PaIR 在 DS
-% 和 RF 下分别将 QWK 提高 0.015 和 0.008，并将 Macro-F1 提高
-% 0.009 和 0.003。这一结果支持将 PaIR 的额外收益归因于分支级
-% 损失归一化，而非配对数据本身。
-
-\textbf{PaIR primarily improves scoring on the DS branch.}
-Table~\ref{tab:full-method-task-level} shows that, under DS, PaIR
-raises the mean QWK across the four ordinal tasks from 0.696 to 0.757
-and the mean Macro-F1 across the three binary tasks from 0.843 to
-0.934 relative to standard RS, with improvements on all seven tasks.
-The Mix ablation in Table~\ref{tab:pair-mix-ablation} further shows
-that, with the paired training data held fixed, PaIR improves QWK by
-0.015 under DS and 0.008 under RF, and Macro-F1 by 0.009 and 0.003,
-respectively. These results support attributing PaIR's additional gains
-to branch-wise loss normalization rather than to the paired data itself.
-
-\clearpage
 \begin{table}[H]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{2.8pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrrr}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lrrr@{}}
 \toprule
-& \multicolumn{2}{c}{RS} & \multicolumn{2}{c}{SO} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}
-Task & $n$ & FixCorr & $n$ & FixCorr \\
+Metric & NatRF & FixOrig & FixCorr \\
 \midrule
-Actionability         & 22 & 95.45 & 25 & 96.00 \\
-Grounding Specificity & 25 & 96.00 & 18 & 100.00 \\
-Helpfulness           & 4  & 100.00 & -- & -- \\
-Verifiability         & 35 & 74.29 & 29 & 86.21 \\
-\midrule
-Overall               & 86 & \textbf{87.21} & 72 & \textbf{93.06} \\
+Accuracy (\%) $\uparrow$ & 0.00 & 0.00 & \textbf{89.87} \\
+MAE $\downarrow$ & 2.038 & 2.044 & \textbf{0.101} \\
 \bottomrule
-\end{tabular}%
-}
-\caption{Gold-score recovery after rationale correction in
-158 selected harmful cases. Values report FixCorr accuracy (\%); the
-observed FixOrig accuracy is 0\% for these cases.}
+\end{tabular*}
+\caption{Aggregate rationale-correction results on 158 harmful cases.
+FixOrig and FixCorr condition on the original and corrected rationales,
+respectively. Tables~\ref{tab:full-correction-aggregate}--\ref{tab:full-correction-task}
+report detailed recovery results; excluding two post hoc rubric-consistency
+flags yields 140/156 recoveries (89.74\%; MAE 0.103).}
 \label{tab:rationale-correction}
 \end{table}
 
-% 三种方法相对于标准 RS 在 DS 和 RF 接口下的性能变化。
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\columnwidth]
-    {figures/rq3_method_results.pdf}
-    \caption{Performance changes relative to standard RS under DS and RF.
-    QWK is averaged across four ordinal tasks and Macro-F1 across three
-    binary tasks; error bars show the standard deviation across seeds.
-    ReaSon--DS QWK is unavailable under strict parsing.}
-    \label{fig:rq3-method-results}
-\end{figure}
+\begin{table*}[!t]
+\centering
+\small
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llrrrr@{}}
+\toprule
+\multirow{2}{*}{Model} & \multirow{2}{*}{Method}
+& \multicolumn{2}{c}{DS} & \multicolumn{2}{c}{RF} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+& & QWK $\uparrow$ & Macro-F1 $\uparrow$
+  & QWK $\uparrow$ & Macro-F1 $\uparrow$ \\
+\midrule
+\multirow{5}{*}{\textbf{Qwen3-0.6B}}
+& SO     & 0.704 & 0.914 & 0.656 & 0.893 \\
+& RS     & 0.310 & 0.483 & 0.589 & 0.890 \\
+& ReaSon & --$^{\dagger}$ & 0.398 & 0.589 & 0.896 \\
+& PaIR   & \textbf{0.719} & \textbf{0.917} & 0.650 & 0.907 \\
+& RePaIR & 0.718 & 0.916 & \textbf{0.715} & \textbf{0.913} \\
+\addlinespace[2pt]
+\midrule
+\multirow{5}{*}{\textbf{Qwen3-4B}}
+& SO     & 0.747 & 0.928 & 0.712 & 0.923 \\
+& RS     & 0.696 & 0.843 & 0.679 & 0.922 \\
+& ReaSon & --$^{\dagger}$ & 0.551 & 0.707 & 0.921 \\
+& PaIR   & 0.757 & \textbf{0.934} & 0.698 & \textbf{0.929} \\
+& RePaIR & \textbf{0.758} & 0.931 & \textbf{0.735} & 0.926 \\
+\addlinespace[2pt]
+\midrule
+SciRM-7B$^{\ddagger}$ & Released checkpoint
+& \textbf{0.531} & 0.676 & \textbf{0.618} & 0.733 \\
+SciRM-Ref-7B$^{\ddagger}$ & Released checkpoint
+& 0.410 & \textbf{0.706} & 0.533 & \textbf{0.749} \\
+\bottomrule
+\end{tabular*}
+\caption{Cross-task strict performance under DS and RF. QWK and Macro-F1
+average four ordinal and three binary tasks, respectively. Qwen3 values
+average independently trained seeds 42--44; the fixed SciRM checkpoints
+average evaluation runs with seeds 42--44. For SciRM, Label-only and CoT
+inference map to the DS and RF columns, respectively. Bold marks the best
+Qwen3 method per model and interface, and the better SciRM checkpoint per
+column. $^{\dagger}$ReaSon--DS QWK is unavailable because an ordinal task lacks
+defined strict QWK. $^{\ddagger}$The SciRM checkpoints are evaluated without
+additional fine-tuning.}
+\label{tab:model-scale-summary}
+\end{table*}
 
-% \textbf{RePaIR 结合 ReaSon 与 PaIR，在保持 DS 性能的同时改善了
-% RF 评分。}
-% Figure~\ref{fig:rq3-method-results} 和
-% Table~\ref{tab:full-method-task-level} 显示，在 DS 下，RePaIR 的
-% QWK 和 Macro-F1 分别为 0.758 和 0.931，与 PaIR 的 0.757 和
-% 0.934 基本一致。在 RF 下，RePaIR 将 QWK 从 PaIR 的 0.698
-% 提高到 0.735，也高于 ReaSon 的 0.707，并在四个序数任务上均
-% 取得最佳结果；Macro-F1 则与 PaIR 基本持平（0.926 对 0.929）。
-% 这些结果表明，RePaIR 结合了 ReaSon 与 PaIR 的互补优势，在保持
-% PaIR 的 DS 性能的同时，进一步提升了 ReaSon 的 RF 评分表现。
+% \paragraph{RQ3：PaIR 和 RePaIR 在两种接口下表现如何？}
+\paragraph{RQ3: How Do PaIR and RePaIR Perform across Interfaces?}
 
-\textbf{RePaIR combines ReaSon and PaIR to improve scoring under RF
-while preserving DS performance.}
-Figure~\ref{fig:rq3-method-results} and
-Table~\ref{tab:full-method-task-level} show that, under DS, RePaIR
-achieves a QWK of 0.758 and a Macro-F1 of 0.931, closely matching PaIR
-at 0.757 and 0.934. Under RF, RePaIR raises QWK from PaIR's 0.698 to
-0.735, also exceeding ReaSon's 0.707, and achieves the best result on
-all four ordinal tasks, while keeping Macro-F1 close to PaIR (0.926
-versus 0.929). These results show that RePaIR combines the complementary
-strengths of ReaSon and PaIR, preserving PaIR's DS performance while
-further improving ReaSon's RF scoring.
+% 表~\ref{tab:model-scale-summary} 比较两个 Qwen3 规模下的五种训练配置，
+% 并加入公开的 SciRM-7B 与 SciRM-Ref-7B 基线。PaIR 在 DS 下最优或接近最优，
+% RePaIR 在两个规模下均取得最高的 RF 序数 QWK；Qwen3 逐任务结果见
+% 表~\ref{tab:full-method-task-level}。
+
+Table~\ref{tab:model-scale-summary} compares five training configurations
+on both Qwen3 scales with the released SciRM-7B and SciRM-Ref-7B baselines.
+PaIR is strongest or near-strongest under DS, whereas RePaIR has the highest
+RF ordinal QWK at both scales; task-level Qwen3 results appear in
+Table~\ref{tab:full-method-task-level}.
+
+
+
+% \textbf{ReaSon 改善 RF 序数评分。}
+% 在 Qwen3-4B 上，ReaSon 将 RF QWK 从 0.679 提高到 0.707，Macro-F1
+% 基本不变（0.922 对 0.921）；DS 仍受格式失败影响
+%（Table~\ref{tab:strict-invalid-rates-all-methods}）。
+
+\textbf{ReaSon improves RF ordinal scoring.}
+On Qwen3-4B, ReaSon raises RF QWK from 0.679 to 0.707 while leaving
+Macro-F1 nearly unchanged (0.922 versus 0.921); DS remains limited by
+formatting failures (Table~\ref{tab:strict-invalid-rates-all-methods}).
+
+% \textbf{PaIR 主要改善 DS 评分。}
+% 相比 RS，PaIR 将 DS QWK/Macro-F1 从 0.696/0.843 提高到 0.757/0.934。
+% 匹配的 PaIR-BP 消融显示，视图级平均在 DS/RF 下分别提高 aggregate QWK
+% 0.015/0.008，并提高 Macro-F1 0.010/0.004。
+
+\textbf{PaIR primarily improves DS scoring.}
+Relative to RS, PaIR raises DS QWK/Macro-F1 from 0.696/0.843 to
+0.757/0.934. The matched PaIR-BP ablation shows that view-level averaging
+improves aggregate QWK by 0.015/0.008 and Macro-F1 by 0.010/0.004 under
+DS/RF, respectively (Table~\ref{tab:pair-bp-ablation}).
+
+
+% \textbf{RePaIR 支持两种推理接口。}
+% RePaIR 的 DS QWK/Macro-F1 为 0.758/0.931，接近 PaIR 的 0.757/0.934；
+% RF QWK 为 0.735，高于 PaIR 的 0.698 和 ReaSon 的 0.707，RF Macro-F1
+% 与 PaIR 接近（0.926 对 0.929）。
+
+\textbf{RePaIR supports both inference interfaces.}
+RePaIR's DS QWK/Macro-F1 (0.758/0.931) closely matches PaIR
+(0.757/0.934). Under RF, its QWK of 0.735 exceeds PaIR's 0.698 and
+ReaSon's 0.707, while Macro-F1 remains close to PaIR (0.926 versus 0.929).
 
 \flushbottom

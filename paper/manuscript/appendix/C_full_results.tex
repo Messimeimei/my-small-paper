@@ -1,0 +1,336 @@
+\clearpage
+\section{Full Results and Ablations}
+\label{app:full-results}
+
+% 输出解析诊断。
+% 表~\ref{tab:strict-invalid-rates-all-methods} 报告了两种模型规模下的严格解析无效率，
+% 而表~\ref{tab:full-method-task-level-relaxed} 检验宽松提取是否改变总体比较结果。
+\noindent\textbf{Output parsing diagnostics.}
+Table~\ref{tab:strict-invalid-rates-all-methods} reports strict invalidity
+at both model scales, while Table~\ref{tab:full-method-task-level-relaxed} checks
+whether relaxed extraction changes the aggregate comparison.
+
+% 配对训练消融实验
+\subsection{Paired-Training Ablations}
+\label{app:ssa-v2-ablation}
+
+% PaIR-BP 保持配对样本、初始化和训练日程不变，仅改变损失聚合方式。
+PaIR-BP holds paired examples, initialization, and the training schedule
+fixed while changing only loss aggregation.
+
+% PaIR-SV 使用单个 RF 视图，分别对理由区域和评分区域的损失取平均，
+% 然后以相同权重进行加权求和：
+PaIR-SV uses one RF view and separately averages rationale- and score-region
+losses as
+\[
+\mathcal{L}_{\mathrm{PaIR\text{-}SV}}
+=0.5\mathcal{L}_{\mathrm{RF,rat}}
++0.5\mathcal{L}_{\mathrm{RF,score}}.
+\]
+
+% 表 9 展示 PaIR-SV 的严格格式有效率，表 10 比较 PaIR 和 PaIR-BP 的性能。
+Table~\ref{tab:ssa-v2-format-validity} reports PaIR-SV's strict format-validity
+rates, while Table~\ref{tab:pair-bp-ablation} compares PaIR and PaIR-BP.
+
+% 展示 PaIR-SV 的格式无效率问题
+\begin{table}[H]
+\centering
+\captionsetup{font=compacttable,skip=2pt}
+
+{\fontsize{8.5pt}{9.2pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{0.82}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}llrrr@{}}
+\toprule
+Interface & Task & S42 & S43 & S44 \\
+\midrule
+\multirow{7}{*}{DS}
+& Actionability & 100.0 & 70.9 & 49.1 \\
+& Grounding Spec. & 99.3 & 98.4 & 100.0 \\
+& Helpfulness & 98.9 & 48.7 & 84.0 \\
+& Verifiability & 97.7 & 39.3 & 100.0 \\
+& Coherence & 73.7 & 89.6 & 100.0 \\
+& Pos. Check & 100.0 & 100.0 & -- \\
+& Pos. Type & -- & -- & -- \\
+\midrule
+\multirow{7}{*}{RF}
+& Actionability & 100.0 & 100.0 & 100.0 \\
+& Grounding Spec. & 100.0 & 100.0 & 100.0 \\
+& Helpfulness & 100.0 & 100.0 & 100.0 \\
+& Verifiability & 100.0 & 100.0 & 100.0 \\
+& Coherence & 100.0 & 100.0 & 100.0 \\
+& Pos. Check & 100.0 & 100.0 & -- \\
+& Pos. Type & -- & -- & -- \\
+\bottomrule
+\end{tabular*}
+}
+
+% Qwen3-4B 上 PaIR-SV 消融实验的严格格式有效率；破折号表示未运行。
+\caption{Strict format-validity rates (\%) for the PaIR-SV ablation on
+Qwen3-4B. Dashes indicate unavailable runs.}
+\label{tab:ssa-v2-format-validity}
+\end{table}
+
+% PaIR 和 PaIR-BP 的对比
+\begin{table*}[!t]
+\centering
+\captionsetup{font=compacttable,skip=3pt}
+
+{\fontsize{9pt}{9.8pt}\selectfont
+\setlength{\tabcolsep}{0pt}
+\renewcommand{\arraystretch}{0.86}
+
+\begin{minipage}[t]{0.49\textwidth}
+\centering
+\textbf{DS}\\[2pt]
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lrrr@{}}
+\toprule
+Task & PaIR-BP & PaIR & $\Delta$ \\
+\midrule
+Action.       & $0.790 \pm 0.009$ & $0.783 \pm 0.004$ & $-0.007$ \\
+Grounding     & $0.723 \pm 0.008$ & $\mathbf{0.749} \pm 0.008$ & $+0.026$ \\
+Helpfulness   & $0.714 \pm 0.005$ & $\mathbf{0.727} \pm 0.013$ & $+0.014$ \\
+Verifiability & $0.740 \pm 0.003$ & $\mathbf{0.768} \pm 0.004$ & $+0.028$ \\
+QWK mean      & 0.742 & \textbf{0.757} & $+0.015$ \\
+\midrule
+Coherence     & $0.776 \pm 0.008$ & $\mathbf{0.804} \pm 0.018$ & $+0.028$ \\
+Pos. Check    & $0.998 \pm 0.002$ & $\mathbf{0.999} \pm 0.001$ & $+0.001$ \\
+Pos. Type     & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $0.000$ \\
+F1 mean       & 0.925 & \textbf{0.934} & $+0.010$ \\
+\bottomrule
+\end{tabular*}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\textwidth}
+\centering
+\textbf{RF}\\[2pt]
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}lrrr@{}}
+\toprule
+Task & PaIR-BP & PaIR & $\Delta$ \\
+\midrule
+Action.       & $0.728 \pm 0.007$ & $\mathbf{0.735} \pm 0.008$ & $+0.007$ \\
+Grounding     & $0.678 \pm 0.003$ & $\mathbf{0.706} \pm 0.013$ & $+0.027$ \\
+Helpfulness   & $0.678 \pm 0.012$ & $\mathbf{0.682} \pm 0.033$ & $+0.004$ \\
+Verifiability & $\mathbf{0.674} \pm 0.009$ & $0.667 \pm 0.013$ & $-0.007$ \\
+QWK mean      & 0.690 & \textbf{0.698} & $+0.008$ \\
+\midrule
+Coherence     & $0.781 \pm 0.003$ & $\mathbf{0.792} \pm 0.006$ & $+0.011$ \\
+Pos. Check    & $0.996 \pm 0.002$ & $0.996 \pm 0.001$ & $0.000$ \\
+Pos. Type     & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $0.000$ \\
+F1 mean       & 0.926 & \textbf{0.929} & $+0.004$ \\
+\bottomrule
+\end{tabular*}
+\end{minipage}
+}
+
+% Qwen3-4B 上 PaIR-BP 损失聚合方式的消融实验。
+\caption{PaIR-BP loss-aggregation ablation on Qwen3-4B under matched
+supervision. PaIR-BP and PaIR use the same training examples, schedule,
+initialization, and inference protocols. $\Delta$ is PaIR minus PaIR-BP,
+computed from unrounded values. QWK and Macro-F1 apply to ordinal and binary
+tasks, respectively.}
+\label{tab:pair-bp-ablation}
+\end{table*}
+
+% 展示格式无效率
+\begin{table*}[p]
+\centering
+\captionsetup{font=compacttable,skip=3pt}
+
+{\fontsize{9pt}{9.8pt}\selectfont
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{0.86}
+\begin{tabular*}{\textwidth}{
+  @{\extracolsep{\fill}}llccccc@{}
+}
+\toprule
+& & \multicolumn{5}{c}{Strict-format invalid rate (\%), DS/RF} \\
+\cmidrule(lr){3-7}
+Model & Task & SO & RS & ReaSon & PaIR & RePaIR \\
+\midrule
+
+\multirow{7}{*}{Qwen3-4B}
+& Actionability
+& 0.00/0.17 & 0.93/0.00 & 15.10/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Grounding Spec.
+& 0.00/0.03 & 0.00/0.00 & 19.07/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Helpfulness
+& 0.00/0.07 & 0.00/0.00 & 100.00/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Verifiability
+& 0.00/0.00 & 0.00/0.00 & 85.91/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Coherence
+& 0.00/0.10 & 2.55/0.00 & 29.29/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Pos. Check
+& 0.00/0.00 & 7.79/0.00 & 49.03/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Pos. Type
+& 0.00/0.33 & 0.00/0.00 & 35.46/0.00 & 0.00/0.00 & 0.00/0.00 \\
+\midrule
+
+\multirow{7}{*}{Qwen3-0.6B}
+& Actionability
+& 0.00/0.20 & 66.50/0.00 & 100.00/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Grounding Spec.
+& 0.00/1.97 & 0.00/0.00 & 97.10/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Helpfulness
+& 0.00/0.10 & 0.00/0.00 & 27.00/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Verifiability
+& 0.00/0.47 & 8.63/0.00 & 76.82/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Coherence
+& 0.00/8.16 & 0.00/0.00 & 0.00/0.00 & 0.00/0.06 & 0.00/0.00 \\
+& Pos. Check
+& 0.00/0.88 & 0.00/0.00 & 0.00/0.00 & 0.00/0.00 & 0.00/0.00 \\
+& Pos. Type
+& 0.00/0.16 & 0.00/0.00 & 0.00/0.00 & 0.00/0.00 & 0.00/0.00 \\
+\bottomrule
+\end{tabular*}
+}
+
+\caption{Strict-format invalid rates (\%) by model scale, task, method,
+and inference interface. Each cell reports DS/RF. Values are one minus
+the mean strict format-valid rate over seeds 42--44. PaIR-BP is omitted
+because it was run only at 4B, where its invalid rate is 0.00\% for every
+task and interface.}
+\label{tab:strict-invalid-rates-all-methods}
+\end{table*}
+
+% 展示两个模型规模下 SO 和 RS 的补充结果
+\begin{table*}[!t]
+\centering
+\captionsetup{font=compacttable,skip=3pt}
+
+{\fontsize{9pt}{9.8pt}\selectfont
+\setlength{\tabcolsep}{2.0pt}
+\renewcommand{\arraystretch}{0.85}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}clrrrr@{}}
+\toprule
+& & \multicolumn{2}{c}{SO} & \multicolumn{2}{c}{RS} \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-6}
+Model--Inf. & Task & Pearson & Accuracy (\%) & Pearson & Accuracy (\%) \\
+\midrule
+
+\multirow{7}{*}{4B--DS}
+& Actionability & \textbf{0.790} $\pm$ 0.004 & \textbf{54.067} $\pm$ 0.208 & 0.766 $\pm$ 0.006 & 52.067 $\pm$ 0.611 \\
+& Grounding Specificity & \textbf{0.765} $\pm$ 0.014 & \textbf{70.967} $\pm$ 1.415 & 0.706 $\pm$ 0.021 & 57.167 $\pm$ 2.023 \\
+& Helpfulness & \textbf{0.736} $\pm$ 0.005 & \textbf{60.433} $\pm$ 1.159 & 0.685 $\pm$ 0.006 & 56.067 $\pm$ 1.286 \\
+& Verifiability & \textbf{0.763} $\pm$ 0.002 & \textbf{60.533} $\pm$ 0.772 & 0.695 $\pm$ 0.021 & 45.093 $\pm$ 2.475 \\
+& Coherence & \textbf{0.576} $\pm$ 0.008 & \textbf{78.776} $\pm$ 0.417 & 0.498 $\pm$ 0.014 & 72.658 $\pm$ 1.447 \\
+& Positioning Check & \textbf{0.994} $\pm$ 0.004 & \textbf{99.724} $\pm$ 0.191 & 0.971 $\pm$ 0.007 & 90.824 $\pm$ 13.023 \\
+& Positioning Type & \textbf{1.000} $\pm$ 0.000 & \textbf{100.000} $\pm$ 0.000 & 0.746 $\pm$ 0.052 & 85.948 $\pm$ 3.546 \\
+\midrule
+
+\multirow{7}{*}{4B--RF}
+& Actionability & \textbf{0.759} $\pm$ 0.011 & \textbf{51.900} $\pm$ 2.088 & 0.722 $\pm$ 0.010 & 48.933 $\pm$ 1.290 \\
+& Grounding Specificity & \textbf{0.730} $\pm$ 0.004 & 63.967 $\pm$ 1.007 & 0.713 $\pm$ 0.015 & \textbf{68.267} $\pm$ 1.002 \\
+& Helpfulness & \textbf{0.711} $\pm$ 0.005 & \textbf{60.033} $\pm$ 0.473 & 0.675 $\pm$ 0.006 & 56.000 $\pm$ 0.700 \\
+& Verifiability & \textbf{0.700} $\pm$ 0.011 & \textbf{56.007} $\pm$ 0.651 & 0.678 $\pm$ 0.010 & 51.142 $\pm$ 0.553 \\
+& Coherence & \textbf{0.548} $\pm$ 0.017 & \textbf{77.310} $\pm$ 0.867 & 0.543 $\pm$ 0.006 & 77.151 $\pm$ 0.287 \\
+& Positioning Check & \textbf{0.994} $\pm$ 0.005 & \textbf{99.724} $\pm$ 0.253 & 0.988 $\pm$ 0.002 & 99.392 $\pm$ 0.096 \\
+& Positioning Type & 0.996 $\pm$ 0.006 & 99.510 $\pm$ 0.490 & \textbf{1.000} $\pm$ 0.000 & \textbf{100.000} $\pm$ 0.000 \\
+\midrule
+
+\multirow{7}{*}{0.6B--DS}
+& Actionability & \textbf{0.747} $\pm$ 0.007 & \textbf{51.767} $\pm$ 0.379 & 0.316 $\pm$ 0.146 & 10.067 $\pm$ 13.983 \\
+& Grounding Specificity & \textbf{0.715} $\pm$ 0.007 & \textbf{68.333} $\pm$ 0.503 & 0.526 $\pm$ 0.049 & 48.567 $\pm$ 4.500 \\
+& Helpfulness & \textbf{0.677} $\pm$ 0.004 & \textbf{56.800} $\pm$ 0.755 & 0.462 $\pm$ 0.007 & 50.133 $\pm$ 1.620 \\
+& Verifiability & \textbf{0.744} $\pm$ 0.001 & \textbf{60.152} $\pm$ 1.250 & 0.403 $\pm$ 0.081 & 18.951 $\pm$ 5.581 \\
+& Coherence & \textbf{0.487} $\pm$ 0.007 & \textbf{74.315} $\pm$ 0.362 & 0.219 $\pm$ 0.070 & 55.609 $\pm$ 3.653 \\
+& Positioning Check & \textbf{0.998} $\pm$ 0.002 & \textbf{99.889} $\pm$ 0.096 & 0.374 $\pm$ 0.109 & 59.093 $\pm$ 7.708 \\
+& Positioning Type & \textbf{1.000} $\pm$ 0.000 & \textbf{100.000} $\pm$ 0.000 & 0.279 $\pm$ 0.051 & 46.895 $\pm$ 4.169 \\
+\midrule
+
+\multirow{7}{*}{0.6B--RF}
+& Actionability & \textbf{0.739} $\pm$ 0.020 & \textbf{48.967} $\pm$ 2.003 & 0.603 $\pm$ 0.012 & 41.267 $\pm$ 0.907 \\
+& Grounding Specificity & \textbf{0.672} $\pm$ 0.018 & 60.633 $\pm$ 5.187 & 0.655 $\pm$ 0.006 & \textbf{64.367} $\pm$ 0.058 \\
+& Helpfulness & \textbf{0.641} $\pm$ 0.017 & \textbf{50.400} $\pm$ 1.652 & 0.560 $\pm$ 0.010 & 49.233 $\pm$ 0.764 \\
+& Verifiability & \textbf{0.670} $\pm$ 0.010 & 46.701 $\pm$ 3.450 & 0.630 $\pm$ 0.001 & \textbf{49.958} $\pm$ 0.765 \\
+& Coherence & \textbf{0.445} $\pm$ 0.017 & 66.189 $\pm$ 4.723 & 0.409 $\pm$ 0.017 & \textbf{70.427} $\pm$ 0.857 \\
+& Positioning Check & \textbf{0.998} $\pm$ 0.002 & 99.005 $\pm$ 0.760 & 0.992 $\pm$ 0.002 & \textbf{99.613} $\pm$ 0.096 \\
+& Positioning Type & \textbf{0.993} $\pm$ 0.013 & \textbf{99.510} $\pm$ 0.849 & 0.941 $\pm$ 0.011 & 97.222 $\pm$ 0.566 \\
+\bottomrule
+\end{tabular*}
+}
+
+% 严格解析下 Qwen3-4B 和 Qwen3-0.6B 的 SO 与 RS 补充结果。
+% 数值为随机种子 42--44 上的均值及样本标准差。
+% Pearson 仅使用严格可解析的预测；Accuracy 使用完整测试集，并将无效输出计为错误。
+% 粗体表示同一模型、推理接口和任务下，每项指标更高的 SO/RS 结果。
+\caption{Additional SO and RS results under strict parsing for Qwen3-4B
+and Qwen3-0.6B. Values are mean $\pm$ sample SD across seeds 42--44.
+Pearson uses strictly extractable predictions; accuracy uses the full test
+set and counts invalid outputs as incorrect. Bold marks the higher SO/RS
+value for each metric within each model--interface--task row.}
+\label{tab:full-so-rs-secondary-merged}
+\end{table*}
+
+% 宽松解析下的完整模型结果
+\begin{table*}[!tp]
+\centering
+\captionsetup{font=compacttable,skip=3pt}
+
+{\fontsize{9pt}{9.8pt}\selectfont
+\setlength{\tabcolsep}{0.8pt}
+\renewcommand{\arraystretch}{0.85}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}clccccc@{}}
+\toprule
+Model--Inf. & Task & SO & RS & ReaSon & PaIR & RePaIR \\
+\midrule
+
+\multirow{8}{*}{4B--DS}
+& Actionability & 0.782 $\pm$ 0.003 & 0.764 $\pm$ 0.003 & 0.748 $\pm$ 0.037 & 0.783 $\pm$ 0.004 & \textbf{0.786} $\pm$ 0.002 \\
+& Grounding Spec. & 0.742 $\pm$ 0.024 & 0.687 $\pm$ 0.034 & 0.682 $\pm$ 0.035 & 0.749 $\pm$ 0.008 & \textbf{0.751} $\pm$ 0.004 \\
+& Helpfulness & 0.721 $\pm$ 0.008 & 0.676 $\pm$ 0.013 & 0.659 $\pm$ 0.023 & 0.727 $\pm$ 0.013 & \textbf{0.729} $\pm$ 0.003 \\
+& Verifiability & 0.744 $\pm$ 0.015 & 0.659 $\pm$ 0.032 & 0.744 $\pm$ 0.018 & \textbf{0.768} $\pm$ 0.004 & 0.764 $\pm$ 0.002 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.788 $\pm$ 0.004 & 0.748 $\pm$ 0.006 & 0.731 $\pm$ 0.005 & \textbf{0.804} $\pm$ 0.018 & 0.798 $\pm$ 0.002 \\
+& Positioning Check & 0.997 $\pm$ 0.002 & 0.986 $\pm$ 0.005 & 0.990 $\pm$ 0.002 & \textbf{0.999} $\pm$ 0.001 & 0.996 $\pm$ 0.001 \\
+& Positioning Type & \textbf{1.000} $\pm$ 0.000 & 0.854 $\pm$ 0.035 & 0.813 $\pm$ 0.007 & \textbf{1.000} $\pm$ 0.000 & \textbf{1.000} $\pm$ 0.000 \\
+& \textit{Mean (QWK/F1)} & 0.747/0.928 & 0.697/0.863 & 0.708/0.844 & 0.757/\textbf{0.934} & \textbf{0.758}/0.931 \\
+\midrule
+
+\multirow{8}{*}{4B--RF}
+& Actionability & 0.742 $\pm$ 0.013 & 0.716 $\pm$ 0.010 & 0.736 $\pm$ 0.011 & 0.735 $\pm$ 0.008 & \textbf{0.757} $\pm$ 0.012 \\
+& Grounding Spec. & 0.724 $\pm$ 0.004 & 0.673 $\pm$ 0.016 & 0.694 $\pm$ 0.008 & 0.706 $\pm$ 0.013 & \textbf{0.726} $\pm$ 0.005 \\
+& Helpfulness & 0.704 $\pm$ 0.007 & 0.668 $\pm$ 0.008 & 0.691 $\pm$ 0.003 & 0.682 $\pm$ 0.033 & \textbf{0.724} $\pm$ 0.005 \\
+& Verifiability & 0.680 $\pm$ 0.020 & 0.657 $\pm$ 0.010 & 0.708 $\pm$ 0.028 & 0.667 $\pm$ 0.013 & \textbf{0.732} $\pm$ 0.010 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.773 $\pm$ 0.008 & 0.771 $\pm$ 0.003 & 0.770 $\pm$ 0.004 & \textbf{0.792} $\pm$ 0.006 & 0.783 $\pm$ 0.006 \\
+& Positioning Check & \textbf{0.997} $\pm$ 0.003 & 0.994 $\pm$ 0.001 & 0.994 $\pm$ 0.001 & 0.996 $\pm$ 0.001 & 0.995 $\pm$ 0.002 \\
+& Positioning Type & 0.997 $\pm$ 0.003 & \textbf{1.000} $\pm$ 0.000 & 0.998 $\pm$ 0.003 & \textbf{1.000} $\pm$ 0.000 & \textbf{1.000} $\pm$ 0.000 \\
+& \textit{Mean (QWK/F1)} & 0.712/0.923 & 0.679/0.922 & 0.707/0.921 & 0.698/\textbf{0.929} & \textbf{0.735}/0.926 \\
+\midrule
+
+\multirow{8}{*}{0.6B--DS}
+& Actionability & 0.741 $\pm$ 0.007 & 0.169 $\pm$ 0.108 & -- & \textbf{0.750} $\pm$ 0.007 & 0.750 $\pm$ 0.003 \\
+& Grounding Spec. & 0.685 $\pm$ 0.010 & 0.359 $\pm$ 0.090 & 0.295 $\pm$ 0.117 & 0.709 $\pm$ 0.011 & \textbf{0.715} $\pm$ 0.006 \\
+& Helpfulness & 0.660 $\pm$ 0.004 & 0.393 $\pm$ 0.008 & 0.380 $\pm$ 0.061 & \textbf{0.679} $\pm$ 0.005 & 0.669 $\pm$ 0.004 \\
+& Verifiability & 0.731 $\pm$ 0.005 & 0.321 $\pm$ 0.104 & 0.405 $\pm$ 0.184 & \textbf{0.740} $\pm$ 0.001 & 0.738 $\pm$ 0.009 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.743 $\pm$ 0.004 & 0.450 $\pm$ 0.073 & 0.337 $\pm$ 0.003 & \textbf{0.752} $\pm$ 0.009 & 0.749 $\pm$ 0.010 \\
+& Positioning Check & 0.999 $\pm$ 0.001 & 0.552 $\pm$ 0.101 & 0.410 $\pm$ 0.144 & 0.999 $\pm$ 0.001 & \textbf{0.999} $\pm$ 0.001 \\
+& Positioning Type & \textbf{1.000} $\pm$ 0.000 & 0.446 $\pm$ 0.054 & 0.447 $\pm$ 0.067 & \textbf{1.000} $\pm$ 0.000 & \textbf{1.000} $\pm$ 0.000 \\
+& \textit{Mean (QWK/F1)} & 0.704/0.914 & 0.310/0.483 & --$^{\dagger}$/0.398 & \textbf{0.719}/\textbf{0.917} & 0.718/0.916 \\
+\midrule
+
+\multirow{8}{*}{0.6B--RF}
+& Actionability & 0.690 $\pm$ 0.038 & 0.596 $\pm$ 0.014 & 0.595 $\pm$ 0.022 & 0.681 $\pm$ 0.018 & \textbf{0.743} $\pm$ 0.004 \\
+& Grounding Spec. & 0.658 $\pm$ 0.014 & 0.590 $\pm$ 0.001 & 0.588 $\pm$ 0.006 & 0.651 $\pm$ 0.006 & \textbf{0.703} $\pm$ 0.006 \\
+& Helpfulness & 0.629 $\pm$ 0.013 & 0.559 $\pm$ 0.010 & 0.557 $\pm$ 0.011 & 0.625 $\pm$ 0.005 & \textbf{0.687} $\pm$ 0.006 \\
+& Verifiability & 0.646 $\pm$ 0.013 & 0.611 $\pm$ 0.007 & 0.616 $\pm$ 0.007 & 0.643 $\pm$ 0.012 & \textbf{0.729} $\pm$ 0.002 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.688 $\pm$ 0.029 & 0.704 $\pm$ 0.009 & 0.709 $\pm$ 0.003 & 0.727 $\pm$ 0.016 & \textbf{0.746} $\pm$ 0.007 \\
+& Positioning Check & 0.994 $\pm$ 0.005 & 0.996 $\pm$ 0.001 & 0.990 $\pm$ 0.002 & \textbf{0.997} $\pm$ 0.003 & 0.995 $\pm$ 0.004 \\
+& Positioning Type & 0.996 $\pm$ 0.007 & 0.969 $\pm$ 0.006 & 0.989 $\pm$ 0.000 & 0.996 $\pm$ 0.003 & \textbf{0.996} $\pm$ 0.003 \\
+& \textit{Mean (QWK/F1)} & 0.656/0.893 & 0.589/0.890 & 0.589/0.896 & 0.650/0.907 & \textbf{0.715}/\textbf{0.913} \\
+\bottomrule
+\end{tabular*}
+}
+
+\caption{Task-level relaxed-parsing primary results for Qwen3-4B and
+Qwen3-0.6B, recomputed from the same model outputs as
+Table~\ref{tab:full-method-task-level}. Values are mean $\pm$ sample SD
+across seeds 42--44; cross-task means use unrounded values. Mean cells report
+QWK/Macro-F1. For QWK, residual invalid outputs are excluded; Macro-F1 retains
+the full test set and counts residual invalid outputs as errors.
+$^{\dagger}$The ReaSon--DS QWK mean at 0.6B is unavailable because
+Actionability has no defined QWK after relaxed extraction.}
+\label{tab:full-method-task-level-relaxed}
+\end{table*}

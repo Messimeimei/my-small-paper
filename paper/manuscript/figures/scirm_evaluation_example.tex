@@ -31,6 +31,8 @@
 % 该命令生成 [QUERY]、[CRITERIA]、[ANSWER] 等粗体字段名。
 % 修改 ink 可统一换色；修改 \textbf 可取消粗体。
 \newcommand{\field}[1]{\textcolor{ink}{\textbf{[#1]}}}
+% 统一图中正文和小标签字号。
+\newcommand{\figuretext}{\fontsize{8.0}{9.0}\selectfont}
 
 \begin{document}
 \begin{tikzpicture}[
@@ -43,11 +45,11 @@
 % ======================== 上方 PROMPT 区域 ========================
 
 % 组件 1：上方 prompt 总外框。
-% 左上角为 (0,0)，右下角为 (16.0,-4.70)，因此宽 16.0、高 4.70。
+% 左上角为 (0,0)，右下角为 (16.0,-4.75)，因此宽 16.0、高 4.75。
 % 修改右下角第一个数可改宽度，修改第二个数可改高度。
 % line width 控制边框粗细；rounded corners 控制圆角大小；fill 控制背景。
 \draw[draw=rulegray, fill=panelbg, line width=0.75pt, rounded corners=5pt]
-  (0,0) rectangle (16.0,-4.70);
+  (0,0) rectangle (16.0,-4.75);
 
 % 组件 2：RF 与 DS system prompt 之间的竖直分隔线。
 % x=8.0 控制左右分栏比例；两个 y 控制线条的顶部和底部。
@@ -55,16 +57,16 @@
 \draw[rulegray!70, line width=0.45pt] (8.0,-0.28) -- (8.0,-2.15);
 
 % 组件 3：system prompt 与 shared user prompt 之间的水平分隔线。
-% y=-2.42 控制上下区域比例；两端 x=0.35 和 x=15.65 控制左右留白。
+% y=-2.50 控制上下区域比例；两端 x=0.35 和 x=15.65 控制左右留白。
 % y 越接近 0，上方区域越矮；y 越小，上方区域越高。
-\draw[rulegray!70, line width=0.45pt] (0.35,-2.42) -- (15.65,-2.42);
+\draw[rulegray!70, line width=0.45pt] (0.35,-2.50) -- (15.65,-2.50);
 
 % 组件 4：左上方 RF system prompt 文本节点。
 % at (0.38,-0.30) 是文本左上角；修改 x/y 可整体移动。
-% text width=7.15cm 控制换行宽度；font 中的 \scriptsize 控制字号。
+% text width=7.50cm 控制换行宽度；font 中的 \figuretext 控制统一的小字号。
 % 标题颜色由 rfaccent 控制；\par\vspace{3pt} 控制标题与正文间距。
-\node[anchor=north west, align=left, text width=7.15cm,
-      font=\rmfamily\scriptsize] at (0.38,-0.30) {%
+\node[anchor=north west, align=left, text width=7.50cm,
+      font=\rmfamily\figuretext] at (0.38,-0.30) {%
   \textcolor{rfaccent}{\textbf{RF system prompt (CoT format)}}\par\vspace{3pt}
   You are an evaluator of expert-domain scientific writing. Evaluate the
   answer against the query, criterion, and scoring rubric. First output your
@@ -75,10 +77,10 @@
 
 % 组件 5：右上方 DS system prompt 文本节点。
 % at (8.38,-0.30) 是文本左上角；x 应保持在竖直分隔线 x=8.0 的右侧。
-% text width=7.15cm 控制换行；若修改竖直分隔线，应同步调整 x 和 text width。
+% text width=7.50cm 控制换行；若修改竖直分隔线，应同步调整 x 和 text width。
 % 标题颜色由 dsaccent 控制；字号和标题间距的修改方法与组件 4 相同。
-\node[anchor=north west, align=left, text width=7.15cm,
-      font=\rmfamily\scriptsize] at (8.38,-0.30) {%
+\node[anchor=north west, align=left, text width=7.50cm,
+      font=\rmfamily\figuretext] at (8.38,-0.30) {%
   \textcolor{dsaccent}{\textbf{DS system prompt (label-only format)}}\par\vspace{3pt}
   You are an evaluator of expert-domain scientific writing. Evaluate the
   answer against the query, criterion, and scoring rubric. Output only the
@@ -87,11 +89,11 @@
 };
 
 % 组件 6：下方 shared user prompt 文本节点。
-% at (0.40,-2.67) 是文本左上角；text width=15.20cm 使其横跨整个外框。
+% at (0.40,-2.72) 是文本左上角；text width=15.20cm 使其横跨整个外框。
 % 修改 y 可整体上下移动；修改 text width 可调整右侧留白和换行位置。
 % \centering 仅作用于标题，后面的 \raggedright 恢复正文左对齐。
 \node[anchor=north west, align=left, text width=15.20cm,
-      font=\rmfamily\scriptsize] at (0.40,-2.67) {%
+      font=\rmfamily\figuretext] at (0.40,-2.72) {%
   % 组件 6a：共享 user prompt 标题；vspace 控制标题与 QUERY 的距离。
   \centering\textbf{Shared user prompt}\par\vspace{4pt}
   \raggedright
@@ -110,7 +112,7 @@
 % 组件 7：gold label。
 % at (8.0,-4.98) 控制中心位置；x=8.0 表示水平居中。
 % 更换样例时修改数字 5，并同步修改 RF/DS 分数与图注。
-\node[font=\rmfamily\scriptsize\bfseries] at (8.0,-4.98)
+\node[font=\rmfamily\figuretext\bfseries] at (8.0,-4.98)
   {Gold label: 5};
 
 % ======================== RF 协议与输出 ========================
@@ -159,12 +161,12 @@
 
 % 组件 16：RF 分数小框内的数字。
 % at (2.825,-6.35) 是组件 15 的中心；移动小框时应同步修改。
-\node[text=rfaccent, font=\rmfamily\scriptsize\bfseries]
+\node[text=rfaccent, font=\rmfamily\figuretext\bfseries]
   at (2.825,-6.35) {5};
 
 % 组件 17：Rationale-first 小字，位于路径下方。
 % at (1.46,-6.76) 位于箭头本身的水平中心，而不是整个路径的中心。
-\node[font=\rmfamily\scriptsize]
+\node[font=\rmfamily\figuretext]
   at (1.46,-6.76) {Rationale-first};
 
 % 组件 18：RF 右侧输出外框。
@@ -179,7 +181,7 @@
 % text width=11.65cm 控制换行；外框左移时可以增大，右移时必须减小。
 % 更换真实输出时替换节点内部文字，并保留 reasoning/score 标签格式。
 \node[anchor=north west, align=left, text width=11.65cm,
-      font=\rmfamily\scriptsize] at (3.87,-5.53) {%
+      font=\rmfamily\figuretext] at (3.87,-5.53) {%
   \textbf{\texttt{<reasoning>}} The answer is a question that asks the authors
   to include agreement statistics for the corpus in specific sections of the
   paper. This is a direct request that provides a clear action (include
@@ -219,12 +221,12 @@
 
 % 组件 24：DS 分数小框内的数字。
 % at (2.825,-8.86) 是组件 23 的中心；移动小框时应同步修改。
-\node[text=dsaccent, font=\rmfamily\scriptsize\bfseries]
+\node[text=dsaccent, font=\rmfamily\figuretext\bfseries]
   at (2.825,-8.86) {5};
 
 % 组件 25：Direct scoring 小字，位于路径下方。
 % at (1.46,-9.27) 位于箭头本身的水平中心，而不是整个路径的中心。
-\node[font=\rmfamily\scriptsize]
+\node[font=\rmfamily\figuretext]
   at (1.46,-9.27) {Direct scoring};
 
 % 组件 26：DS 右侧输出外框。

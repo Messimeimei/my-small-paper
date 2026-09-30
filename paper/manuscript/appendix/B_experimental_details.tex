@@ -1,0 +1,256 @@
+\clearpage
+\section{Training and Evaluation Protocols}
+\label{app:experimental-details}
+\label{app:external-llm}
+
+\subsection{Local Training and Inference}
+
+% 在每个模型规模内，所有方法使用相同的 Qwen3 backbone、LoRA 配置和固定划分。
+% Qwen chat template 在训练和评测时均关闭，内置 thinking mode；RF rationale 
+% 仅由显式 RF system prompt 触发。
+Within each model scale, all methods use the same Qwen3 backbone, LoRA
+configuration, and fixed data splits. Training and evaluation
+render prompts with the Qwen chat template while disabling its built-in
+thinking mode (\texttt{enable\_thinking=false}); RF rationales are elicited
+only by the explicit RF system prompt.
+
+% LoRA 应用于所有线性层，r=16、alpha=32、dropout=0.05、bias=none。
+% 所有方法使用学习率 1e-4、余弦衰减、0.03 warm-up、3 epochs、
+% 最大梯度范数 0.3、8 步梯度累积、BF16、SDPA 和 gradient checkpointing。
+LoRA is applied to all linear layers with rank \(r=16\), scaling factor
+\(\alpha=32\), dropout 0.05, and \texttt{bias=none}. All methods use a
+learning rate of \(1\!\times\!10^{-4}\), cosine decay, a 0.03 warm-up ratio,
+three epochs, a maximum gradient norm of 0.3, eight gradient-accumulation
+steps, BF16 precision, SDPA attention, and gradient checkpointing with
+\texttt{use\_reentrant=False}.
+% 每个 epoch 后进行验证并保存 checkpoint，最终评测统一使用保存的最后一个 checkpoint。
+% 本地推理采用 bfloat16 精度的 vLLM，并使用确定性贪心解码，
+% 其中 \texttt{temperature=0}、\texttt{top\_p=1}。
+Validation and checkpoint saving occur after each epoch, and final evaluation
+consistently uses the last checkpoint. Local inference
+uses bfloat16 vLLM and deterministic
+greedy decoding with \texttt{temperature=0} and \texttt{top\_p=1}.
+
+% SO 只监督最终分数；RS 和 ReaSon 监督 rationale 与分数。
+% PaIR-BP、PaIR 和 RePaIR 为每个源样本构造配对的 DS 分数序列与
+% RF rationale--score 序列。任务 user prompt 在所有方法间共享。
+The supervision format differs by method. SO supervises only the final score,
+whereas RS and ReaSon supervise a rationale followed by the score. PaIR-BP,
+PaIR, and RePaIR construct paired sequences for every source example: a
+score-only DS branch and a rationale-and-score RF branch. The corresponding
+system and completion formats are shown in Figure~\ref{fig:scirm-evaluation};
+task-specific user prompts are shared across methods and indexed in
+Table~\ref{tab:prompt-map}.
+
+% SO、RS 和 ReaSon 的每设备训练和评测 batch 均为 2。PaIR 系列的源样本
+% batch 为 1，由 collator 展开成 DS/RF 两条序列；评测 batch 仍为 2。
+SO, RS, and ReaSon use standard SFT with per-device training and evaluation
+batch sizes of 2. PaIR-BP, PaIR, and RePaIR use a per-device source-example
+batch size of 1; the paired-view collator expands each source row into one DS
+and one RF sequence. Evaluation batch size remains 2.
+
+% PaIR 分别在 DS 与 RF completion 的监督 token 上计算均值，再以 0.5/0.5
+% 聚合。PaIR-BP 则把两个视图的监督 token 放在同一分母下平均。
+For PaIR and RePaIR, \(\mathcal{L}_D\) and \(\mathcal{L}_R\) are averaged
+over the supervised tokens of the DS and RF completions, respectively, and
+combined as
+\[
+\mathcal{L}_{\mathrm{PaIR}}
+=0.5\mathcal{L}_D+0.5\mathcal{L}_R.
+\]
+PaIR-BP retains the same paired examples but pools both views under one token
+denominator:
+\[
+\mathcal{L}_{\mathrm{PaIR\text{-}BP}}
+=\frac{M_D\mathcal{L}_D+M_R\mathcal{L}_R}{M_D+M_R},
+\]
+where \(M_D\) and \(M_R\) are the supervised-token counts of the two views.
+
+% 所有方法的最大模型序列长度为 8192。generation validation 中，SO 使用
+% batch 16 和 32-token 上限，其余方法使用 batch 8 和 512-token 上限。
+% 最终评测对每个方法都运行 DS（最多 32 tokens）和 RF（最多 512 tokens）。
+All methods use a maximum model sequence length of 8192. For generation-based
+validation, SO uses a batch size of 16 and a 32-token generation limit; RS,
+ReaSon, PaIR-BP, PaIR, and RePaIR use a batch size of 8 and a 512-token limit.
+The ReaSon configuration omits \texttt{max\_new\_tokens} and therefore uses the
+strategy default of 512. At final evaluation, every method is run under both
+interfaces, with at most 32 generated tokens for DS and 512 for RF.
+
+\subsection{Teacher Distillation and External Models}
+\label{app:teacher-distillation}
+
+% 训练数据由 DeepSeek-V4-Pro 在贪心解码设置下蒸馏得到。我们仅保留格式有效且
+% 教师评分与 gold label 一致的轨迹，并将可见的 rationale 用作训练目标。
+% 所用模板见附录~\ref{app:prompts}，模型配置见表~\ref{tab:teacher-config}。
+Training data were distilled with DeepSeek-V4-Pro under greedy decoding. We
+retain only format-valid trajectories whose teacher scores match the gold label
+and use the visible rationale as the training target. Templates are provided in
+Appendix~\ref{app:prompts}, and model configurations in
+Table~\ref{tab:teacher-config}.
+
+% 外部模型的推理配置表
+\begin{table}[H]
+\centering
+
+\begingroup
+\fontsize{10pt}{11.5pt}\selectfont
+\setlength{\tabcolsep}{3.5pt}
+\renewcommand{\arraystretch}{1.0}
+
+\begin{tabularx}{\columnwidth}{
+  @{}
+  >{\raggedright\arraybackslash}p{0.28\columnwidth}
+  >{\raggedright\arraybackslash}X
+  @{}
+}
+\toprule
+Workflow & Models \\
+\midrule
+
+Teacher distillation &
+\texttt{DeepSeek-V4-Pro} (2026-08-13) \\
+
+\midrule
+Rationale quality and transition audit &
+\texttt{Qwen3.8-Max} (2026-08-03);
+\texttt{DeepSeek-V4-Pro} (2026-08-13);
+\texttt{GLM-5.3} (2026-08-14) \\
+
+\midrule
+Earlier correction-set audit &
+\texttt{MiniMax-M3} (2026-06-01);
+\texttt{doubao-seed-2.0-lite} (2026-02-15/2026-04-28);
+\texttt{doubao-seed-2.1-turbo} (2026-06-28) \\
+
+\midrule
+Correction and review &
+\texttt{GLM-5.3-Flash} (2026-08-26);
+\texttt{MiniMax-M3} (2026-06-01) \\
+
+\bottomrule
+\end{tabularx}
+\endgroup
+
+\par
+\vspace{0.8\baselineskip}
+\raggedright
+
+% 解码。所有调用均显式设置 temperature=0，未另外指定的 top_p 使用
+% 提供方默认值。教师蒸馏的生成上限为 2,048 tokens。rationale-quality
+% 与 rationale-support 审计均使用 8,192-token 上限，并设置
+% reasoning_effort=high。纠错与复核使用 3,000-token 上限。
+% 在提供方支持时，请求 JSON 格式输出。
+\noindent\textbf{Decoding.}
+All calls explicitly set \texttt{temperature=0}; unspecified
+\texttt{top\_p} values use the provider defaults. Teacher distillation uses a
+2,048-token generation limit. The rationale-quality and rationale-support
+audits both use an 8,192-token limit with
+\texttt{reasoning\_effort=high}. Correction and review use a 3,000-token
+limit. Audit and correction calls request JSON-formatted output when supported.
+
+\caption{Third-party model configurations. Dates in parentheses denote model
+release or dated-snapshot dates; token counts are completion budgets.}
+\label{tab:teacher-config}
+\end{table}
+
+% 严格解析下的完整模型结果
+\begin{table*}[!t]
+\centering
+\captionsetup{font=compacttable,skip=3pt}
+
+{\fontsize{9pt}{9.8pt}\selectfont
+\setlength{\tabcolsep}{0.8pt}
+\renewcommand{\arraystretch}{0.85}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}clccccc@{}}
+\toprule
+Model--Inf. & Task & SO & RS & ReaSon & PaIR & RePaIR \\
+\midrule
+
+\multirow{8}{*}{4B--DS}
+& Actionability & 0.782 $\pm$ 0.003 & 0.763 $\pm$ 0.004 & 0.734 $\pm$ 0.063 & 0.783 $\pm$ 0.004 & \textbf{0.786} $\pm$ 0.002 \\
+& Grounding Spec. & 0.742 $\pm$ 0.024 & 0.687 $\pm$ 0.034 & 0.651 $\pm$ 0.076 & 0.749 $\pm$ 0.008 & \textbf{0.751} $\pm$ 0.004 \\
+& Helpfulness & 0.721 $\pm$ 0.008 & 0.676 $\pm$ 0.013 & -- & 0.727 $\pm$ 0.013 & \textbf{0.729} $\pm$ 0.003 \\
+& Verifiability & 0.744 $\pm$ 0.015 & 0.659 $\pm$ 0.032 & 0.586 $\pm$ 0.511 & \textbf{0.768} $\pm$ 0.004 & 0.764 $\pm$ 0.002 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.788 $\pm$ 0.004 & 0.732 $\pm$ 0.011 & 0.511 $\pm$ 0.069 & \textbf{0.804} $\pm$ 0.018 & 0.798 $\pm$ 0.002 \\
+& Positioning Check & 0.997 $\pm$ 0.002 & 0.942 $\pm$ 0.072 & 0.599 $\pm$ 0.167 & \textbf{0.999} $\pm$ 0.001 & 0.996 $\pm$ 0.001 \\
+& Positioning Type & \textbf{1.000} $\pm$ 0.000 & 0.854 $\pm$ 0.035 & 0.543 $\pm$ 0.124 & \textbf{1.000} $\pm$ 0.000 & \textbf{1.000} $\pm$ 0.000 \\
+& \textit{Mean (QWK/F1)} & 0.747/0.928 & 0.696/0.843 & --$^{\dagger}$/0.551 & 0.757/\textbf{0.934} & \textbf{0.758}/0.931 \\
+\midrule
+
+\multirow{8}{*}{4B--RF}
+& Actionability & 0.742 $\pm$ 0.013 & 0.716 $\pm$ 0.010 & 0.736 $\pm$ 0.011 & 0.735 $\pm$ 0.008 & \textbf{0.757} $\pm$ 0.012 \\
+& Grounding Spec. & 0.724 $\pm$ 0.004 & 0.673 $\pm$ 0.016 & 0.694 $\pm$ 0.008 & 0.706 $\pm$ 0.013 & \textbf{0.726} $\pm$ 0.005 \\
+& Helpfulness & 0.704 $\pm$ 0.007 & 0.668 $\pm$ 0.008 & 0.691 $\pm$ 0.003 & 0.682 $\pm$ 0.033 & \textbf{0.724} $\pm$ 0.005 \\
+& Verifiability & 0.680 $\pm$ 0.020 & 0.657 $\pm$ 0.010 & 0.708 $\pm$ 0.028 & 0.667 $\pm$ 0.013 & \textbf{0.732} $\pm$ 0.010 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.773 $\pm$ 0.008 & 0.771 $\pm$ 0.003 & 0.770 $\pm$ 0.004 & \textbf{0.792} $\pm$ 0.006 & 0.783 $\pm$ 0.006 \\
+& Positioning Check & \textbf{0.997} $\pm$ 0.003 & 0.994 $\pm$ 0.001 & 0.994 $\pm$ 0.001 & 0.996 $\pm$ 0.001 & 0.995 $\pm$ 0.002 \\
+& Positioning Type & 0.997 $\pm$ 0.003 & \textbf{1.000} $\pm$ 0.000 & 0.998 $\pm$ 0.003 & \textbf{1.000} $\pm$ 0.000 & \textbf{1.000} $\pm$ 0.000 \\
+& \textit{Mean (QWK/F1)} & 0.712/0.923 & 0.679/0.922 & 0.707/0.921 & 0.698/\textbf{0.929} & \textbf{0.735}/0.926 \\
+\midrule
+
+\multirow{8}{*}{0.6B--DS}
+& Actionability & 0.741 $\pm$ 0.007 & 0.169 $\pm$ 0.108 & -- & \textbf{0.750} $\pm$ 0.007 & 0.750 $\pm$ 0.003 \\
+& Grounding Spec. & 0.685 $\pm$ 0.010 & 0.359 $\pm$ 0.090 & 0.288 $\pm$ 0.207$^{\ddagger}$ & 0.709 $\pm$ 0.011 & \textbf{0.715} $\pm$ 0.006 \\
+& Helpfulness & 0.660 $\pm$ 0.004 & 0.393 $\pm$ 0.008 & 0.445 $\pm$ 0.019 & \textbf{0.679} $\pm$ 0.005 & 0.669 $\pm$ 0.004 \\
+& Verifiability & 0.731 $\pm$ 0.005 & 0.321 $\pm$ 0.103 & 0.405 $\pm$ 0.184 & \textbf{0.740} $\pm$ 0.001 & 0.738 $\pm$ 0.009 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.743 $\pm$ 0.004 & 0.450 $\pm$ 0.073 & 0.337 $\pm$ 0.003 & \textbf{0.752} $\pm$ 0.009 & 0.749 $\pm$ 0.010 \\
+& Positioning Check & 0.999 $\pm$ 0.001 & 0.552 $\pm$ 0.101 & 0.410 $\pm$ 0.144 & 0.999 $\pm$ 0.001 & \textbf{0.999} $\pm$ 0.001 \\
+& Positioning Type & \textbf{1.000} $\pm$ 0.000 & 0.446 $\pm$ 0.054 & 0.447 $\pm$ 0.067 & \textbf{1.000} $\pm$ 0.000 & \textbf{1.000} $\pm$ 0.000 \\
+& \textit{Mean (QWK/F1)} & 0.704/0.914 & 0.310/0.483 & --$^{\dagger}$/0.398 & \textbf{0.719}/\textbf{0.917} & 0.718/0.916 \\
+\midrule
+
+\multirow{8}{*}{0.6B--RF}
+& Actionability & 0.690 $\pm$ 0.038 & 0.596 $\pm$ 0.014 & 0.595 $\pm$ 0.022 & 0.681 $\pm$ 0.018 & \textbf{0.743} $\pm$ 0.004 \\
+& Grounding Spec. & 0.658 $\pm$ 0.014 & 0.590 $\pm$ 0.001 & 0.588 $\pm$ 0.006 & 0.651 $\pm$ 0.006 & \textbf{0.703} $\pm$ 0.006 \\
+& Helpfulness & 0.629 $\pm$ 0.013 & 0.559 $\pm$ 0.010 & 0.557 $\pm$ 0.011 & 0.625 $\pm$ 0.005 & \textbf{0.687} $\pm$ 0.006 \\
+& Verifiability & 0.646 $\pm$ 0.013 & 0.611 $\pm$ 0.010 & 0.616 $\pm$ 0.007 & 0.643 $\pm$ 0.012 & \textbf{0.729} $\pm$ 0.002 \\
+\cmidrule(lr){2-7}
+& Coherence & 0.688 $\pm$ 0.029 & 0.704 $\pm$ 0.009 & 0.709 $\pm$ 0.003 & 0.727 $\pm$ 0.016 & \textbf{0.746} $\pm$ 0.007 \\
+& Positioning Check & 0.994 $\pm$ 0.005 & 0.996 $\pm$ 0.001 & 0.990 $\pm$ 0.002 & \textbf{0.997} $\pm$ 0.003 & 0.995 $\pm$ 0.004 \\
+& Positioning Type & 0.996 $\pm$ 0.007 & 0.969 $\pm$ 0.006 & 0.989 $\pm$ 0.000 & 0.996 $\pm$ 0.003 & \textbf{0.996} $\pm$ 0.003 \\
+& \textit{Mean (QWK/F1)} & 0.656/0.893 & 0.589/0.890 & 0.589/0.896 & 0.650/0.907 & \textbf{0.715}/\textbf{0.913} \\
+\bottomrule
+\end{tabular*}
+}
+
+\caption{Task-level strict primary results for Qwen3-4B and Qwen3-0.6B.
+Values are mean $\pm$ sample SD across seeds 42--44; cross-task means use
+unrounded values. Mean cells report QWK/Macro-F1. Metric-specific handling
+of invalid outputs follows Appendix~\ref{app:score-extraction}.
+$^{\dagger}$The ReaSon--DS QWK mean is unavailable because one task has no
+defined QWK. $^{\ddagger}$Qwen3-0.6B Grounding Specificity uses the two seeds
+with defined QWK.}
+\label{tab:full-method-task-level}
+\label{tab:full-method-task-level-06b}
+\end{table*}
+
+\subsection{Score Extraction and Metric Denominators}
+\label{app:score-extraction}
+
+% 严格解析只读取最后一个 <score> block，并要求其中整数属于任务合法分值集合。
+% relaxed extraction 先保留严格结果；无 tag 时，再接受完整输出整数，或首/末
+% 非空行中的合法裸整数或显式 score 表达。无法恢复的输出保持 invalid。
+Strict parsing reads only the final \texttt{<score>} block and accepts it only
+when its integer belongs to the task's legal score set. Relaxed extraction
+retains a valid strict score; when no score tag is present, it additionally
+accepts a legal whole-output integer -or a legal bare integer or explicit score
+statement on the first or last nonempty line. Outputs that still cannot be
+recovered remain invalid.
+
+% Accuracy 和 Macro-F1 保留完整测试集并将 invalid 计为错误；Pearson、MAE
+% 和 QWK 仅在每个 task--seed 条件下基于合法提取的预测计算，因此其分母为
+% 该条件的 valid prediction 数。表~\ref{tab:full-method-task-level}报告两种
+% 模型规模在 DS 和 RF 推理下采用严格解析得到的逐任务主要结果。
+% 表~\ref{tab:full-method-averages}则对同一批 Qwen3-4B 输出采用宽松解析
+% 重新计算汇总指标，作为解析敏感性分析；模型未重新运行。
+Accuracy and Macro-F1 retain the full test-set denominator and count invalid
+outputs as errors. Pearson, MAE, and QWK use only legally extracted predictions
+within each task--seed condition, so their denominator is that condition's
+valid-prediction count. Table~\ref{tab:full-method-task-level} and~\ref{tab:full-so-rs-secondary-merged}
+reports task-level primary results under strict parsing for both model scales under
+DS and RF inference. Table~\ref{tab:full-method-task-level-relaxed} recomputes aggregate
+metrics from the same Qwen3-4B outputs under relaxed parsing as a parsing
+sensitivity analysis; no model is rerun.

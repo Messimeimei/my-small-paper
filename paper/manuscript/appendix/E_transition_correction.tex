@@ -1,0 +1,525 @@
+\clearpage
+\begingroup
+\raggedbottom
+\setlength{\baselineskip}{13pt}
+
+\section{Transition Analysis and Correction}
+\label{app:sentence-level-analysis}
+
+% 完整诊断转换审计
+\subsection{Full Diagnostic Transition Audit}
+
+% 对每种监督目标，配对 11,364 个 DS 和 RF 预测。
+% 后续完整诊断审计纳入全部 1,135 个有害或有益的极端转换，
+% 其中 1,119 个达到多数共识。其余 16 个因三次重试后仍有一个
+% 主裁判缺少有效响应，且剩余两个有效判断不一致，被记为
+% no_majority 并排除。这是确定性的完成标准，而非随机子采样。
+For each supervision target, we pair 11,364 DS and RF predictions. The later
+full diagnostic audit includes all 1,135 harmful or beneficial extreme
+transitions and reaches majority consensus on 1,119. The remaining 16 are
+excluded as \textit{no\_majority}: after three retries, one primary judge still
+lacks a valid response, and the two remaining valid judgments disagree. This
+is a deterministic completion criterion, not random subsampling.
+
+% 完成共识的集合包含 701 个有害转换（DS 正确而 RF 严重错误）
+% 和 418 个有益转换（DS 严重错误而 RF 正确）。
+% 裁判接收任务说明、评分标准、被评估文本、真实分数、
+% DS/RF 预测及 RF 理由，但不知道训练条件和模型身份。
+% 主裁判为 GLM-5.3-Flash 和 Doubao-Seed-2.0-Lite，
+% 仲裁裁判为 MiniMax-M3。表中报告预测变化。
+The completed set contains 701 harmful transitions (DS correct and RF a severe
+error) and 418 beneficial transitions (DS a severe error and RF correct).
+Judges receive the task instruction, rubric, evaluated text, gold score, DS and
+RF predictions, and the RF rationale. The panel is GLM-5.3-Flash and
+Doubao-Seed-2.0-Lite, with MiniMax-M3 as adjudicator; training condition and
+model identity are hidden. Table~\ref{tab:full-interface-transitions} reports
+the prediction changes.
+
+% 原始错误标签统一映射为以下展示名称：
+% factual_error（事实错误）、
+% evidence_misread（证据误读）、
+% rubric_misapplication（评分标准误用）、
+% score_mapping_error（分数映射错误）、
+% unsupported_inference（无依据推断）、
+% internal_contradiction（内部矛盾）、
+% irrelevant_or_missing_reasoning（无关或缺失的推理）、
+% other（其他）。
+% “未标记错误”和“未解决的错误类型平票”属于聚合结果，
+% 并不分别等同于经过验证的正确类别和实质性错误类别。
+% 对应表格明确说明各自的统计分母。
+Raw error labels are displayed consistently as follows:
+\textit{factual\_error} (Factual error),
+\textit{evidence\_misread} (Evidence misread),
+\textit{rubric\_misapplication} (Rubric misapplication),
+\textit{score\_mapping\_error} (Score mapping error),
+\textit{unsupported\_inference} (Unsupported inference),
+\textit{internal\_contradiction} (Internal contradiction),
+\textit{irrelevant\_or\_missing\_reasoning} (Irrelevant or missing reasoning),
+and \textit{other} (Other).
+``No error flagged'' and ``Unresolved error-type tie'' are aggregation outcomes, not
+validated-correct and substantive-error categories. Tables~\ref{tab:full-sentence-errors}
+and~\ref{tab:full-first-error-position} state their denominators explicitly.
+
+\subsection{Rationale Correction and Fixed-Prefix Rescoring}
+
+% 158 个纠错案例不是从上述 701 例全量审计中再抽样，而来自更早的独立分层审计。
+% 该审计按 supervision-pair×task 最多抽 50 例，通常 harmful/beneficial 各 25，
+% 小池全取并由另一方向补足，seed=20260825。
+The 158-case correction set is not sampled from the 701 harmful cases above.
+It comes from an earlier, separately stratified audit with seed 20260825. For
+each supervision-pair--task cell, that audit selects at most 50 transitions,
+typically 25 harmful and 25 beneficial; a small pool is exhausted and the
+opposite direction fills the remaining quota. It selects 296 transitions
+(175 harmful), completes consensus for 278, and contains 159 completed harmful
+cases. Of these, 158 are judged to support the wrong score and are frozen for
+the intervention. This earlier audit uses MiniMax-M3 and
+Doubao-Seed-2.0-Lite as primaries and Doubao-Seed-2.1-Turbo as adjudicator,
+whereas the full audit above uses the later panel and prompt version.
+Only 155 of the 158 frozen record IDs overlap the later eligible set.
+
+% 冻结集有 158 个唯一 record_id、131 个唯一 task/sample 对；允许跨 seed 或监督目标
+% 重复同一测试样本。任务配额是 47/43/4/64，RS/SO 为 86/72，seed 为 56/54/48。
+The frozen set has 158 unique record IDs but 131 unique task--sample pairs:
+24 test samples recur across seeds or supervision targets, accounting for 51
+records. The task counts are 47/43/4/64 for Actionability, Grounding
+Specificity, Helpfulness, and Verifiability; RS/SO contribute 86/72 records,
+and seeds 42/43/44 contribute 56/54/48. There is no separate correction-stage
+quota beyond the earlier audit's stratification.
+
+% 保留原来的说明文字
+\begingroup
+\fontsize{10pt}{11.2pt}\selectfont
+
+% 接口转换证据。
+% 这些表连接接口变化、理由错误和固定前缀纠错；
+% 附录中定义各项统计的分母。
+\noindent\textbf{Interface-transition evidence.}
+Tables~\ref{tab:full-interface-transitions}--\ref{tab:full-correction-transitions}
+connect interface changes, rationale errors, and fixed-prefix correction;
+Appendix~\ref{app:sentence-level-analysis} defines the denominators.
+\par
+\endgroup
+
+% =========================================================
+% 原跨双栏表：保持不变
+% 展示推理接口切换后，变化的样本和指标之间的关系
+% =========================================================
+\begin{table*}[!t]
+\centering
+\captionsetup{font=normalsize,skip=2pt}
+\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+
+\begin{tabular*}{\textwidth}{
+@{\extracolsep{\fill}}llrrrrrrr@{}
+}
+\toprule
+Training & Task
+& $\Delta$QWK
+& $\Delta$Acc.
+& $\Delta$Adj.
+& $\Delta$Sev.
+& $\Delta$Inv.
+& Harm.
+& Bene. \\
+\midrule
+
+\multirow{4}{*}{\textbf{SO}}
+& Actionability
+& $-0.040$ & $-2.17$ & $-4.03$ & $+6.03$ & $+0.17$
+& 130 & 46 \\
+
+& Grounding Spec.
+& $-0.018$ & $-7.00$ & $+2.97$ & $+4.00$ & $+0.03$
+& 212 & 95 \\
+
+& Helpfulness
+& $-0.017$ & $-0.40$ & $-0.33$ & $+0.67$ & $+0.07$
+& 0 & 0 \\
+
+& Verifiability
+& $-0.064$ & $-4.53$ & $-0.68$ & $+5.20$ & $0.00$
+& 35 & 10 \\
+
+\cmidrule(l){2-9}
+\textbf{Mean} &
+& $\mathbf{-0.035}$
+& $\mathbf{-3.52}$
+& $\mathbf{-0.52}$
+& $\mathbf{+3.98}$
+& $\mathbf{+0.07}$
+& \textbf{377}
+& \textbf{151} \\
+
+\midrule
+
+\multirow{4}{*}{\textbf{RS}}
+& Actionability
+& $-0.047$ & $-3.13$ & $\mathbf{+1.90}$ & $+2.17$
+& $\mathbf{-0.93}$ & 170 & \textbf{130} \\
+
+& Grounding Spec.
+& $-0.014$ & $\mathbf{+11.10}$ & $\mathbf{-16.60}$
+& $+5.50$ & $0.00$ & 128 & 128 \\
+
+& Helpfulness
+& $-0.008$ & $-0.07$ & $-0.33$ & $+0.40$ & $0.00$
+& 4 & 4 \\
+
+& Verifiability
+& $\mathbf{-0.002}$ & $\mathbf{+6.05}$ & $\mathbf{-15.02}$
+& $+8.97$ & $0.00$ & 36 & 7 \\
+
+\cmidrule(l){2-9}
+\textbf{Mean} &
+& $\mathbf{-0.017}$
+& $\mathbf{+3.49}$
+& $\mathbf{-7.51}$
+& $\mathbf{+4.26}$
+& $\mathbf{-0.23}$
+& \textbf{338}
+& \textbf{269} \\
+
+\bottomrule
+\end{tabular*}
+
+% 四个有序评分任务从 DS 切换到 RF 后的逐任务变化。
+% SO 和 RS 表示训练方法。准确率及各比例的变化以百分点（pp）表示。
+% Harmful 表示正确预测变为严重错误；Beneficial 表示严重错误变为正确预测。
+% 计数为三个随机种子上的事件总数。Mean 行加粗。
+% 任务行中的粗体标记与对应 SO 单元格在符号或幅度上存在差异的 RS 结果，
+% 即两种训练目标对接口切换呈现不同响应的位置。
+\caption{Task-level changes after switching the inference interface from
+DS to RF on the four ordinal tasks. SO and RS denote training methods.
+Accuracy and ratio changes are in percentage points (pp). Harmful means
+correct-to-severe-error; beneficial means severe-error-to-correct. Counts
+are seed-level events across the three seeds. Mean rows are shown in bold.
+In the task rows, boldface marks RS cells that differ from the corresponding
+SO cells in sign or magnitude, i.e., where the two training targets respond
+differently to the interface switch.}
+\label{tab:full-interface-transitions}
+\end{table*}
+
+% GLM 编辑、MiniMax 复核，最多三轮；每次调用最多三次传输/格式重试。
+% 142/14/2 例分别在第 1/2/3 轮通过，共 18 次复核拒绝，最终 0 失败。
+GLM-5.3-Flash edits each rationale and MiniMax-M3 independently reviews it,
+for at most three edit--review rounds; each API call permits up to three
+transport or format retries. Of the 158 cases, 142, 14, and 2 are approved in
+rounds 1, 2, and 3, respectively, implying 18 review rejections followed by
+revision and no final failures. Four records require a retried API call
+(six failed call attempts in total). Rejections concern incomplete target
+correction, failure to preserve valid content, inconsistent change logs,
+incoherence, or wording that indirectly leaks a rubric tier.
+
+% 编辑器和复核器不直接接收 gold/prediction 字段，但 error targets 与指导来自 gold-aware 上游审计，
+% 因此流程不是端到端 gold-blind。编辑和复核先于重评分，之后不依据重评分结果继续修改。
+The editor receives the task request, rubric, evaluated answer, original
+rationale, and judge-derived \texttt{error\_targets} with
+\texttt{correction\_guidance}. The reviewer approves only a complete,
+coherent rationale that corrects every target, preserves unrelated valid
+reasoning, invents no evidence, states no numeric final score or gold label,
+and can be inserted for rescoring. Gold and prediction fields are not directly
+sent to either model; however, the edit guidance is produced by an upstream
+gold-aware audit. The workflow is therefore not end-to-end gold-blind, and
+the results are evidence about rationale intervention on selected failures
+rather than an estimate for the full test set. Editing and review finish
+before Qwen rescoring; no rationale is revised in response to the downstream
+rescoring result.
+
+% 固定前缀重评分保留原 system/user prompt，只拼接原始或修正理由及 score 起始标签，
+% 再由同一 adapter 和贪心配置续写分数。
+For rescoring, the original system and user messages are rendered unchanged
+with the original Qwen chat template. The only appended assistant prefix is
+\texttt{<reasoning>\{rationale\}</reasoning>}\\
+\texttt{\textbackslash n<score>}, using either the
+original or corrected rationale; the same adapter and greedy decoding settings
+then generate only the score. FixOrig reproduces NatRF in 157/158 cases.
+Table~\ref{tab:correction-analysis-sets} distinguishes the three reported
+analysis sets. The two post hoc flags are Actionability edits whose treatment
+of a direct-action question conflicts with the task rubric.
+
+% =========================================================
+% 原跨双栏表：保持不变
+% 有害 DS--RF 转换中的逐句理由标签
+% =========================================================
+% SO 和 RS 分列展示，各单元格报告句子数量及其在对应训练条件下的比例。
+% Delta pp 表示 RS 百分比减去 SO 百分比。
+% 保留原来的标签名称、统计数值和加粗位置。
+\begin{table*}[!t]
+\centering
+\captionsetup{font=normalsize,skip=2pt}
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.05}
+
+\begin{tabular*}{\textwidth}{
+@{\extracolsep{\fill}}lrrr@{}
+}
+\toprule
+Sentence label
+& SO Count (\%)
+& RS Count (\%)
+& $\Delta$pp (RS$-$SO) \\
+\midrule
+
+No error flagged
+& 687 (41.5\%)
+& 657 (39.2\%)
+& $-2.4$ \\
+
+Unresolved error-type tie
+& 448 (27.1\%)
+& 424 (25.3\%)
+& $-1.8$ \\
+
+Rubric misapplication
+& 191 (11.5\%)
+& 231 (13.8\%)
+& $\mathbf{+2.2}$ \\
+
+Factual error
+& 110 (6.7\%)
+& 66 (3.9\%)
+& $\mathbf{-2.7}$ \\
+
+Evidence misread
+& 90 (5.4\%)
+& 85 (5.1\%)
+& $-0.4$ \\
+
+Score mapping error
+& 72 (4.4\%)
+& 132 (7.9\%)
+& $\mathbf{+3.5}$ \\
+
+Unsupported inference
+& 45 (2.7\%)
+& 76 (4.5\%)
+& $\mathbf{+1.8}$ \\
+
+Internal contradiction
+& 10 (0.6\%)
+& 5 (0.3\%)
+& $-0.3$ \\
+
+Irrelevant or missing reasoning
+& 1 (0.1\%)
+& 1 (0.1\%)
+& $0.0$ \\
+
+\midrule
+\textbf{Total sentences}
+& \textbf{1,654 (100\%)}
+& \textbf{1,677 (100\%)}
+& -- \\
+\bottomrule
+\end{tabular*}
+
+% 701 个有害事件中共 3,331 个理由句子的标签分布。
+% SO 和 RS 两列分别报告句子数量，括号内为对应条件下的百分比。
+% Delta pp 为 RS 百分比减去 SO 百分比，以未四舍五入的比例计算。
+% 未解决的错误类型平票保留在分母中，但不纳入对应图中的错误类型分析。
+\caption{Sentence labels across 3,331 rationale sentences in 701
+harmful events. SO and RS columns report sentence counts with within-condition
+percentages in parentheses. $\Delta$pp is the RS percentage minus the SO
+percentage, computed from unrounded proportions. Unresolved ties remain
+in the denominator but are excluded from
+Figure~\ref{fig:rationale-error-analysis}.}
+\label{tab:full-sentence-errors}
+\end{table*}
+
+% =========================================================
+% 表 22：改为独立单栏表
+% 调换行列，保留所有数值、百分号和加粗位置。
+% =========================================================
+\begin{table}[!htbp]
+\centering
+\captionsetup{font=normalsize,skip=2pt}
+\small
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.0}
+
+\begin{tabular*}{\columnwidth}{
+@{\extracolsep{\fill}}lrrrr@{}
+}
+\toprule
+& \multicolumn{2}{c}{\textbf{SO}}
+& \multicolumn{2}{c}{\textbf{RS}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Position
+& \shortstack{Sentence\\number}
+& Quartile
+& \shortstack{Sentence\\number}
+& Quartile \\
+\midrule
+1st
+& 20.7\% & 29.3\%
+& \textbf{36.3\%} & \textbf{49.2\%} \\
+
+2nd
+& 28.3\% & 35.6\%
+& 25.2\% & 36.6\% \\
+
+3rd
+& 36.4\% & 30.7\%
+& 26.1\% & 11.7\% \\
+
+4th+
+& 14.7\% & 4.3\%
+& 12.3\% & 2.4\% \\
+
+1st--2nd
+& 48.9\% & --
+& \textbf{61.6\%} & -- \\
+\bottomrule
+\end{tabular*}
+
+\caption{First flagged-sentence position in the 701 harmful events.
+Sentence number is absolute position; Quartile is relative position.}
+\label{tab:full-first-error-position}
+\end{table}
+
+% =========================================================
+% 表 23：改为独立单栏表
+% =========================================================
+\begin{table}[!htbp]
+\centering
+\captionsetup{font=normalsize,skip=2pt}
+\small
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.0}
+
+\begin{tabular*}{\columnwidth}{
+@{\extracolsep{\fill}}lrrr@{}
+}
+\toprule
+Measure & NatRF & FixOrig & FixCorr \\
+\midrule
+Cases & 158 & 158 & 158 \\
+MAE & 2.038 & 2.044 & \textbf{0.101} \\
+Incorrect & 158 & 158 & \textbf{16} \\
+Returned to gold & 0 & 0 & \textbf{142 (89.9\%)} \\
+\bottomrule
+\end{tabular*}
+
+\caption{Aggregate fixed-prefix intervention on the frozen 158-case
+set. FixOrig and FixCorr fix the original and corrected rationale,
+respectively; all 474 outputs are format-valid.}
+\label{tab:full-correction-aggregate}
+\end{table}
+
+% =========================================================
+% 表 24：改为独立单栏表
+% 第一列自动换行，数值列保持完整。
+% =========================================================
+\begin{table}[!htbp]
+\centering
+\captionsetup{font=normalsize,skip=2pt}
+\small
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.05}
+
+\begin{tabularx}{\columnwidth}{
+@{}>{\raggedright\arraybackslash}Xrr@{}
+}
+\toprule
+Analysis set & Gold recovery & Statistic \\
+\midrule
+Frozen intervention set
+& 142/158 (89.87\%)
+& MAE 0.101 \\
+
+Excluding two post hoc rubric flags
+& 140/156 (89.74\%)
+& MAE 0.103 \\
+
+FixOrig-matched subset
+& 141/157 (89.81\%)
+& -- \\
+\bottomrule
+\end{tabularx}
+
+\caption{Correction-analysis denominators. The second row excludes
+\texttt{actionability\_test\_0061} and \texttt{actionability\_test\_0344};
+the third uses the distinct FixOrig = NatRF restriction.}
+\label{tab:correction-analysis-sets}
+\end{table}
+
+% =========================================================
+% 表 25：改为独立单栏表
+% =========================================================
+\begin{table}[!htbp]
+\centering
+\captionsetup{font=normalsize,skip=2pt}
+\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.0}
+
+\begin{tabular*}{\columnwidth}{
+@{\extracolsep{\fill}}lrrr@{}
+}
+\toprule
+Task & RS & SO & All \\
+\midrule
+Actionability
+& 21/22 & 24/25 & 45/47 \\
+
+Grounding Spec.
+& 24/25 & 18/18 & 42/43 \\
+
+Helpfulness
+& 4/4 & -- & 4/4 \\
+
+Verifiability
+& \textbf{26/35} & 25/29 & 51/64 \\
+\midrule
+Overall
+& 75/86 & 67/72 & \textbf{142/158} \\
+\bottomrule
+\end{tabular*}
+
+\caption{Gold-score recovery by task and training target. Cells show
+recovered/total harmful cases; Verifiability has the lowest observed rate.}
+\label{tab:full-correction-task}
+\end{table}
+
+% =========================================================
+% 表 26：改为独立单栏表
+% =========================================================
+\begin{table}[!htbp]
+\centering
+\captionsetup{font=normalsize,skip=2pt}
+\small
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.0}
+
+\begin{tabular*}{\columnwidth}{
+@{\extracolsep{\fill}}lrlr@{}
+}
+\toprule
+\multicolumn{2}{@{}l}{Returned to gold}
+& \multicolumn{2}{l@{}}{Adjacent errors} \\
+\midrule
+$5\to3$ & 63 & $1\to2$ (gold 3) & 11 \\
+$1\to3$ & 30 & $5\to2$ (gold 3) & 3 \\
+$3\to5$ & 22 & $3\to2$ (gold 1) & 1 \\
+$3\to1$ & 13 & $5\to4$ (gold 3) & 1 \\
+$4\to2$ & 4 & & \\
+$5\to2$ & 3 & & \\
+$2\to4$ & 3 & & \\
+$4\to1$ & 3 & & \\
+$2\to5$ & 1 & & \\
+\midrule
+Subtotal & 142 & Subtotal & 16 \\
+\bottomrule
+\end{tabular*}
+
+\caption{FixOrig-to-FixCorr score transitions. All 158 predictions
+move closer to gold: 142 return exactly and 16 become adjacent errors, reducing
+total absolute error from 323 to 16.}
+\label{tab:full-correction-transitions}
+\end{table}
+
+\clearpage
+\endgroup

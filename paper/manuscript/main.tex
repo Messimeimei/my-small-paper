@@ -18,12 +18,15 @@
 \usepackage{xcolor}
 \usepackage[table]{xcolor}
 \usepackage{amssymb}
+\usepackage{ragged2e}
+\DeclareCaptionFont{compacttable}{\fontsize{9pt}{10pt}\selectfont}
 
 % Keep stacked double-column result floats top-aligned; leave unused space below.
 \makeatletter
 \setlength{\@dblfptop}{0pt}
 \setlength{\@dblfpsep}{14pt}
 \setlength{\@dblfpbot}{0pt plus 1fil}
+\hfuzz=2pt
 \makeatother
 
 % 标题，先问句后回答，现象是 rationales 对大模型评测效果不好；然后给出提供 rationales 的影响研究
@@ -35,56 +38,52 @@
 \begin{document}
 \maketitle  % 打印标题和作者
 
-% 在基于 LLM 的科学写作评估中，评分前先生成 rationale 已成为常见做法，
-% 用以支持基于评分标准的可解释判断；然而现有工作往往将提示格式、训练目标与
-% 推理协议一并改变，收益难以归因于 rationale 本身。
-% 为此，本文构建 2×2 因子框架，将仅分数监督（SO）与理由+分数监督（RS）
-% 同直接打分（DS）与理由优先推理（RF）交叉，在七个科学写作评估任务上
-% 产生 28 个实验条件，并从理由 NLL、理由质量、DS–RF 预测转变与
-% 句级错误标注四个层面进行解析。
-% 实验发现：（1）RS 改善理由拟合与质量，却未带来更好的打分，序数任务上 RF 反而
-% 增加严重错误并降低 QWK；（2）有害转变中的理由多支持错误分数，主要源于评分标准
-% 误用与分数映射，修正后 158 例中 142 例恢复黄金分数；（3）据此提出 RePaIR，
-% 其在两种推理接口上均取得最高的序数 QWK（DS：0.696→0.758；RF：0.679→0.735），
-% 并保持 100% 严格格式有效率。结果表明，理由质量并非打分能力的可靠代理，
-% 监督目标应与推理协议联合设计。
+% 在科学写作评估中，评分前生成理由可以支持可解释判断，
+% 但其对评分准确性的影响仍不明确。
+% 本文采用 2×2 因子设计，在七个任务上交叉比较
+% 仅分数监督（SO）、理由与分数监督（RS），
+% 以及直接打分（DS）、理由优先推理（RF）。
+% 对 Qwen3-4B 的详细分析表明，RS 改善了理由拟合与外部评估的理由质量，
+% 但评分表现未优于 SO；在该模型的两种监督设置下，RF 均增加了序数任务的严重错误。
+% 在选取的 DS–RF 有害预测转变案例中，理由经常包含评分标准误用或分数映射错误；
+% 原协议下，修正这些理由后 158 例中有 142 例恢复了金标准分数；
+% 排除两条事后规则一致性存疑的修正后，敏感性结果为 140/156。
+% 基于这些发现，本文结合已有的 rationale 再生成和分别归一化监督思想，
+% 在配对 DS/RF 训练配置中构建 RePaIR。
+% 在 Qwen3-4B 上，相较于 SO，RePaIR 将四个序数任务的
+% DS/RF 平均 QWK 从 0.747/0.712 提升至 0.758/0.735，
+% 并将三个二分类任务的 Macro-F1 从 0.928/0.923
+% 提升至 0.931/0.926；序数任务增益也在 Qwen3-0.6B 上复现。
+% 综合来看，理由质量的提升并不必然转化为更准确的评分，
+% 监督目标应与预期推理接口联合设计和评估。
 
 \begin{abstract}
-Eliciting rationales before scoring has become a common practice
-in LLM-based scientific-writing evaluation,
-supporting interpretable, rubric-grounded judgments;
-yet prior work often changes prompt formats, training objectives, and inference protocols together,
-leaving the gains hard to attribute to rationales themselves.
-We therefore build a 2$\times$2 factorial framework
-that crosses score-only supervision (SO) and rationale-and-score supervision (RS)
-with direct-score (DS) and rationale-first (RF) inference,
-yielding 28 conditions over seven scientific-writing tasks
-analyzed via rationale NLL, rationale-quality assessment, DS--RF prediction transitions,
-and sentence-level error annotation.
-Experiments yield three findings:
-(1) RS improves rationale fitting and quality but not scoring,
-while RF increases severe errors and lowers QWK on ordinal tasks.
-(2) Rationales in harmful transitions mostly support incorrect scores,
-mainly through rubric misapplication and score mapping;
-correcting them restores the gold score in 142 of 158 cases.
-(3) We further propose RePaIR, which attains the highest ordinal QWK
-under both interfaces (DS: 0.696$\rightarrow$0.758; RF: 0.679$\rightarrow$0.735)
-with 100\% strict-format validity.
-These results indicate that rationale quality is not a reliable proxy for scoring ability,
-and supervision objectives should be co-designed with the inference protocol.
+Generating rationales before scoring can support interpretable
+scientific-writing evaluation, but their effect on scoring accuracy
+remains unclear.
+We cross score-only (SO) and rationale-and-score (RS) supervision
+with direct-score (DS) and rationale-first (RF) inference
+in a 2$\times$2 factorial design across seven tasks.
+Detailed analyses on Qwen3-4B show that RS improves rationale fitting
+and externally assessed quality without improving scoring over SO.
+In this model, RF also increases severe ordinal errors
+under both supervision settings.
+In selected harmful DS--RF transitions, rationales frequently contain
+rubric misapplication or score-mapping errors;
+correcting them recovers the gold score in 142 of 158 cases under the
+original protocol, and in 140 of 156 after excluding two post hoc
+rubric-consistency flags.
+Motivated by these findings, we develop RePaIR by combining established
+ideas of rationale regeneration and separately normalized supervision
+in a paired DS/RF training configuration.
+On Qwen3-4B, relative to SO, RePaIR improves DS/RF mean QWK
+over four ordinal tasks from 0.747/0.712 to 0.758/0.735
+and Macro-F1 over three binary tasks from 0.928/0.923
+to 0.931/0.926; the ordinal gains also hold on Qwen3-0.6B.
+Taken together, improved rationale quality does not necessarily
+translate into more accurate scoring, and supervision should be
+designed and evaluated with the intended inference interface.
 \end{abstract}
-
-
-% 图1，展示整体的 SO 和 RS 训练 prompt 模板
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\textwidth]
-    {figures/scirm_evaluation_example.pdf}
-    \caption{Matched direct-score (DS) and rationale-first (RF)
-    evaluation prompts and outputs for the same scientific-writing
-    example.}
-    \label{fig:scirm-evaluation}
-\end{figure*}
 
 \input{sections/introduction}
 
@@ -100,20 +99,30 @@ and supervision objectives should be co-designed with the inference protocol.
 
 \bibliography{references}
 
-
+\clearpage
 \appendix
-\input{appendix/dataset}
-\input{appendix/experimental_details}
-\input{appendix/prompts}
-\input{appendix/full_results}
-\input{appendix/rationale_analysis}
-\input{appendix/external_llm_usage}
+\raggedbottom
+% Keep all appendix text at the same size as the main body.
+\renewcommand{\small}{\normalsize}
+\renewcommand{\footnotesize}{\normalsize}
+\renewcommand{\scriptsize}{\normalsize}
+\captionsetup{font=normalsize}
+\section*{Appendix Guide}
+% 附录按数据、协议、完整结果、理由质量、接口转换与纠错、案例和提示词依次组织。
+\noindent
+Appendix~\ref{app:dataset} documents the data and splits;
+Appendix~\ref{app:experimental-details} gives the training and evaluation
+protocols; Appendices~\ref{app:full-results}--\ref{app:sentence-level-analysis}
+report complete results and diagnostic analyses; Appendix~\ref{app:rationale-analysis}
+collects illustrative examples; and Appendix~\ref{app:prompts} provides the
+prompt templates.
 
-% All non-dataset appendix floats are collected after the six text modules.
-\input{appendix/experimental_details_floats}
-\input{appendix/prompt_floats}
-\input{appendix/full_results_floats}
-\input{appendix/rationale_analysis_floats}
-\input{appendix/external_llm_usage_floats}
+\input{appendix/A_dataset}
+\input{appendix/B_experimental_details}
+\input{appendix/C_full_results}
+\input{appendix/D_external_llm_usage}
+\input{appendix/E_transition_correction}
+\input{appendix/F_rationale_analysis}
+\input{appendix/G_prompts}
 
 \end{document}

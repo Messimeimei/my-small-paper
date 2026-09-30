@@ -3,13 +3,15 @@
 \usepackage{lmodern}
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
+\usetikzlibrary{calc}
 
 \pgfplotsset{compat=1.18}
 
 % 在仓库根目录运行：make -C paper figure-training-targets
-% 图中所有柱高均从下面的 CSV 文件读取，不需要手工同步两份数据。
-\newcommand{\ordinaldatafile}{../../analysis/derived/training_target_ordinal_means.csv}
-\newcommand{\binarydatafile}{../../analysis/derived/training_target_binary_means.csv}
+% 柱高由当前 Qwen3-4B metrics.json 的三个种子均值派生，并从下面的
+% CSV 文件读取，不需要在图源中手工维护第二份数值。
+\newcommand{\ordinaldatafile}{data/training_target_ordinal_means.csv}
+\newcommand{\binarydatafile}{data/training_target_binary_means.csv}
 
 % 四种训练目标 + 推理接口组合的固定配色。
 \definecolor{sods}{HTML}{7A2430}
@@ -90,53 +92,48 @@
     Helpfulness,
     Verifiability
   },
+  legend to name=training-target-legend,
+  legend columns=2,
+  legend cell align={left},
+  legend style={
+    draw=none,
+    fill=none,
+    font=\sffamily\small,
+    /tikz/every even column/.append style={column sep=10pt},
+    row sep=1pt,
+  },
 ]
 \addplot+[SO-DS] table[
   col sep=comma,
   x=x,
   y=SO_DS,
 ] {\ordinaldatafile};
+\addlegendentry{Score-only + Direct scoring (SO--DS)}
 \addplot+[RS-DS] table[
   col sep=comma,
   x=x,
   y=RS_DS,
 ] {\ordinaldatafile};
+\addlegendentry{Rationale-supervised + Direct scoring (RS--DS)}
 \addplot+[SO-RF] table[
   col sep=comma,
   x=x,
   y=SO_RF,
 ] {\ordinaldatafile};
+\addlegendentry{Score-only + Rationale-first (SO--RF)}
 \addplot+[RS-RF] table[
   col sep=comma,
   x=x,
   y=RS_RF,
 ] {\ordinaldatafile};
+\addlegendentry{Rationale-supervised + Rationale-first (RS--RF)}
 
-% 无边框、无背景的四色说明，纵向位置严格位于 QWK 0.76--0.80。
-\path[fill=sods, draw=black!80, line width=0.45pt]
-  (axis cs:0.95,0.792) rectangle (axis cs:1.10,0.798);
-\node[anchor=west, font=\sffamily\fontsize{6}{7}\selectfont] at (axis cs:1.17,0.795)
-  {Score-only + Direct scoring (SO--DS)};
-
-\path[fill=rsds, draw=black!80, line width=0.45pt]
-  (axis cs:0.95,0.782) rectangle (axis cs:1.10,0.788);
-\node[anchor=west, font=\sffamily\fontsize{6}{7}\selectfont] at (axis cs:1.17,0.785)
-  {Rationale-supervised + Direct scoring (RS--DS)};
-
-\path[fill=sorf, draw=black!80, line width=0.45pt]
-  (axis cs:0.95,0.772) rectangle (axis cs:1.10,0.778);
-\node[anchor=west, font=\sffamily\fontsize{6}{7}\selectfont] at (axis cs:1.17,0.775)
-  {Score-only + Rationale-first (SO--RF)};
-
-\path[fill=rsrf, draw=black!80, line width=0.45pt]
-  (axis cs:0.95,0.762) rectangle (axis cs:1.10,0.768);
-\node[anchor=west, font=\sffamily\fontsize{6}{7}\selectfont] at (axis cs:1.17,0.765)
-  {Rationale-supervised + Rationale-first (RS--RF)};
 \end{axis}
 
 % 右侧面板：三个二分类任务。xshift 控制两个面板之间的距离。
 \begin{axis}[
   common axis,
+  name=binary,
   at={(ordinal.east)},
   anchor=west,
   xshift=1.05cm,
@@ -177,6 +174,11 @@
   y=RS_RF,
 ] {\binarydatafile};
 \end{axis}
+\coordinate (plots-top) at ($(ordinal.north west)!0.5!(binary.north east)$);
+\node[anchor=south] (shared-legend) at ([yshift=7mm]plots-top)
+  {\pgfplotslegendfromname{training-target-legend}};
+\node[anchor=south, font=\sffamily\large\bfseries] at ([yshift=2mm]shared-legend.north)
+  {Qwen3-4B};
 
 \end{tikzpicture}
 \end{document}

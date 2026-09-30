@@ -1,0 +1,118 @@
+\documentclass[tikz,border=3pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+
+% Counts reproduce the sentence-level audit summarized in the manuscript.
+\newcommand{\errordatafile}{data/rationale_error_types.csv}
+\newcommand{\positiondatafile}{data/rationale_first_error_positions.csv}
+
+\definecolor{errorbar}{HTML}{7A2430}
+\definecolor{positionbar}{HTML}{174D68}
+
+\pgfplotsset{
+  common bar axis/.style={
+    xbar,
+    axis lines*=left,
+    xmin=0,
+    xmax=50,
+    xtick={0,10,20,30,40,50},
+    xmajorgrids=true,
+    ymajorgrids=false,
+    grid style={draw=black!18, densely dashed, line width=0.45pt},
+    axis line style={draw=black!80, line width=0.8pt},
+    tick style={draw=black!80, line width=0.7pt},
+    tick label style={font=\sffamily\fontsize{10.5}{12}\selectfont},
+    yticklabel style={font=\sffamily\fontsize{10.5}{12}\selectfont, align=right},
+    label style={font=\sffamily\fontsize{10.5}{12}\selectfont},
+    title style={font=\sffamily\fontsize{10.5}{12}\selectfont\bfseries, yshift=2pt},
+    enlarge y limits=0.10,
+    bar width=11pt,
+    clip=false,
+    nodes near coords style={
+      font=\sffamily\fontsize{10.5}{12}\selectfont,
+      text=black,
+      anchor=west,
+      xshift=2pt,
+    },
+  },
+}
+
+\begin{document}
+\begin{tikzpicture}
+
+% Left: one definitive error label per erroneous sentence (n=1,115).
+\begin{axis}[
+  common bar axis,
+  name=errors,
+  width=11.4cm,
+  height=8.0cm,
+  title={(a) Error type},
+  xlabel={Share of labeled error sentences (\%)},
+  ytick={0,1,2,3,4,5,6},
+  yticklabels={
+    {Irrelevant/missing\\reasoning},
+    {Internal\\contradiction},
+    {Unsupported\\inference},
+    {Evidence misread},
+    {Factual error},
+    {Score mapping\\error},
+    {Rubric\\misapplication}
+  },
+]
+\addplot+[
+  fill=errorbar,
+  draw=black!75,
+  line width=0.55pt,
+  point meta=x,
+  visualization depends on={value \thisrow{count} \as \Count},
+  nodes near coords={
+    \pgfmathprintnumber[fixed,precision=1]{\pgfplotspointmeta}\%
+    \,(\pgfmathprintnumber[fixed,precision=0]{\Count})
+  },
+] table[
+  col sep=comma,
+  x=percent,
+  y=order,
+] {\errordatafile};
+\end{axis}
+
+% Right: relative position of the first flagged sentence; ties count as flags (n=701).
+\begin{axis}[
+  common bar axis,
+  at={(errors.east)},
+  anchor=west,
+  xshift=2.0cm,
+  width=9.2cm,
+  height=8.0cm,
+  title={(b) First flagged-error position},
+  xlabel={Share of harmful transitions (\%)},
+  ytick={0,1,2,3},
+  yticklabels={
+    {Final 25\%},
+    {50\%--75\%},
+    {25\%--50\%},
+    {First 25\%}
+  },
+]
+\addplot+[
+  fill=positionbar,
+  draw=black!75,
+  line width=0.55pt,
+  point meta=x,
+  visualization depends on={value \thisrow{count} \as \Count},
+  nodes near coords={
+    \pgfmathprintnumber[fixed,precision=1]{\pgfplotspointmeta}\%
+    \,(\pgfmathprintnumber[fixed,precision=0]{\Count})
+  },
+] table[
+  col sep=comma,
+  x=percent,
+  y=order,
+] {\positiondatafile};
+\end{axis}
+
+\end{tikzpicture}
+\end{document}

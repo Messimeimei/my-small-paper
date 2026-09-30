@@ -79,82 +79,64 @@ In scientific-writing evaluation, the model must instead integrate
 domain knowledge, weigh open-ended textual evidence, and map
 multidimensional rubric criteria onto an ordinal scale.
 
-% 本文系统研究 rationale supervision 与 rationale-first inference
-% 如何影响基于大模型的科学写作评价。
-% 我们构建统一的受控实验框架，在七项科学写作评价任务上
-% 交叉比较两种监督目标与两种推理协议。
-% 在此基础上，我们从整体性能、样本级预测变化和句子级错误三个层面
-% 分析 rationale 的作用，并针对发现的问题设计相应的训练方法。
+% \paragraph{本文工作与贡献。}
+% 本文研究理由监督与理由生成如何影响科学写作评估，
+% 并据此考察支持直接打分和理由优先推理的训练配置。
+% 主要贡献包括三个方面。
+%
+% \textbf{(C1) 受控实验设计。}
+% 我们将仅分数监督（SO）与理由加分数监督（RS），
+% 同直接打分（DS）与理由优先推理（RF）交叉，
+% 在七个任务上构建 2×2 析因设计。
+% 实验覆盖 Qwen3-4B 和 Qwen3-0.6B，
+% 每个模型包含 28 个实验条件，每个条件使用三个随机种子，
+% 用于考察监督目标、推理协议及其交互作用。
+%
+% \textbf{(C2) 理由质量与评分表现的诊断。}
+% 在 Qwen3-4B 上，我们结合教师强制下的理由 NLL、
+% 理由质量与一致性评价、配对预测转移和句子级错误标注，
+% 发现 RS 虽然改善理由拟合与质量，但未带来更好的评分表现。
+% 在选取的 158 个 DS 正确、RF 出现严重错误的案例中，
+% 原协议下修正理由并固定前缀重评分后，142 例恢复 gold；排除两条
+% 事后规则一致性存疑的修正后，敏感性结果为 140/156。
+%
+% \textbf{（C3）面向两种推理接口的训练。}
+% 基于已有的分别归一化损失研究~\citep{shi-etal-2025-investigating}
+% 和 rationale 再生成方法~\citep{chiang-etal-2025-tract}，
+% 我们实现了 PaIR 和 ReaSon，
+% 并将二者整合为 RePaIR。我们在 DS 和 RF 两种推理接口下评估这些配置。
+% 结果表明，在两种模型规模和两种推理接口下，RePaIR 在四个序数任务上的平均 QWK 均优于 SO。
 
-\paragraph{Our work.}
-In this work, we systematically investigate the effects of rationales on LLM-based scientific-writing evaluation.
-We establish a unified controlled framework that crosses two supervision targets
-with two inference protocols across seven scientific-writing evaluation tasks.
-We then analyze the role of rationales through aggregate performance,
-sample-level prediction changes, and sentence-level errors,
-and develop targeted training methods based on the identified problems.
-
-% 本文的贡献主要包括三个方面。
-% \textbf{(C1)} 我们构建 $2\times2$ 析因设计，将
-% score-only supervision（SO）和 rationale-and-score supervision（RS）
-% 分别与 direct-score inference（DS）和 rationale-first inference（RF）组合。
-% 该设计包含 28 个实验条件，每个条件使用三个随机种子，
-% 用于区分监督目标、推理协议及其交互作用。
-% \textbf{(C2)} 我们建立多层次分析流程，包括 teacher-forced rationale NLL、
-% rationale 质量与一致性评价、配对 DS--RF 预测转移、
-% 句子级错误标注以及固定 rationale 后的受控重评分。
-% \textbf{(C3)} 我们提出三种针对性方法：
-% Regenerated Rationales with Gold-Score Restoration（ReaSon）
-% 使用学生模型生成的 rationale 替换教师 rationale 并恢复 gold score；
-% Paired-Interface Reweighting（PaIR）通过配对 DS 和 RF 训练视图
-% 及等权分支损失缓解训练--推理接口失配；
-% Regenerated-Rationale Paired-Interface Reweighting（RePaIR）
-% 则将上述两种设计相结合。
-
-\paragraph{Contributions and Findings}
+\paragraph{Our work and contributions.}
+We investigate how rationale supervision and generation affect
+scientific-writing evaluation, and use these insights to examine
+training configurations supporting both direct scoring and rationale-first inference.
 Our contributions are threefold.
-\textbf{(C1)} We construct a $2\times2$ factorial design that crosses
-score-only supervision (SO) and rationale-and-score supervision (RS)
-with direct-score inference (DS) and rationale-first inference (RF).
-The design comprises 28 experimental conditions,
-each evaluated with three random seeds,
-to separate the effects of supervision targets, inference protocols,
+
+\textbf{(C1) Controlled experimental design.}
+We cross score-only (SO) and rationale-and-score (RS) supervision
+with direct-score (DS) and rationale-first (RF) inference
+in a $2\times2$ factorial design across seven tasks.
+Experiments cover Qwen3-4B and Qwen3-0.6B,
+with 28 conditions per backbone and three random seeds per condition,
+allowing us to examine supervision effects, inference effects,
 and their interaction.
-\textbf{(C2)} We develop a multilevel analysis pipeline combining
-teacher-forced rationale NLL, rationale quality and consistency assessment,
-paired DS--RF prediction transitions, sentence-level error annotation,
-and controlled rescoring with fixed rationales.
-\textbf{(C3)} We introduce three targeted methods:
-Regenerated Rationales with Gold-Score Restoration (ReaSon)
-replaces teacher rationales with student-generated ones while restoring gold scores;
-Paired-Interface Reweighting (PaIR) trains on paired DS and RF views
-with equally weighted branch losses to address training--inference interface mismatch;
-and Regenerated-Rationale Paired-Interface Reweighting (RePaIR)
-combines the two designs.
 
-% 实验得到三个主要发现。
-% \textbf{(F1)} RS 改善了教师 rationale 拟合、生成质量和
-% rationale--score 一致性，但这些优势并未转化为更好的评分性能。
-% \textbf{(F2)} 有害转移中的 rationale 通常支持错误分数，
-% 且错误主要来自评分标准误用和分数映射。
-% 修正错误 rationale 后，158 个所选有害案例中有 142 个恢复为 gold score，
-% 表明 rationale 内容能够显著影响这些案例中的后续评分。
-% \textbf{(F3)} ReaSon 改善了 RF 序数评分，但未能保持 DS 性能；
-% PaIR 主要提升了 DS 推理接口下的评分性能；
-% RePaIR 在 DS 推理下取得最佳性能，同时将 RF 的 QWK 从 0.698 提升至 0.735。
+\textbf{(C2) Diagnosing rationale quality and scoring performance.}
+On Qwen3-4B, we combine teacher-forced rationale NLL,
+rationale quality and consistency assessment,
+paired prediction transitions, and sentence-level error annotation.
+These analyses show that RS improves rationale fitting and quality
+without improving scoring.
+Among 158 selected cases where DS is correct but RF makes a severe error,
+correcting the rationales and rescoring with fixed prefixes recovers the
+gold score in 142 cases under the original protocol; excluding two post hoc
+rubric-consistency flags yields 140 recoveries among 156 cases.
 
-Our experiments yield three main findings.
-\textbf{(F1)} RS improves teacher-rationale fitting,
-generated-rationale quality, and rationale--score consistency,
-but these gains do not translate into better scoring performance.
-\textbf{(F2)} Rationales in harmful transitions typically support
-the incorrect score, with errors arising primarily
-from rubric misapplication and score mapping.
-Correcting erroneous rationales restores the gold score
-in 142 of 158 selected harmful cases,
-showing that rationale content can substantially affect subsequent scoring
-in these cases.
-\textbf{(F3)} ReaSon improves RF ordinal scoring
-but does not preserve DS performance;
-PaIR primarily improves scoring performance under DS inference;
-RePaIR achieves the best performance under DS inference while raising RF QWK from 0.698 to 0.735.
+\textbf{(C3) Training for both inference interfaces.}
+Building on prior work on separately normalized
+losses~\citep{shi-etal-2025-investigating} and rationale
+regeneration~\citep{chiang-etal-2025-tract}, we instantiate PaIR and ReaSon and
+integrate them into RePaIR. We evaluate these configurations under
+both DS and RF inference. RePaIR improves mean QWK over SO across the four
+ordinal tasks at both model sizes under both interfaces.

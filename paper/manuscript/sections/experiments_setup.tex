@@ -32,19 +32,19 @@ are provided in Appendix~\ref{app:dataset}.
 
 % 我们以 Qwen3-4B~\citep{yang-etal-2025-qwen3} 作为主要基础模型，
 % 并针对每个任务--方法组合分别训练模型。为检验主要发现对模型规模的
-% 适用性，我们进一步在 Qwen3-0.6B 和 Qwen3-8B 上进行验证。此外，
-% 我们使用面向科学写作评价微调的 SciRM-7B
-% ~\citep{sahinuc-etal-2026-reward} 作为领域模型对照，并在相同的
-% 测试集和推理接口下进行评估。
+% 适用性，我们进一步在 Qwen3-0.6B 上进行验证。此外，
+% 我们使用面向科学写作评价微调的 SciRM-7B 和 SciRM-Ref-7B
+% ~\citep{sahinuc-etal-2026-reward} 两个已发布 checkpoint 作为领域模型对照。
+% 两者不再额外微调，并在相同测试集和 DS/RF 接口下使用评测 seed 42、43、44。
 
 We use Qwen3-4B~\citep{yang-etal-2025-qwen3} as the primary backbone
 and train a separate model for each task--method combination. To
 examine whether the main findings generalize across model scales, we
-further conduct validation experiments with Qwen3-0.6B and Qwen3-8B.
-We additionally evaluate SciRM-7B
-~\citep{sahinuc-etal-2026-reward}, a model fine-tuned for
-scientific-writing evaluation, as a domain-specific comparator under
-the same test sets and inference interfaces.
+further conduct validation experiments with Qwen3-0.6B.
+We additionally evaluate the released SciRM-7B and SciRM-Ref-7B
+checkpoints~\citep{sahinuc-etal-2026-reward} as domain-specific comparators.
+Without additional fine-tuning, both are run on the same test sets and DS/RF
+interfaces with evaluation seeds 42, 43, and 44.
 
 \paragraph{Implementation details.}
 
@@ -68,26 +68,27 @@ tasks and Macro-F1 for binary tasks.
 % \subparagraph{实现细节。}
 % 所有任务模型均使用 LoRA~\citep{hu-etal-2022-lora} 进行微调。
 % 每个任务采用固定的训练、验证和测试划分，并为每种训练方法单独
-% 训练 adapter。每个 epoch 后执行验证与 checkpoint 保存，最终使用
-% 第 3 个 epoch 的 adapter 进行测试。LoRA 应用于全部线性层，设置
+% 训练 adapter。每个 epoch 后执行验证与 checkpoint 保存，最终评测统一
+% 使用第 3 个 epoch 保存的最后一个 checkpoint。LoRA 应用于全部线性层，设置
 % \(r=16\)、\(\alpha=32\)、学习率 \(1\times10^{-4}\)，训练
 % 3 个 epoch，并采用余弦衰减和 8,192-token 最大序列长度。
-% 所有评估均使用 zero-shot DS/RF prompt；其格式见图
-% \ref{fig:scirm-evaluation}，完整模板见附录~\ref{app:prompts}。
+% 所有评估均使用 zero-shot DS/RF prompt；其格式示例见
+% 附录~\ref{app:prompts} 中的图~\ref{fig:scirm-evaluation}，完整模板也见该附录。
 % 其余配置见附录~\ref{app:experimental-details}。
 
 All task-specific models are fine-tuned using
 LoRA~\citep{hu-etal-2022-lora}. Each task uses fixed training,
 validation, and test splits, with a separate adapter trained for each
 method. Validation and checkpoint saving are performed after every
-epoch, and the epoch-3 adapter is used for final evaluation. LoRA is
+epoch, and final evaluation consistently uses the last checkpoint saved after
+epoch 3. LoRA is
 applied to all linear layers with \(r=16\), \(\alpha=32\), a learning
 rate of \(1\times10^{-4}\), three training epochs, cosine decay, and a
 maximum sequence length of 8,192 tokens. All evaluations use zero-shot
-DS/RF prompts; their format is illustrated in
-Figure~\ref{fig:scirm-evaluation}, and the complete templates are
-provided in Appendix~\ref{app:prompts}. Additional settings are
-reported in Appendix~\ref{app:experimental-details}.
+DS/RF prompts; Appendix~\ref{app:prompts} provides a matched example
+(Figure~\ref{fig:scirm-evaluation}) and the complete templates.
+Additional settings are reported in
+Appendix~\ref{app:experimental-details}.
 
 % RQ1：为什么 score-only 训练效果，比 rationale-and-score 训练效果更好
 \subsection{Diagnosing the Scoring Gap between SO and RS Supervision}
@@ -113,7 +114,7 @@ reported in Appendix~\ref{app:experimental-details}.
 % \]
 % 其中，\(R_n\) 表示样本 \(n\) 中的 rationale token 位置；
 % 较低的 NLL 表示模型更接近教师 rationale 的分布。
-% 完整的逐任务 NLL 诊断结果见表~\ref{tab:full-nll-diagnostics}。
+% 完整的逐任务 NLL 诊断结果见表~\ref{tab:rationale-nll-full}。
 
 \paragraph{Teacher-forced Rationale NLL.}
 
@@ -136,50 +137,64 @@ tokens. We then micro-average the loss over all rationale tokens:
 \]
 Here, \(R_n\) denotes the rationale-token positions in sample \(n\);
 lower NLL indicates closer fitting to the teacher-rationale
-distribution. Full task-level NLL diagnostics are reported in Table~\ref{tab:full-nll-diagnostics}.
+distribution. Full task-level NLL diagnostics are reported in
+Table~\ref{tab:rationale-nll-full}.
 
 \paragraph{Rationale Quality Comparison.}
 
 % 为比较 SO 与 RS 监督训练模型在 RF 接口下生成的 rationale，
 % 我们从 rationale 的内容质量及其与预测分数的一致性两个方面
 % 进行评估~\citep{liu-etal-2023-g,zhang-etal-2026-surveyreview}。
-% 内容质量包括评分标准理解、证据支撑、关键信息覆盖
+% 内容质量包括评分标准理解、证据支撑、决策覆盖
 % 和无依据陈述控制四个维度；一致性评估判断 rationale 的内容
 % 是否支持模型给出的预测分数。各评判维度和一致性标签的具体定义
 % 见表~\ref{tab:eval-dimensions}。
 %
 % GLM-5.3-Flash 和 Doubao-Seed-2.0-Lite 作为主裁判，
-% MiniMax-M3 作为仲裁裁判。评测提示词见图~\ref{fig:judge-r1}
-% 和图~\ref{fig:judge-r2}，模型配置见表~\ref{tab:teacher-config}。
-% 四个质量维度的总体得分及总体一致性结果见
-% 表~\ref{tab:rationale-quality-consistency}，逐任务的一致性结果见
-% 表~\ref{tab:full-rationale-quality-task}。
+% MiniMax-M3 作为仲裁裁判。模型与解码配置见表~\ref{tab:teacher-config}，
+% Round-2 完整提示词见图~\ref{fig:judge-r2}。
+% 汇总诊断见表~\ref{tab:rationale-summary}。
+% 完整质量与一致性结果见表~\ref{tab:rationale-quality-full}，
+% 逐任务比较见表~\ref{tab:full-rationale-quality-task}。
 
 To compare rationales generated under RF inference by models trained
 with SO and RS supervision, we evaluate both their content quality
 and their consistency with predicted
 scores~\citep{liu-etal-2023-g,zhang-etal-2026-surveyreview}.
 Content quality covers
-four dimensions: rubric understanding, evidence grounding,
-key-information coverage, and unsupported-claim control. Consistency
+four dimensions: rubric correctness, evidence grounding, decision
+coverage, and unsupported-claim control. Consistency
 indicates whether the rationale content supports the model's predicted
 score. Detailed definitions of the quality dimensions and consistency
 labels are provided in Table~\ref{tab:eval-dimensions}.
 
 GLM-5.3-Flash and Doubao-Seed-2.0-Lite serve as primary judges, with
-MiniMax-M3 as the adjudicator. The evaluation prompts are shown in
-Figures~\ref{fig:judge-r1} and~\ref{fig:judge-r2}, and the model
-configurations are listed in Table~\ref{tab:teacher-config}. Aggregate
-scores for the four quality dimensions and overall consistency results
-are reported in Table~\ref{tab:rationale-quality-consistency}, while
-task-level consistency results are provided in
+MiniMax-M3 as the adjudicator. Their model and decoding configurations are
+listed in Table~\ref{tab:teacher-config}, and the complete Round-2 template is
+shown in Figure~\ref{fig:judge-r2}.
+Summary diagnostics are reported in Table~\ref{tab:rationale-summary}.
+Full quality and consistency results are provided in
+Table~\ref{tab:rationale-quality-full}, with task-level comparisons in
 Table~\ref{tab:full-rationale-quality-task}.
+
+% 提前声明跨栏 RQ1 图，使其排在 Results/RQ1 所在页顶部。
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=\textwidth]
+    {figures/training_targets_by_task_type.pdf}
+    \caption{
+        Qwen3-4B performance across training objectives and
+        inference protocols.
+        The left panel reports QWK on ordinal tasks, and the right panel
+        reports Macro-F1 on binary tasks.
+    }
+    \label{fig:training-targets-by-task-type}
+\end{figure*}
 
 % RQ2：为什么在相同训练方法下，RF 推理在序数任务上的 QWK 低于 DS 推理？
 \subsection{Diagnosing the Scoring Gap between DS and RF Inference}
 
-% 表~\ref{tab:full-so-rs-strict-qwk} 和
-% 表~\ref{tab:full-so-rs-strict-f1} 所报告的 28 个实验条件表明，
+% 表~\ref{tab:full-method-task-level} 所报告的完整实验条件表明，
 % DS 与 RF 的相对表现因任务类型和监督目标而异。为分析这一差异，
 % 我们选取推理接口从 DS 切换至 RF 后预测结果发生变化的样本。
 % 其中，有害转移指 DS 预测正确而 RF 产生严重错误，有益转移
@@ -201,8 +216,7 @@ Table~\ref{tab:full-rationale-quality-task}.
 % FixOrig--FixCorr 则用于衡量 rationale 修正带来的分数变化。
 
 The 28 experimental conditions reported in
-Tables~\ref{tab:full-so-rs-strict-qwk}
-and~\ref{tab:full-so-rs-strict-f1} show that the relative performance
+Table~\ref{tab:full-method-task-level} shows that the relative performance
 of DS and RF varies across task types and supervision targets. To
 analyze this variation, we select samples whose predictions change
 after switching the inference interface from DS to RF. A harmful

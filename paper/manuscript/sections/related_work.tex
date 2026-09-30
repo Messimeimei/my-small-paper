@@ -50,34 +50,26 @@ inference protocol, or their interaction~\citep{sahinuc-etal-2026-reward}
 
 \subsection{Rationales in LLM Training and Inference}
 
-% 在训练阶段，evaluator rationale 可以与分数共同作为监督目标，
-% 但现有方法采用了不同的训练设计。Prometheus 联合学习评价反馈和分数；
-% TRACT 则使用模型自生成的 reasoning trace 作为 rationale，
-% 将预测分数替换为 gold score，并采用回归感知的分数学习目标
-% ~\citep{kim-etal-2024-prometheus-iclr,chiang-etal-2025-tract}。
-% 由于这些设计同时改变 rationale 来源和训练目标，
-% rationale supervision 本身的影响难以单独识别。
-% 这一归因问题也反映在不同的实验结果中：inferred thinking traces
-% 可以提高 LLM rater 与人类判断的一致性
-% ~\citep{zhang-etal-2025-judge-eyes}，但在临床预测中，
-% 即使 rationale 准确且有证据支撑，rationale SFT 仍弱于
-% label-only training~\citep{su-etal-2026-rationale-disease}。
-% 因此，rationale supervision 在何种条件下有效仍不清楚。
+% 在训练阶段，Prometheus 对评价反馈和分数进行联合监督
+% ~\citep{kim-etal-2024-prometheus-iclr}。TRACT 研究了结合回归感知训练的
+% 自生成 rationale，并包含采用标准交叉熵的消融实验
+% ~\citep{chiang-etal-2025-tract}。不同任务上的实证结果也不一致：
+% inferred thinking traces 可以提高 LLM 与人类判断的一致性
+% ~\citep{zhang-etal-2025-judge-eyes}，而在临床预测中，rationale SFT
+% 的表现可能不如 label-only training~\citep{su-etal-2026-rationale-disease}。
+% 这些发现促使我们在科学写作评估中，在匹配的推理接口下
+% 考察 rationale supervision。
 
-At training time, evaluator rationales can be supervised alongside scores,
-but existing methods implement this supervision differently.
-Prometheus jointly learns evaluative feedback and scores, whereas TRACT uses
-self-generated reasoning traces as rationales, replaces their predicted scores
-with gold scores, and applies a regression-aware objective
-~\citep{kim-etal-2024-prometheus-iclr,chiang-etal-2025-tract}.
-Because these designs change the rationale source and training objective
-together, the effect of rationale supervision is difficult to isolate.
-This attribution problem is also reflected in mixed empirical results:
-inferred thinking traces improve LLM--human agreement
-~\citep{zhang-etal-2025-judge-eyes}, whereas rationale SFT underperforms
-label-only training in clinical prediction even with accurate, grounded
-rationales~\citep{su-etal-2026-rationale-disease}.
-It therefore remains unclear when rationale supervision is beneficial.
+At training time, Prometheus jointly supervises evaluative feedback and
+scores~\citep{kim-etal-2024-prometheus-iclr}. TRACT investigates
+self-generated rationales with regression-aware training and includes
+ablations using standard cross-entropy~\citep{chiang-etal-2025-tract}.
+Empirical findings also vary across tasks: inferred thinking traces improve
+LLM--human agreement~\citep{zhang-etal-2025-judge-eyes}, whereas rationale
+SFT can underperform label-only training in clinical
+prediction~\citep{su-etal-2026-rationale-disease}. These findings motivate examining
+rationale supervision under matched inference interfaces in scientific-writing
+evaluation.
 
 % 在推理阶段，许多 LLM evaluator 会先生成 rationale，再给出分数。
 % G-Eval 使用任务特定的评价步骤引导评分，并报告了更高的人类相关性
@@ -117,22 +109,21 @@ evaluations~\citep{zhang-etal-2026-reasoning-not-free}.
 These findings motivate a domain-specific examination of rationale-based
 methods in scientific-writing evaluation.
 
-% 现有受控研究已开始区分训练阶段的 rationale supervision 与推理阶段的
-% reasoning。NLURC 比较 NLU 任务上的 label-only 与 rationale-augmented
-% training，但未在两种输出接口下完整评估各训练方法
-% ~\citep{shi-etal-2025-investigating}。TTCW 进一步交叉比较
-% reasoning supervision 与 inference-time thinking，但研究的是长篇文学评论生成，
-% 且性能下降主要来自解析失败~\citep{liu-etal-2026-when}。
-% 因此，现有研究尚未在科学写作评分中完整交叉监督目标与推理协议，
-% 也没有区分格式失败和合法分数中的评分错误。
+% 既有研究在 NLU 和长篇文学评论生成中考察了 rationale supervision
+% 与 inference-time reasoning~\citep{shi-etal-2025-investigating,liu-etal-2026-when}。
+% NLURC 在 Direct 和 CoT 推理下评估了 Mix 与 Align，但未评估
+% Label-Only 的 CoT 推理以及 Reason 的 Direct 推理。本文在科学写作评分中
+% 评估完整的 SO/RS $\times$ DS/RF 四种组合，分别报告格式有效性与分数一致性，
+% 并考察外部评估的 rationale 质量如何关联评分错误。固定前缀干预进一步在
+% 所选有害案例中检验 rationale 变化对后续分数的影响。
 
-Controlled studies have begun to separate training-time rationale supervision
-from inference-time reasoning. NLURC compares label-only and
-rationale-augmented training on NLU tasks but does not evaluate each method
-under both output interfaces~\citep{shi-etal-2025-investigating}.
-TTCW crosses reasoning supervision with inference-time thinking but studies
-long-form literary review generation, where degradation is driven mainly by
-parsing failures~\citep{liu-etal-2026-when}.
-Existing work therefore neither fully crosses supervision targets with
-inference protocols in scientific-writing scoring nor distinguishes format
-failures from errors among valid scores.
+Prior studies investigate rationale supervision and inference-time reasoning
+in NLU and literary-review generation
+~\citep{shi-etal-2025-investigating,liu-etal-2026-when}.
+NLURC evaluates Mix and Align under both Direct and CoT inference, while
+omitting CoT evaluation for Label-Only and Direct evaluation for Reason.
+We evaluate all four SO/RS $\times$ DS/RF combinations in scientific-writing
+scoring, report format validity separately from score agreement, and examine
+how externally assessed rationale quality relates to scoring errors.
+Fixed-prefix interventions further test the effect of rationale changes on
+subsequent scores in selected harmful cases.

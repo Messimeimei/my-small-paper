@@ -5,25 +5,24 @@
 % 监督目标比较 score-only supervision（SO）与
 % rationale-and-score supervision（RS）；推理协议比较
 % direct-score inference（DS）与 rationale-first inference（RF）。
-% 随后，我们针对两个不同方面分别设计 ReaSon 和 PaIR：
-% ReaSon 调整 rationale 监督的来源，PaIR 通过配对 DS/RF 训练视图
-% 和分支级损失归一化改善接口覆盖。由于两种干预分别作用于
-% rationale 来源和训练--推理接口适配，RePaIR 在重生成 rationale
-% 数据上采用 PaIR 训练目标，以检验二者能否形成互补。
-% Mix 作为 PaIR 的匹配消融对照。
+% 随后，我们适配两种已有训练策略，用于考察 rationale 再生成和
+% 两种推理接口的联合监督。ReaSon 实例化两阶段再生成策略，PaIR 则将
+% 分别归一化损失训练适配到配对的 DS/RF 视图。RePaIR 组合这两种策略，
+% 并在两种接口下评估该组合配置。
+% PaIR-BP 作为 PaIR 的匹配消融对照。
 
 We first use a $2\times2$ controlled design to separate the
 training-time supervision target from the test-time inference protocol.
 The supervision factor contrasts score-only supervision (SO) with
 rationale-and-score supervision (RS), while the inference factor
 contrasts direct-score inference (DS) with rationale-first inference
-(RF). We then introduce two targeted interventions. ReaSon changes the
-source of rationale supervision, whereas PaIR improves interface
-coverage through paired DS and RF training views with branch-wise
-loss normalization. Because these interventions target distinct
-aspects of RS, RePaIR applies the PaIR objective to regenerated-rationale
-training data to test whether their effects are complementary.
-Mix serves as a matched ablation for PaIR.
+(RF). We then adapt two established training strategies to examine
+rationale regeneration and supervision of both inference interfaces.
+ReaSon instantiates a two-stage regeneration strategy, whereas PaIR
+adapts separate-loss training to paired DS/RF views. RePaIR combines
+the two strategies, and we evaluate the resulting configuration under
+both interfaces.
+PaIR-BP serves as a matched ablation for PaIR.
 
 \subsection{Controlled Supervision--Inference Design}
 
@@ -104,30 +103,21 @@ respective mean token-level losses. When \(N_r \gg N_s\), the
 rationale span receives a larger weight in the overall scalar loss.
 
 % \paragraph{标准 RS 的局限。}
-% 标准 RS 在训练与 RF 推理之间存在潜在的 rationale 来源失配。
-% 训练时，score token 以教师生成的 rationale \(r_i^T\) 为条件进行学习；
-% 而在 RF 推理时，模型首先生成自身的 rationale \(\hat{r}_i\)，再基于
-% 该 rationale 输出分数。教师 rationale 与模型自生成 rationale
-% 在内容和错误模式上可能存在差异，因此，score token 在训练与推理
-% 阶段所依赖的 rationale 上下文并不完全一致。此外，标准 RS 对整个
-% completion 的 token loss 进行平均，使较长的 rationale span 相比
-% 简短的 score span 对总体损失具有更大的贡献。标准 RS 微调还仅使用
-% RF 格式的训练样本，因此模型在训练过程中没有接触 DS 接口。
+% 标准 RS 存在三个潜在局限：训练时的 score 以教师 rationale 为条件，
+% 而 RF 推理依赖模型自生成 rationale；对完整 completion 的 token loss
+% 取平均会使较长的 rationale span 获得更大权重；仅使用 RF 格式训练
+% 则使 DS 接口在训练中不可见。
 
 \paragraph{Limitations of Standard RS.}
-Standard RS is subject to a potential rationale-source mismatch between
-training and RF inference. During training, the score tokens are learned
-conditional on the teacher-generated rationale \(r_i^T\). Under RF
-inference, the model instead generates its own rationale \(\hat{r}_i\)
-before producing the score. Teacher and model-generated rationales may
-differ in their content and error patterns, so the score tokens depend
-on different rationale contexts during training and inference. Standard
-RS also averages token losses over the full completion, giving the
-longer rationale span a greater contribution to the overall loss than
-the short score span. Moreover, standard RS fine-tuning uses only
-RF-formatted examples, leaving the DS interface unseen during training.
+Standard RS has three potential limitations. The score is conditioned on
+teacher rationales during training but on model-generated rationales under
+RF inference. Averaging token losses over the full completion gives the
+longer rationale span greater weight than the short score span. Training
+only on RF-formatted examples also leaves the DS interface unseen.
 
 % \subsection{ReaSon：重生成 Rationale 与 Gold-Score 恢复}
+% ReaSon 遵循 \citet{chiang-etal-2025-tract} 研究的两阶段 rationale 再生成策略。
+% 本文将其作为基于 CE 的比较配置，用于在科学写作任务和 DS/RF 评估协议下考察再生成。
 % 标准 RS 使用教师 rationale \(r_i^T\) 与 gold score \(s_i\) 构成
 % 监督数据 \(\mathcal{D}_T=\{(x_i,r_i^T,s_i)\}\)，并从基础模型
 % \(\theta_0\) 初始化，在该数据上训练得到第一阶段模型 \(\theta_A\)。
@@ -146,12 +136,17 @@ RF-formatted examples, leaving the DS interface unseen during training.
 % \]
 % 最终模型 \(\theta_B\) 从基础模型 \(\theta_0\) 重新初始化，并在
 % \(\mathcal{D}_A\) 上训练，而不继承 \(\theta_A\) 的参数。
-% ReaSon 保持基础模型初始化、RS 训练目标和 gold-score 监督不变，
-% 仅改变最终模型所使用的 rationale 监督来源~\citep{chiang-etal-2025-tract}。% ReaSon 的训练数据构造见附录~\ref{app:reason-training-data}，
+% 对于最终阶段与 RS 的比较，ReaSon 保持基础模型初始化、CE 目标、
+% gold score 和训练计划不变，仅将教师 rationale 替换为第一阶段模型输出。
+% ReaSon 的训练数据构造见附录~\ref{app:reason-training-data}，
 % 教师 rationale 蒸馏所用的模型与解码配置见表~\ref{tab:teacher-config}，蒸馏 prompt 见图~\ref{fig:rs}。
 
 \subsection{ReaSon: Regenerated Rationales with Gold-Score Restoration}
 
+ReaSon follows the two-stage rationale-regeneration strategy studied by
+\citet{chiang-etal-2025-tract}. We use it as a CE-based comparison
+configuration to examine regeneration under our scientific-writing tasks
+and DS/RF evaluation protocol.
 Under standard RS, teacher rationales \(r_i^T\) are paired with gold
 scores \(s_i\) to form
 \(\mathcal{D}_T=\{(x_i,r_i^T,s_i)\}\). A model is initialized from the
@@ -173,25 +168,23 @@ score \(s_i\), yielding
 \]
 The final model \(\theta_B\) is reinitialized from the base model
 \(\theta_0\) and trained on \(\mathcal{D}_A\), without inheriting the
-parameters of \(\theta_A\). ReaSon keeps the base-model initialization, RS
-objective, and gold-score supervision fixed, changing only the source
-of rationale supervision used to train the final model~\citep{chiang-etal-2025-tract}. The construction of the ReaSon training data is described in
-Appendix~\ref{tab:constructing-reason-data}, while the model and decoding configuration
+parameters of \(\theta_A\). For the final-stage comparison with RS,
+ReaSon retains the base-model initialization, CE objective, gold scores,
+and training schedule while replacing teacher rationales with first-stage
+model outputs. The construction of the ReaSon training data is described in
+Appendix~\ref{app:reason-training-data}, while the model and decoding configuration
 for teacher-rationale distillation are reported in
 Table~\ref{tab:teacher-config}, with the corresponding prompts shown in
 Figure~\ref{fig:rs}.
 
 % \subsection{Paired-Interface Reweighting (PaIR)}
-% 标准 RS 仅使用 RF completion 训练，导致 rationale token 在
-% token-averaged loss 中占据主要权重，且 DS 接口缺少监督。PaIR
-% 为每个样本构造配对的 DS 和 RF 训练视图。两个视图共享相同的
-% user prompt 和 gold score，但使用不同的 system prompt 和输出结构：
-% DS 目标 \(y_i^D\) 仅包含 score block，RF 目标 \(y_i^R\) 则包含
-% rationale block 和相同的 score block。
+% PaIR 将 Align 的分别归一化损失训练思想~\citep{shi-etal-2025-investigating}
+% 适配到显式格式化的 DS 和 RF 视图。每个样本产生两个共享 user input
+% 和 gold score 的训练序列：DS completion 仅包含分数，RF completion
+% 则包含 rationale 及其后的分数。两个序列使用接口特定的 system prompt。
 %
-% 为避免较长的 RF 视图因 token 更多而获得更大的权重，PaIR 分别
-% 计算两个视图的平均 token-level loss \(\mathcal{L}_D\) 和
-% \(\mathcal{L}_R\)，并进行等权组合~\citep{shi-etal-2025-investigating}：
+% PaIR 分别计算两个视图的平均监督 token 交叉熵
+% \(\mathcal{L}_D\) 和 \(\mathcal{L}_R\)，再进行等权组合：
 % \[
 % \mathcal{L}_{\mathrm{PaIR}}
 % =
@@ -199,61 +192,32 @@ Figure~\ref{fig:rs}.
 % +
 % 0.5\mathcal{L}_R.
 % \]
-% 该标量损失用于一次反向传播和参数更新。等权发生在 DS 和 RF
-% 两个视图之间；RF 视图内部的所有监督 token 仍使用同一个分母
-% 计算平均损失。
+% 每个损失均在对应视图的监督 token 上取平均。RF 损失同时包含
+% rationale 和 score token。视图等权可避免较长的 RF completion
+% 仅因 token 数量更多而主导训练。
 %
-% 为分别检验分支等权和双视图监督，我们构造 PaIR-BP 与 PaIR-SV
-% 两个消融版本。PaIR-BP（PaIR with Branch Pooling）保留 PaIR 的
-% 配对 DS/RF 视图，但将两个视图的所有监督 token 放在同一分母下
-% 平均。设 \(M_D\) 和 \(M_R\) 分别为 DS 与 RF 视图的监督 token 数，
-% 其目标为
-% \[
-% \mathcal{L}_{\mathrm{PaIR\text{-}BP}}
-% =
-% \frac{
-% M_D\mathcal{L}_D
-% +
-% M_R\mathcal{L}_R
-% }{
-% M_D+M_R
-% }.
-% \]
-%
-% PaIR-SV（PaIR with a Single RF View）仅使用一个 RF 训练视图，
-% 并在该视图内分别平均 rationale 和 score 区域的 token loss。
-% 训练时，score 分支仅关注 prompt 和此前的 score token，
-% 不关注 rationale token。
-% 设 \(\mathcal{L}_{\mathrm{RF,rat}}\) 和
-% \(\mathcal{L}_{\mathrm{RF,score}}\) 分别为同一 RF 视图内
-% rationale 与 score 区域的平均 loss，其目标为
-% \[
-% \mathcal{L}_{\mathrm{PaIR\text{-}SV}}
-% =
-% 0.5\mathcal{L}_{\mathrm{RF,rat}}
-% +
-% 0.5\mathcal{L}_{\mathrm{RF,score}}.
-% \]
-% PaIR-BP 的设置与结果见附录~\ref{app:dataset}第三小节、
-% 表~\ref{tab:train-infer-configs}和表~\ref{tab:pair-mix-ablation}；
-% PaIR-SV 的设置与格式有效率结果见
+% 我们通过两个对照版本考察相关设计。PaIR-BP 保留配对视图，
+% 但将两个视图的全部监督 token 合并取平均，用于检验视图间等权的作用。
+% PaIR-SV 则考察单 RF 视图替代方案：分别归一化 rationale 与 score
+% 区域的损失，并禁止 score token 关注 rationale token。
+% PaIR-BP 的完整定义、设置与结果见附录~\ref{tab:constructing-pair-data}、
+% 附录~\ref{app:experimental-details}和表~\ref{tab:pair-bp-ablation}；
+% PaIR-SV 的定义、设置与格式有效率结果见
 % 附录~\ref{app:ssa-v2-ablation}和
 % 表~\ref{tab:ssa-v2-format-validity}。
 
 \subsection{Paired-Interface Reweighting (PaIR)}
 
-Standard RS trains only on RF completions, so rationale tokens receive
-most of the token-averaged loss weight and the DS interface remains
-unsupervised. PaIR constructs paired DS and RF training views for each
-example. The two views share the same user prompt and gold score but
-use different system prompts and output structures: the DS target
-\(y_i^D\) contains only the score block, whereas the RF target
-\(y_i^R\) contains a rationale block followed by the same score block.
+PaIR adapts the separate-loss training principle of
+Align~\citep{shi-etal-2025-investigating} to explicitly formatted DS and RF
+views. Each example produces two training sequences with the same user
+input and gold score: a DS completion containing only the score, and an
+RF completion containing a rationale followed by the score. The two
+sequences use interface-specific system prompts.
 
-To prevent the longer RF view from receiving greater weight solely
-because it contains more tokens, PaIR computes the mean token-level
-losses \(\mathcal{L}_D\) and \(\mathcal{L}_R\) separately and combines
-them equally~\citep{shi-etal-2025-investigating}:
+PaIR computes the mean cross-entropy over supervised tokens
+separately for each view, yielding \(\mathcal{L}_D\) and
+\(\mathcal{L}_R\), and combines them equally:
 \[
 \mathcal{L}_{\mathrm{PaIR}}
 =
@@ -261,55 +225,30 @@ them equally~\citep{shi-etal-2025-investigating}:
 +
 0.5\mathcal{L}_R.
 \]
-The resulting scalar loss is used for a single backward pass and
-parameter update. Equal weighting is applied between the DS and RF
-views; all supervised tokens within the RF view remain averaged under
-a shared denominator.
+Here, each loss is averaged over the supervised tokens of its corresponding
+view. The RF loss includes both rationale and score tokens. Equal view
+weighting prevents the longer RF completion from dominating solely through
+its token count.
 
-We construct two ablations, PaIR-BP and PaIR-SV, to evaluate equal
-branch weighting and paired-view supervision, respectively. PaIR-BP
-(PaIR with Branch Pooling) retains the paired DS and RF views but
-averages all supervised tokens from both views under a shared
-denominator. Let \(M_D\) and \(M_R\) denote the numbers of supervised
-tokens in the DS and RF views, respectively. Its objective is
-\[
-\mathcal{L}_{\mathrm{PaIR\text{-}BP}}
-=
-\frac{
-M_D\mathcal{L}_D
-+
-M_R\mathcal{L}_R
-}{
-M_D+M_R
-}.
-\]
-
-PaIR-SV (PaIR with a Single RF View) retains only one RF training view
-and separately averages the token losses over its rationale and score
-regions. During training, the score branch attends only to the prompt
-and preceding score tokens, not to rationale tokens. Let
-\(\mathcal{L}_{\mathrm{RF,rat}}\) and
-\(\mathcal{L}_{\mathrm{RF,score}}\) denote the mean losses over the
-rationale and score regions of the same RF view, respectively. Its
-objective is
-\[
-\mathcal{L}_{\mathrm{PaIR\text{-}SV}}
-=
-0.5\mathcal{L}_{\mathrm{RF,rat}}
-+
-0.5\mathcal{L}_{\mathrm{RF,score}}.
-\]
-The PaIR-BP settings and results are reported in the third subsection
-of Appendix~\ref{app:dataset}, Table~\ref{tab:train-infer-configs},
-and Table~\ref{tab:pair-mix-ablation}; the PaIR-SV settings and
-format-validity results are reported in
+We examine two comparison variants.
+PaIR-BP retains both views but pools all supervised-token losses
+into a single mean, testing the effect of equal view weighting.
+PaIR-SV explores a single RF view with separately normalized
+rationale and score losses, while preventing score tokens
+from attending to rationale tokens.
+Full definitions, settings, and results for PaIR-BP appear in
+Appendices~\ref{tab:constructing-pair-data} and
+\ref{app:experimental-details}, and Table~\ref{tab:pair-bp-ablation};
+definitions, settings, and
+format-validity results for PaIR-SV appear in
 Appendix~\ref{app:ssa-v2-ablation} and
 Table~\ref{tab:ssa-v2-format-validity}.
 
 % \subsection{Regenerated-Rationale Paired-Interface Reweighting (RePaIR)}
-% PaIR 虽然提供了配对的 DS/RF 监督并平衡了两个分支的损失，但其
-% RF 视图仍依赖教师 rationale；RePaIR 因此使用第一阶段 PaIR 模型
-% 重生成 RF rationale，同时保留 PaIR 的双视图训练目标。
+% RePaIR 将配对 DS/RF 目标与 rationale 再生成相结合。第一阶段 PaIR
+% 模型生成替代 rationale，随后从基础模型重新初始化一个新模型，并在
+% 生成的配对视图上使用相同目标进行训练。我们检验该组合配置能否在
+% 保持 DS 性能的同时改善 RF 评分。
 % 第一阶段从基础模型 \(\theta_0\) 初始化，并基于教师 rationale 数据
 % \(\mathcal{D}_T\) 构造配对的 DS/RF 视图，训练得到 PaIR 模型
 % \(\theta_A\)。随后，\(\theta_A\) 在 RF 接口下生成新的 rationale
@@ -327,16 +266,18 @@ Table~\ref{tab:ssa-v2-format-validity}.
 % \xrightarrow[\theta_0]{\mathrm{PaIR}}
 % \theta_B .
 % \]
-% RePaIR 的数据构造见附录~\ref{app:dataset}第二小节，训练配置和
-% DS/RF system prompts 分别见表~\ref{tab:train-infer-configs}以及
-% 图~\ref{fig:so}和图~\ref{fig:rs}。
+% regenerated-rationale 数据构造见附录~\ref{app:reason-training-data}，
+% 配对 DS/RF 视图构造见附录~\ref{tab:constructing-pair-data}。
+% 训练配置见附录~\ref{app:experimental-details}；DS/RF system prompts
+% 见图~\ref{fig:so}中的对应 panels。
 
 \subsection{Regenerated-Rationale Paired-Interface Reweighting (RePaIR)}
 
-Although PaIR provides paired DS/RF supervision and balances the two
-branch losses, its RF view still relies on teacher rationales; RePaIR
-therefore regenerates the RF rationales with a first-stage PaIR model
-while retaining the paired-view objective. The first-stage model
+RePaIR combines the paired DS/RF objective with rationale regeneration.
+A first-stage PaIR model generates replacement rationales, and a fresh
+base model is trained on the resulting paired views using the same
+objective. We evaluate whether this combined configuration improves RF
+scoring while maintaining DS performance. The first-stage model
 \(\theta_A\) is initialized from the base model \(\theta_0\) and
 trained with PaIR using paired DS/RF views constructed from the
 teacher-rationale data \(\mathcal{D}_T\). Under RF, \(\theta_A\) then
@@ -356,7 +297,9 @@ procedure is
 \xrightarrow[\theta_0]{\mathrm{PaIR}}
 \theta_B .
 \]
-RePaIR data construction is described in the second subsection of
-Appendix~\ref{tab:constructing-pair-data}; the training configuration and DS/RF
-system prompts are reported in Table~\ref{tab:train-infer-configs}
-and Figures~\ref{fig:so} and~\ref{fig:rs}, respectively.
+Regenerated-rationale data construction is described in
+Appendix~\ref{app:reason-training-data}, and paired DS/RF view
+construction is detailed in Appendix~\ref{tab:constructing-pair-data}.
+The training configuration is provided in
+Appendix~\ref{app:experimental-details}, and the DS/RF system prompts are
+shown in the corresponding panels of Figure~\ref{fig:so}.
