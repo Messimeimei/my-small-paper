@@ -14,7 +14,8 @@ from utils.metrics import criterion_title
 from evaluation.reporting.conditions import infer_eval_condition
 
 EVAL_CONDITIONS = (
-    "B-L", "B-C", "SciRM-L", "SciRM-C", "LL", "LC", "CL", "CC",
+    "B-L", "B-C", "SciRM-L", "SciRM-C", "SciRM-Ref-L", "SciRM-Ref-C",
+    "LL", "LC", "CL", "CC",
     "PAL", "PAC", "MIX-L", "MIX-C", "SSAL", "SSAC", "SSA2L", "SSA2C",
     "SSA3L", "SSA3C",
     "SCL", "SCC", "SCAL", "SCAC",
@@ -31,6 +32,16 @@ CONDITION_META = {
     "B-C": ("Qwen3-4B Base", "CoT", "Qwen3-4B 基座模型先输出推理再输出标签"),
     "SciRM-L": ("SciRM-7B RL", "Label-only", "SciRM-7B 强化学习模型直接输出标签"),
     "SciRM-C": ("SciRM-7B RL", "CoT", "SciRM-7B 强化学习模型先输出推理再输出标签"),
+    "SciRM-Ref-L": (
+        "SciRM-Ref-7B RL",
+        "Label-only",
+        "SciRM-Ref-7B 强化学习模型直接输出标签",
+    ),
+    "SciRM-Ref-C": (
+        "SciRM-Ref-7B RL",
+        "CoT",
+        "SciRM-Ref-7B 强化学习模型先输出推理再输出标签",
+    ),
     "LL": ("Label-only SFT", "Label-only", "同格式 Label-only 微调与测试"),
     "LC": ("Label-only SFT", "CoT", "Label-only adapter 交叉测试 CoT prompt"),
     "CL": ("CoT SFT", "Label-only", "CoT adapter 交叉测试 Label-only prompt"),
@@ -128,6 +139,7 @@ RAIL_CONDITIONS = frozenset({"LL-R", "RAFT-R", "CC-R", "COT-RAFT-R"})
 OFFICIAL_RAIL_NORMALIZATION = "full_vocab_raw"
 CONDITION_INFERENCE = {
     "B-L": "Greedy", "B-C": "Greedy", "SciRM-L": "Greedy", "SciRM-C": "Greedy",
+    "SciRM-Ref-L": "Greedy", "SciRM-Ref-C": "Greedy",
     "LL": "Greedy", "LC": "Greedy",
     "CL": "Greedy", "CC": "Greedy", "PAL": "Greedy", "PAC": "Greedy",
     "MIX-L": "Greedy", "MIX-C": "Greedy",
@@ -141,6 +153,7 @@ CONDITION_INFERENCE = {
 }
 CONDITION_DATA = {
     "B-L": "Label-only", "B-C": "CoT", "SciRM-L": "Label-only", "SciRM-C": "CoT",
+    "SciRM-Ref-L": "Label-only", "SciRM-Ref-C": "CoT",
     "LL": "Label-only", "LC": "CoT",
     "CL": "Label-only", "CC": "CoT", "PAL": "Label-only", "PAC": "CoT",
     "MIX-L": "Label-only", "MIX-C": "CoT",
@@ -179,7 +192,7 @@ def as_float(value: Any) -> float | None:
 
 def extract_train_seed(metrics: dict[str, Any], condition: str) -> str:
     """Extract the training seed without confusing it with the eval seed."""
-    if condition.startswith("B-") or condition.startswith("SciRM-"):
+    if condition in {"B-L", "B-C", "SciRM-L", "SciRM-C"}:
         return "base"
     full_config = metrics.get("full_config") or {}
     train_run = full_config.get("train_run") or {}
@@ -281,7 +294,9 @@ def extract_run_record(metrics: dict[str, Any], metrics_path: Path) -> dict[str,
     )
     # SciRM results created before the dedicated conditions existed were persisted
     # as B-L/B-C. Prefer the model-specific inference for those stale records.
-    if inferred_condition in {"SciRM-L", "SciRM-C"}:
+    if inferred_condition in {
+        "SciRM-L", "SciRM-C", "SciRM-Ref-L", "SciRM-Ref-C"
+    }:
         condition = inferred_condition
     elif condition is None:
         condition = inferred_condition
@@ -372,7 +387,9 @@ def load_record_cache(output_root: Path) -> Records:
                 adapter=None,
             )
         )
-        if inferred_condition in {"SciRM-L", "SciRM-C"}:
+        if inferred_condition in {
+            "SciRM-L", "SciRM-C", "SciRM-Ref-L", "SciRM-Ref-C"
+        }:
             condition = inferred_condition
         seeded_exp_name = exp_name_with_seed(old_exp_name, train_seed)
         metrics_path = Path(str(record.get("metrics_path") or ""))

@@ -45,7 +45,10 @@ METRIC_SECTIONS = (
 )
 
 CONDITION_GROUPS = (
-    ("Baselines", ("B-L", "B-C", "SciRM-L", "SciRM-C")),
+    (
+        "Baselines",
+        ("B-L", "B-C", "SciRM-L", "SciRM-C", "SciRM-Ref-L", "SciRM-Ref-C"),
+    ),
     ("Standard fine-tuning", ("LL", "LC", "CL", "CC")),
     ("Paper Align", ("PAL", "PAC")),
     ("Paper Align w/o Loss Balance", ("MIX-L", "MIX-C")),
@@ -65,6 +68,8 @@ CONDITION_MODEL = {
     "B-C": "Qwen3-4B Base",
     "SciRM-L": "SciRM-7B RL",
     "SciRM-C": "SciRM-7B RL",
+    "SciRM-Ref-L": "SciRM-Ref-7B RL",
+    "SciRM-Ref-C": "SciRM-Ref-7B RL",
 }
 
 CONDITION_TRAIN = {
@@ -72,6 +77,8 @@ CONDITION_TRAIN = {
     "B-C": "Base",
     "SciRM-L": "RL",
     "SciRM-C": "RL",
+    "SciRM-Ref-L": "RL",
+    "SciRM-Ref-C": "RL",
     "LL": "Label-only SFT",
     "LC": "Label-only SFT",
     "CL": "CoT SFT",
@@ -253,7 +260,7 @@ def render_evaluation_analysis(records: Records) -> str:
             f"*Table {section_number - 1}. {display} by training/inference configuration and task.*"
         )
 
-    return f"""# Qwen3-4B and SciRM-7B evaluation results
+    return f"""# Qwen3-4B, SciRM-7B, and SciRM-Ref-7B evaluation results
 
 > Generated at {utc_now()}; {len(records)} deduplicated task/configuration/seed records are included.
 > This file is rebuilt by `scripts/evaluate.py` after evaluation.
